@@ -1,10 +1,16 @@
-# JTIPS Analytics V5.1 — CSV real corrigido
+# JTIPS Analytics V6 — funcional
 
-Correção do erro de JavaScript que impedia o site de abrir.
+Versão com CSV real e tela Jogos operacional.
 
 ## Arquivos
 - index.html
 - vercel.json
 - data/26-05-2026.csv
 
-Substitua os arquivos no GitHub e faça commit/push para atualizar a Vercel.
+## Publicação
+Substitua os arquivos do repositório atual pelos arquivos deste pacote e faça commit/push.
+A Vercel atualiza automaticamente.
+
+## Novas datas
+Adicione novos CSVs em `/data` com o formato `DD-MM-YYYY.csv`.
+Exemplo: `data/27-05-2026.csv`.
