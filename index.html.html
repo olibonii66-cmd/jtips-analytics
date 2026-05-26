@@ -1,0 +1,3498 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>JTIPS Analytics — V5 CSV Real Funcional</title>
+  <style>
+    :root{
+      --bg:#04110d;
+      --bg2:#071913;
+      --panel:#071b14;
+      --panel2:#0a241b;
+      --line:rgba(52,140,104,.20);
+      --line2:rgba(52,140,104,.12);
+      --text:#f5fbf8;
+      --muted:#98b6aa;
+      --green:#30ef9a;
+      --green-2:#8effc5;
+      --pill:#b1ffcf;
+      --yellow:#f0c71d;
+      --red:#ff3737;
+      --red2:#ff5c5c;
+      --shadow:0 18px 55px rgba(0,0,0,.35);
+      --radius:20px;
+    }
+
+    *{box-sizing:border-box;margin:0;padding:0}
+    html{scroll-behavior:smooth}
+    body{
+      min-height:100vh;
+      background:
+        radial-gradient(circle at top right, rgba(0,255,153,.06), transparent 28%),
+        radial-gradient(circle at top left, rgba(0,255,153,.04), transparent 24%),
+        var(--bg);
+      color:var(--text);
+      font-family:Inter,Segoe UI,Arial,sans-serif;
+      overflow-x:hidden;
+    }
+    button,input,select{font-family:inherit}
+
+    .public-page{display:none;min-height:100vh;padding:26px}
+    .public-page.active{display:block}
+
+    .public-header{
+      width:min(1180px,100%);
+      margin:0 auto;
+      display:flex;justify-content:space-between;align-items:center;
+      gap:18px;
+    }
+
+    .logo{display:flex;align-items:center;gap:12px;cursor:pointer}
+    .logo-mark{
+      width:48px;height:48px;border-radius:14px;
+      background:linear-gradient(135deg,#12e58b,#0aa864);
+      display:grid;place-items:center;font-size:26px;font-weight:900;
+      color:#042b1a;
+      box-shadow:0 0 28px rgba(48,239,154,.18);
+      flex:none;
+    }
+    .logo-title{font-size:27px;font-weight:950;letter-spacing:-.8px;line-height:1}
+    .logo-sub{display:block;color:var(--muted);font-size:12px;font-weight:700;margin-top:4px}
+
+    .btn{
+      min-height:44px;border-radius:12px;padding:0 18px;cursor:pointer;
+      font-weight:900;transition:.2s ease;border:0
+    }
+    .btn:hover{transform:translateY(-1px)}
+    .btn-primary{
+      background:linear-gradient(135deg,#10cc7a,#27f09c);
+      color:#032415;box-shadow:0 0 28px rgba(48,239,154,.16);
+    }
+    .btn-secondary{
+      background:rgba(8,23,17,.7);
+      border:1px solid var(--line);
+      color:#d7efe4;
+    }
+
+    .hero{
+      width:min(1180px,100%);
+      margin:54px auto 0;
+      display:grid;grid-template-columns:1.02fr .98fr;gap:24px;align-items:center;
+    }
+    .hero h1{
+      font-size:clamp(42px,5vw,72px);
+      line-height:.98;letter-spacing:-2px;margin-bottom:18px;
+    }
+    .hero h1 span{color:var(--green)}
+    .hero p{color:#bad1c7;font-size:18px;line-height:1.65;max-width:620px}
+    .hero-actions{display:flex;gap:12px;flex-wrap:wrap;margin-top:24px}
+    .hero-badges{display:flex;gap:10px;flex-wrap:wrap;margin-top:24px}
+    .hero-badge{
+      padding:10px 14px;border-radius:999px;background:rgba(8,23,17,.76);
+      border:1px solid var(--line);color:#d8f4e6;font-weight:800;font-size:13px;
+    }
+
+    .mock{
+      background:linear-gradient(180deg,rgba(7,27,20,.96),rgba(4,16,12,.98));
+      border:1px solid var(--line);
+      border-radius:28px;padding:18px;box-shadow:var(--shadow);
+    }
+    .mock-head{
+      display:flex;justify-content:space-between;align-items:center;margin-bottom:14px
+    }
+    .mock-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+    .mock-box,.mock-match{
+      background:rgba(5,18,13,.72);border:1px solid var(--line2);
+      border-radius:18px;padding:14px;
+    }
+    .mock-box small{color:var(--muted);text-transform:uppercase;font-size:11px;font-weight:800}
+    .mock-box div{font-size:26px;font-weight:950;margin-top:7px}
+    .mock-match{grid-column:1/-1}
+    .mock-match-head{
+      display:flex;justify-content:space-between;color:var(--muted);font-size:12px;font-weight:800
+    }
+    .mock-teams{text-align:center;font-size:22px;font-weight:950;margin:14px 0}
+    .mini-row{
+      display:grid;grid-template-columns:132px 1fr 44px;gap:10px;align-items:center;
+      margin:10px 0;font-size:13px;font-weight:800;color:#dff5ea
+    }
+
+    .public-cards{
+      width:min(1180px,100%);
+      margin:42px auto 0;
+      display:grid;grid-template-columns:repeat(3,1fr);gap:14px
+    }
+    .card{
+      background:linear-gradient(180deg,rgba(7,27,20,.92),rgba(5,17,13,.96));
+      border:1px solid var(--line2);
+      border-radius:22px;padding:22px;box-shadow:var(--shadow)
+    }
+    .card .icon{
+      width:48px;height:48px;border-radius:14px;display:grid;place-items:center;
+      font-size:22px;background:rgba(48,239,154,.10);margin-bottom:16px
+    }
+    .card h3{font-size:19px;margin-bottom:10px}
+    .card p{font-size:14px;line-height:1.6;color:var(--muted)}
+
+    .login-card{
+      width:min(460px,100%);
+      margin:68px auto 0;
+      background:linear-gradient(180deg,rgba(7,27,20,.96),rgba(4,15,11,.98));
+      border:1px solid var(--line);
+      border-radius:26px;padding:28px;box-shadow:var(--shadow)
+    }
+    .login-card h2{font-size:29px;letter-spacing:-1px;margin-bottom:8px}
+    .login-card p{color:var(--muted);font-size:14px;line-height:1.6;margin-bottom:20px}
+    .field{display:flex;flex-direction:column;gap:8px;margin-bottom:14px}
+    .field label{font-size:13px;color:#d3ece0;font-weight:850}
+    .field input,.field select{
+      width:100%;height:48px;background:rgba(4,15,11,.86);border:1px solid var(--line);
+      border-radius:14px;padding:0 14px;color:#fff;outline:0;font-size:14px
+    }
+    .full-btn{width:100%}
+    .login-links{
+      display:flex;justify-content:space-between;margin-top:16px;color:var(--muted);
+      font-size:13px;font-weight:800
+    }
+    .login-links span{cursor:pointer}
+
+    .dashboard-shell{display:none;min-height:100vh}
+    .dashboard-shell.active{display:block}
+    .sidebar{
+      position:fixed;left:0;top:0;width:260px;height:100vh;z-index:10;
+      background:linear-gradient(180deg,#061811,#04120d);
+      border-right:1px solid var(--line);
+      padding:20px 14px;
+    }
+    .sidebar .logo{
+      padding:0 10px 18px 10px;margin-bottom:18px;border-bottom:1px solid var(--line2)
+    }
+
+    .nav{display:flex;flex-direction:column;gap:8px}
+    .nav-item{
+      min-height:48px;padding:0 14px;border-radius:14px;display:flex;align-items:center;
+      gap:12px;color:#daefe4;border:1px solid transparent;font-weight:800;cursor:pointer;
+      transition:.2s ease
+    }
+    .nav-item:hover{background:rgba(48,239,154,.05)}
+    .nav-item.active{
+      background:rgba(48,239,154,.10);border-color:rgba(48,239,154,.26);color:#dffff2
+    }
+
+    .side-bottom{
+      position:absolute;left:14px;right:14px;bottom:18px;display:flex;flex-direction:column;gap:10px
+    }
+    .profile-mini{
+      padding:14px;border-radius:16px;background:rgba(8,23,17,.8);border:1px solid var(--line2)
+    }
+    .profile-mini strong{display:block}
+    .profile-mini small{color:var(--muted)}
+    .logout-mini{
+      display:flex;align-items:center;gap:8px;color:#dcefe6;font-weight:800;cursor:pointer;padding:6px 4px
+    }
+
+    .app-main{
+      margin-left:260px;width:calc(100% - 260px);padding:22px;min-height:100vh
+    }
+
+    .topbar{
+      display:flex;align-items:center;gap:14px;margin-bottom:18px;flex-wrap:wrap
+    }
+    .title-block{flex:1;min-width:260px}
+    .title-block h2{font-size:30px;line-height:1.1;letter-spacing:-.8px;margin-bottom:4px}
+    .title-block p{color:var(--muted);font-size:14px}
+    .search-box,.date-box,.bell-box,.profile-box{
+      height:50px;background:rgba(5,17,13,.86);border:1px solid var(--line);
+      border-radius:13px;display:flex;align-items:center;color:#bad1c7
+    }
+    .search-box{width:min(410px,34vw);padding:0 14px;gap:10px}
+    .search-box input{
+      width:100%;background:transparent;border:0;outline:none;color:#fff;font-size:14px
+    }
+    .date-box{width:190px;justify-content:center;gap:10px;font-weight:800}
+    .bell-box{width:58px;justify-content:center;position:relative}
+    .bell-box span{
+      position:absolute;top:8px;right:10px;width:18px;height:18px;border-radius:999px;
+      background:var(--green);color:#022113;display:grid;place-items:center;font-size:11px;font-weight:950
+    }
+    .profile-box{width:200px;padding:0 12px;gap:10px}
+    .avatar{
+      width:38px;height:38px;border-radius:50%;
+      background:linear-gradient(135deg,#dbffe9,#1fcf80);position:relative;flex:none
+    }
+    .avatar:after{
+      content:"";position:absolute;right:0;bottom:2px;width:10px;height:10px;border-radius:50%;
+      background:var(--green);border:2px solid #04110d
+    }
+    .profile-text strong{display:block;font-size:13px}
+    .profile-text small{color:var(--green);font-weight:900}
+
+    .app-page{display:none}
+    .app-page.active{display:block}
+
+    .section{
+      background:linear-gradient(180deg,rgba(7,27,20,.92),rgba(4,16,12,.96));
+      border:1px solid var(--line2);
+      border-radius:22px;padding:18px;box-shadow:var(--shadow);margin-bottom:18px
+    }
+    .section-head{
+      display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:14px
+    }
+    .section-title{font-size:21px;font-weight:950;line-height:1.2}
+    .panel-text{color:var(--muted);font-size:14px;line-height:1.6}
+
+    .kpis{display:grid;grid-template-columns:repeat(5,minmax(160px,1fr));gap:14px;margin-bottom:18px}
+    .metric-card{
+      background:linear-gradient(180deg,rgba(7,27,20,.96),rgba(4,16,12,.98));
+      border:1px solid var(--line2);
+      border-radius:20px;padding:18px;box-shadow:var(--shadow)
+    }
+    .metric-content{display:flex;align-items:center;gap:12px}
+    .metric-icon{
+      width:50px;height:50px;border-radius:15px;display:grid;place-items:center;font-size:24px;
+      background:rgba(48,239,154,.10);flex:none
+    }
+    .metric-label{color:var(--muted);font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
+    .metric-value{font-size:28px;font-weight:950;line-height:1;margin-bottom:7px}
+    .delta{font-size:12px;font-weight:900}
+    .green-text{color:var(--green)}
+    .yellow-text{color:var(--yellow)}
+    .red-text{color:var(--red)}
+    .blue-text{color:#86ffcb}
+
+    .filters{display:flex;gap:10px;flex-wrap:wrap}
+    .chip{
+      padding:10px 14px;border-radius:999px;background:rgba(5,17,13,.86);
+      border:1px solid var(--line2);color:#dff5ea;font-weight:850;font-size:13px;cursor:pointer
+    }
+    .chip.active{background:var(--pill);color:#032113;border-color:transparent}
+    .see-all{color:#aeeccc;font-weight:850;font-size:13px;cursor:pointer}
+
+    .match-grid,.simple-grid,.plans-grid{
+      display:grid;grid-template-columns:repeat(3,minmax(260px,1fr));gap:14px
+    }
+    .match-card{
+      background:linear-gradient(180deg,rgba(8,28,20,.96),rgba(5,17,13,.98));
+      border:1px solid var(--line2);border-radius:18px;padding:16px;min-height:392px;box-shadow:var(--shadow)
+    }
+    .match-header{
+      display:flex;justify-content:space-between;gap:10px;align-items:center;
+      color:var(--muted);font-size:12px;font-weight:800;margin-bottom:12px
+    }
+    .teams{text-align:center;font-size:20px;font-weight:950;line-height:1.25;margin:12px 0 8px}
+    .vs{padding:0 12px;color:#4fe3a2}
+    .confidence{
+      display:flex;justify-content:center;align-items:center;gap:10px;margin:12px 0 18px
+    }
+    .confidence small{color:var(--muted);font-size:11px;font-weight:900;letter-spacing:.6px}
+    .score{
+      width:44px;height:44px;border-radius:999px;border:2px solid var(--green);display:grid;place-items:center;
+      color:var(--green-2);font-size:17px;font-weight:950;flex:none
+    }
+    .confidence span{color:var(--green-2);font-size:12px;font-weight:900}
+    .divider{height:1px;background:var(--line2);margin:14px 0}
+    .market-row{
+      display:grid;grid-template-columns:140px 1fr 48px;gap:10px;align-items:center;
+      margin:12px 0
+    }
+    .market-label{
+      color:#dff5ea;font-size:13px;font-weight:760;white-space:nowrap;overflow:hidden;text-overflow:ellipsis
+    }
+    .bar-bg{height:8px;border-radius:999px;background:rgba(148,179,165,.18);overflow:hidden}
+    .bar{height:100%;border-radius:999px}
+    .pct{font-size:13px;font-weight:950;text-align:right}
+    .analysis-btn{
+      margin-top:18px;padding:12px;border-radius:13px;text-align:center;
+      background:rgba(48,239,154,.10);border:1px solid rgba(48,239,154,.18);color:#d8fff0;font-weight:900;cursor:pointer
+    }
+
+    .bottom-grid{display:grid;grid-template-columns:minmax(0,1.8fr) minmax(360px,1.1fr);gap:18px}
+    .right-stack{display:flex;flex-direction:column;gap:18px}
+    .watch-item,.alert-item{
+      display:grid;gap:8px;align-items:center;padding:12px 0;border-bottom:1px solid var(--line2);font-size:13px;color:#e7fbf2
+    }
+    .watch-item{grid-template-columns:26px minmax(0,1fr) 112px 24px}
+    .alert-item{grid-template-columns:14px minmax(0,1fr) 62px 70px}
+    .muted{color:var(--muted);font-size:12px}
+    .dot{width:8px;height:8px;border-radius:50%}
+    .dot.green{background:var(--green)}
+    .dot.yellow{background:var(--yellow)}
+    .dot.red{background:var(--red)}
+    .dot.blue{background:#8effc5}
+
+    .table-wrap{width:100%;overflow-x:auto}
+    table{width:100%;border-collapse:collapse;font-size:13px;min-width:820px}
+    th{
+      color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.35px;text-align:left;
+      padding:12px 10px;border-bottom:1px solid var(--line);white-space:nowrap
+    }
+    td{
+      color:#e7fbf2;padding:13px 10px;border-bottom:1px solid var(--line2);white-space:nowrap
+    }
+    .prob-cell{display:flex;align-items:center;gap:8px}
+    .mini-bar{width:80px;flex:none}
+    .badge{
+      display:inline-block;padding:5px 10px;border-radius:999px;font-size:12px;font-weight:950;white-space:nowrap
+    }
+    .badge.green{color:#022113;background:var(--green)}
+    .badge.yellow{color:#2b1f00;background:var(--yellow)}
+    .badge.red{color:#fff;background:var(--red)}
+    .badge.blue{color:#022113;background:#8effc5}
+
+    .analysis-layout{display:grid;grid-template-columns:1fr 290px;gap:18px}
+    .analysis-topbar{margin-bottom:12px;font-weight:850;color:#dff5ea;cursor:pointer;display:flex;align-items:center;gap:8px}
+    .analysis-header-grid{
+      display:grid;grid-template-columns:1fr 220px;gap:18px;margin-bottom:18px
+    }
+    .match-main-card{
+      background:linear-gradient(180deg,rgba(8,28,20,.98),rgba(5,17,13,.98));
+      border:1px solid var(--line);border-radius:20px;padding:20px;box-shadow:var(--shadow)
+    }
+    .match-hero{
+      display:grid;grid-template-columns:1fr auto 1fr;gap:20px;align-items:center
+    }
+    .team-side{
+      display:flex;align-items:center;gap:16px
+    }
+    .team-side.right{justify-content:flex-end;text-align:right}
+    .club-logo{
+      width:70px;height:70px;border-radius:50%;
+      background:rgba(48,239,154,.12);border:1px solid rgba(48,239,154,.16);
+      display:grid;place-items:center;font-size:24px;font-weight:950;color:var(--green)
+    }
+    .team-name{font-size:22px;font-weight:950}
+    .vs-big{font-size:28px;font-weight:950;color:var(--green)}
+    .match-meta{
+      display:flex;gap:26px;flex-wrap:wrap;margin-top:18px;padding-top:14px;border-top:1px solid var(--line2)
+    }
+    .meta-item{display:flex;align-items:center;gap:8px;color:#dff5ea;font-size:14px}
+    .confidence-card{
+      background:linear-gradient(180deg,rgba(8,28,20,.98),rgba(5,17,13,.98));
+      border:1px solid var(--line);border-radius:20px;padding:20px;box-shadow:var(--shadow)
+    }
+    .confidence-card small{display:block;color:#dff5ea;font-size:16px;font-weight:850;margin-bottom:14px}
+    .confidence-big{
+      display:flex;align-items:center;gap:12px;color:var(--green);font-size:28px;font-weight:950;margin-bottom:12px
+    }
+
+    .analysis-tabs{
+      display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px
+    }
+    .analysis-tab{
+      padding:12px 18px;border-radius:999px;background:rgba(5,17,13,.9);
+      border:1px solid var(--line2);color:#dff5ea;font-size:14px;font-weight:850;cursor:pointer
+    }
+    .analysis-tab.active{
+      background:var(--pill);color:#062517;border-color:transparent
+    }
+
+    .analysis-filter-row{margin-bottom:14px}
+    .analysis-select{
+      width:100%;height:56px;border-radius:14px;background:rgba(7,27,20,.9);color:#fff;
+      border:1px solid var(--line);padding:0 16px;font-size:14px;font-weight:850;outline:0
+    }
+
+    .analysis-card{
+      background:linear-gradient(180deg,rgba(8,28,20,.98),rgba(5,17,13,.98));
+      border:1px solid var(--line2);border-radius:18px;padding:18px;box-shadow:var(--shadow)
+    }
+    .analysis-card h3{
+      font-size:20px;font-weight:950;margin-bottom:18px
+    }
+
+    .winner-section + .winner-section{
+      margin-top:28px;padding-top:28px;border-top:1px solid var(--line2)
+    }
+    .winner-head{
+      display:flex;justify-content:space-between;align-items:center;margin-bottom:16px
+    }
+    .winner-head strong{font-size:18px}
+    .winner-head span{color:var(--muted);font-size:12px}
+
+    .winner-row{
+      display:grid;grid-template-columns:42px 1fr minmax(220px,400px) 52px;
+      gap:14px;align-items:center;padding:16px 0;border-bottom:1px solid var(--line2)
+    }
+    .winner-row:last-child{border-bottom:0}
+    .winner-index{color:#8ba99d;font-size:16px}
+    .winner-index.highlight{color:var(--green);font-weight:900}
+    .winner-label{font-size:17px;font-weight:500}
+    .winner-label.highlight{color:var(--green);font-weight:700}
+    .winner-track{
+      height:10px;border-radius:999px;background:rgba(148,179,165,.18);overflow:hidden
+    }
+    .winner-fill{height:100%;border-radius:999px}
+    .winner-value{font-size:18px;font-weight:900;text-align:right}
+    .winner-value.green{color:var(--green)}
+    .winner-value.yellow{color:var(--yellow)}
+
+    .market-table{
+      width:100%;min-width:100%;border-collapse:collapse
+    }
+    .market-table thead th{
+      border-bottom:0;padding-bottom:10px
+    }
+    .market-table th,.market-table td{
+      min-width:auto;white-space:nowrap;border-bottom:1px solid var(--line2)
+    }
+    .market-table tbody tr:last-child td{
+      border-bottom:0
+    }
+    .market-table .divider-row td{
+      border-bottom:0;padding:16px 0 8px 0
+    }
+    .market-table .label-col{width:42%}
+    .game-pill{
+      min-width:56px;display:inline-flex;justify-content:center;align-items:center;
+      padding:6px 10px;border-radius:8px;font-weight:950;color:#062517
+    }
+    .game-pill.green{background:var(--green)}
+    .game-pill.yellow{background:var(--yellow);color:#332400}
+    .game-pill.red{background:var(--red);color:#fff}
+    .market-table td{font-size:14px}
+    .market-table td strong{font-weight:950}
+
+    .quick-box{display:flex;flex-direction:column;gap:14px}
+    .quick-mini{
+      padding:14px;border-radius:14px;background:rgba(5,17,13,.62);border:1px solid var(--line2)
+    }
+    .quick-mini strong{display:block;font-size:15px;margin-bottom:8px}
+    .footer-note{
+      margin-top:18px;padding:14px 16px;border-radius:14px;border:1px solid var(--line);
+      background:rgba(9,34,24,.72);display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;
+      color:#dff5ea;font-size:14px
+    }
+
+    .plan-card{
+      background:linear-gradient(180deg,rgba(7,27,20,.96),rgba(4,16,12,.98));
+      border:1px solid var(--line2);border-radius:24px;padding:24px;min-height:420px;box-shadow:var(--shadow)
+    }
+    .plan-card.featured{border-color:rgba(48,239,154,.38);box-shadow:0 0 50px rgba(48,239,154,.10)}
+    .plan-card h3{font-size:24px;margin-top:8px}
+    .price{font-size:38px;font-weight:950;margin:18px 0}
+    .price small{font-size:13px;color:var(--muted)}
+    .plan-list{display:flex;flex-direction:column;gap:12px;color:#ddf5eb;font-size:14px;margin:18px 0 28px}
+
+    .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px}
+
+    /* =====================================================
+       INSIGHTS IA — V3
+       Atualização isolada da análise completa
+    ===================================================== */
+    .ai-guide {
+      background: rgba(245, 199, 30, 0.08);
+      border: 1px solid rgba(245, 199, 30, 0.35);
+      border-radius: 16px;
+      padding: 16px;
+      margin-bottom: 18px;
+      position: relative;
+    }
+
+    .ai-guide h4 {
+      color: #fff7c7;
+      font-size: 15px;
+      margin-bottom: 10px;
+      font-weight: 950;
+    }
+
+    .ai-guide ul {
+      margin-left: 18px;
+      color: #e9f6ee;
+      line-height: 1.6;
+      font-size: 13px;
+    }
+
+    .ai-guide li::marker {
+      color: var(--yellow);
+    }
+
+    .ai-close {
+      position: absolute;
+      top: 12px;
+      right: 14px;
+      color: #fff7c7;
+      font-weight: 900;
+      opacity: .75;
+    }
+
+    .impact-card {
+      background: linear-gradient(180deg, rgba(8, 28, 20, .92), rgba(5, 17, 13, .96));
+      border: 1px solid rgba(48, 239, 154, .25);
+      border-radius: 18px;
+      padding: 18px;
+      margin-bottom: 18px;
+    }
+
+    .impact-top {
+      display: flex;
+      justify-content: space-between;
+      gap: 14px;
+      align-items: flex-start;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+    }
+
+    .impact-top h4 {
+      font-size: 18px;
+      font-weight: 950;
+      margin-bottom: 4px;
+    }
+
+    .impact-top small {
+      color: var(--muted);
+      font-weight: 800;
+    }
+
+    .impact-scale {
+      display: grid;
+      grid-template-columns: 120px 1fr 120px;
+      gap: 14px;
+      align-items: center;
+      margin: 16px 0;
+    }
+
+    .impact-team {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 900;
+      color: #e8fff3;
+    }
+
+    .impact-team.right {
+      justify-content: flex-end;
+      text-align: right;
+    }
+
+    .impact-logo {
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      background: rgba(48, 239, 154, .12);
+      border: 1px solid rgba(48, 239, 154, .22);
+      display: grid;
+      place-items: center;
+      color: var(--green);
+      font-weight: 950;
+      flex: none;
+    }
+
+    .impact-track {
+      height: 8px;
+      border-radius: 999px;
+      background: linear-gradient(90deg, rgba(255, 55, 55, .85), rgba(245, 199, 30, .85), rgba(48, 239, 154, .85));
+      position: relative;
+    }
+
+    .impact-knob {
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: #eafff3;
+      border: 5px solid rgba(48, 239, 154, .92);
+      box-shadow: 0 0 18px rgba(48, 239, 154, .35);
+    }
+
+    .impact-summary {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+      margin-top: 16px;
+    }
+
+    .impact-mini {
+      background: rgba(5, 17, 13, .72);
+      border: 1px solid var(--line2);
+      border-radius: 14px;
+      padding: 12px;
+    }
+
+    .impact-mini span {
+      display: block;
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 900;
+      margin-bottom: 6px;
+      text-transform: uppercase;
+    }
+
+    .impact-mini strong {
+      font-size: 14px;
+      color: #fff;
+    }
+
+    .insight-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(260px, 1fr));
+      gap: 14px;
+    }
+
+    .insight-card {
+      background: rgba(5, 17, 13, .72);
+      border: 1px solid var(--line2);
+      border-radius: 16px;
+      padding: 16px;
+    }
+
+    .insight-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+
+    .insight-head h4 {
+      font-size: 16px;
+      font-weight: 950;
+    }
+
+    .insight-card p {
+      color: #b9d3c7;
+      line-height: 1.6;
+      font-size: 13px;
+    }
+
+    .insight-final {
+      margin-top: 16px;
+      background: rgba(48, 239, 154, .08);
+      border: 1px solid rgba(48, 239, 154, .24);
+      border-radius: 16px;
+      padding: 16px;
+      color: #dff8ec;
+      line-height: 1.6;
+      font-size: 14px;
+    }
+
+    .sensor-row {
+      margin-top: 16px;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 14px;
+    }
+
+    .sensor-box {
+      background: rgba(5, 17, 13, .72);
+      border: 1px solid var(--line2);
+      border-radius: 14px;
+      padding: 14px;
+    }
+
+    .sensor-box span {
+      color: var(--muted);
+      display: block;
+      font-size: 11px;
+      text-transform: uppercase;
+      font-weight: 950;
+      margin-bottom: 6px;
+    }
+
+    .sensor-box strong {
+      color: #fff;
+      font-size: 15px;
+    }
+
+    @media (max-width: 980px) {
+      .impact-scale,
+      .impact-summary,
+      .insight-grid,
+      .sensor-row {
+        grid-template-columns: 1fr;
+      }
+
+      .impact-team.right {
+        justify-content: flex-start;
+        text-align: left;
+      }
+    }
+
+
+    @media (max-width:1500px){
+      .kpis{grid-template-columns:repeat(3,minmax(180px,1fr))}
+    }
+    @media (max-width:1400px){
+      .hero,.public-cards,.analysis-header-grid,.analysis-layout,.bottom-grid{grid-template-columns:1fr}
+      .match-grid,.simple-grid,.plans-grid{grid-template-columns:repeat(2,minmax(260px,1fr))}
+      .topbar{flex-wrap:wrap}
+      .title-block{width:100%;flex-basis:100%}
+      .search-box{width:min(520px,46vw)}
+    }
+    @media (max-width:980px){
+      .public-header{flex-direction:column;align-items:flex-start}
+      .sidebar{position:static;width:100%;height:auto}
+      .side-bottom{position:static;margin-top:18px}
+      .app-main{margin-left:0;width:100%;padding:16px}
+      .topbar{flex-direction:column;align-items:stretch}
+      .search-box,.date-box,.bell-box,.profile-box{width:100%}
+      .kpis,.match-grid,.simple-grid,.plans-grid,.public-cards,.form-grid{grid-template-columns:1fr}
+      .analysis-header-grid,.analysis-layout,.hero{grid-template-columns:1fr}
+      .match-hero{grid-template-columns:1fr}
+      .team-side,.team-side.right{justify-content:flex-start;text-align:left}
+      .winner-row{grid-template-columns:36px 1fr}
+      .winner-track,.winner-value{grid-column:1 / -1}
+    }
+  
+    /* =====================================================
+       V3.2 — CORREÇÃO REAL DO LAYOUT
+       Objetivo:
+       - Corrigir sidebar sobrepondo itens.
+       - Impedir menu inferior de cobrir Planos/Configurações.
+       - Ajustar dashboard para 1366px sem precisar zoom.
+       - Manter o código principal e só corrigir CSS/layout.
+    ===================================================== */
+
+    html,
+    body {
+      width: 100%;
+      max-width: 100%;
+      overflow-x: hidden;
+    }
+
+    .dashboard-shell.active {
+      display: block;
+      width: 100%;
+      min-height: 100vh;
+    }
+
+    .sidebar {
+      width: 220px !important;
+      height: 100vh !important;
+      padding: 16px 10px !important;
+      display: flex !important;
+      flex-direction: column !important;
+      overflow: hidden !important;
+    }
+
+    .sidebar .logo {
+      flex: 0 0 auto !important;
+      padding: 0 8px 14px 8px !important;
+      margin-bottom: 12px !important;
+    }
+
+    .sidebar .logo-mark {
+      width: 38px !important;
+      height: 38px !important;
+      font-size: 21px !important;
+      border-radius: 12px !important;
+    }
+
+    .sidebar .logo-title {
+      font-size: 20px !important;
+      line-height: 1.02 !important;
+      letter-spacing: -0.5px !important;
+    }
+
+    .sidebar .logo-sub {
+      font-size: 10px !important;
+      margin-top: 3px !important;
+    }
+
+    .nav {
+      flex: 1 1 auto !important;
+      min-height: 0 !important;
+      overflow-y: auto !important;
+      overflow-x: hidden !important;
+      gap: 5px !important;
+      padding-right: 2px !important;
+      scrollbar-width: thin;
+    }
+
+    .nav::-webkit-scrollbar {
+      width: 4px;
+    }
+
+    .nav::-webkit-scrollbar-thumb {
+      background: rgba(48, 239, 154, .22);
+      border-radius: 999px;
+    }
+
+    .nav-item {
+      min-height: 38px !important;
+      padding: 0 10px !important;
+      font-size: 12px !important;
+      gap: 8px !important;
+      border-radius: 12px !important;
+      flex: 0 0 auto !important;
+    }
+
+    .side-bottom {
+      position: static !important;
+      left: auto !important;
+      right: auto !important;
+      bottom: auto !important;
+      flex: 0 0 auto !important;
+      margin-top: 10px !important;
+      display: flex !important;
+      flex-direction: column !important;
+      gap: 8px !important;
+    }
+
+    .profile-mini {
+      padding: 10px !important;
+      border-radius: 13px !important;
+    }
+
+    .profile-mini strong {
+      font-size: 12px !important;
+    }
+
+    .profile-mini small {
+      font-size: 10px !important;
+    }
+
+    .logout-mini {
+      padding: 5px 4px !important;
+      font-size: 12px !important;
+    }
+
+    .app-main {
+      margin-left: 220px !important;
+      width: calc(100% - 220px) !important;
+      padding: 14px 16px !important;
+      max-width: none !important;
+    }
+
+    .topbar {
+      display: grid !important;
+      grid-template-columns: minmax(180px, 1fr) minmax(260px, 330px) 165px 52px 165px !important;
+      align-items: center !important;
+      gap: 10px !important;
+      margin-bottom: 14px !important;
+    }
+
+    .title-block {
+      min-width: 0 !important;
+      width: auto !important;
+      flex-basis: auto !important;
+    }
+
+    .title-block h2 {
+      font-size: 25px !important;
+      line-height: 1.05 !important;
+      margin-bottom: 4px !important;
+    }
+
+    .title-block p {
+      font-size: 12px !important;
+      line-height: 1.3 !important;
+    }
+
+    .search-box,
+    .date-box,
+    .bell-box,
+    .profile-box {
+      height: 48px !important;
+      min-width: 0 !important;
+    }
+
+    .search-box {
+      width: auto !important;
+      padding: 0 12px !important;
+    }
+
+    .date-box {
+      width: auto !important;
+      font-size: 13px !important;
+    }
+
+    .bell-box {
+      width: auto !important;
+    }
+
+    .profile-box {
+      width: auto !important;
+      padding: 0 10px !important;
+    }
+
+    .kpis {
+      grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
+      gap: 10px !important;
+      margin-bottom: 12px !important;
+    }
+
+    .metric-card {
+      min-height: 86px !important;
+      padding: 12px !important;
+      border-radius: 16px !important;
+    }
+
+    .metric-content {
+      gap: 10px !important;
+    }
+
+    .metric-icon {
+      width: 40px !important;
+      height: 40px !important;
+      font-size: 20px !important;
+      border-radius: 13px !important;
+    }
+
+    .metric-label {
+      font-size: 9px !important;
+      margin-bottom: 4px !important;
+    }
+
+    .metric-value {
+      font-size: 22px !important;
+      margin-bottom: 5px !important;
+    }
+
+    .delta {
+      font-size: 10px !important;
+    }
+
+    .section {
+      padding: 14px !important;
+      margin-bottom: 12px !important;
+      border-radius: 18px !important;
+    }
+
+    .section-head {
+      margin-bottom: 12px !important;
+      gap: 10px !important;
+    }
+
+    .section-title {
+      font-size: 18px !important;
+    }
+
+    .filters {
+      gap: 8px !important;
+    }
+
+    .chip,
+    .analysis-tab {
+      padding: 8px 12px !important;
+      font-size: 12px !important;
+    }
+
+    .match-grid,
+    .simple-grid,
+    .plans-grid {
+      grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+      gap: 10px !important;
+    }
+
+    .match-card {
+      min-height: 318px !important;
+      padding: 12px !important;
+      border-radius: 16px !important;
+    }
+
+    .match-header {
+      font-size: 11px !important;
+      margin-bottom: 10px !important;
+    }
+
+    .teams {
+      font-size: 17px !important;
+      margin: 9px 0 6px !important;
+    }
+
+    .confidence {
+      margin: 9px 0 12px !important;
+      gap: 8px !important;
+    }
+
+    .confidence small {
+      font-size: 10px !important;
+    }
+
+    .confidence span {
+      font-size: 11px !important;
+    }
+
+    .score {
+      width: 38px !important;
+      height: 38px !important;
+      font-size: 15px !important;
+    }
+
+    .divider {
+      margin: 11px 0 !important;
+    }
+
+    .market-row {
+      grid-template-columns: 118px 1fr 40px !important;
+      gap: 8px !important;
+      margin: 9px 0 !important;
+    }
+
+    .market-label,
+    .pct {
+      font-size: 11px !important;
+    }
+
+    .analysis-btn {
+      margin-top: 12px !important;
+      padding: 10px !important;
+      font-size: 12px !important;
+    }
+
+    .bottom-grid {
+      grid-template-columns: minmax(0, 1.65fr) minmax(300px, .95fr) !important;
+      gap: 12px !important;
+    }
+
+    table {
+      font-size: 12px !important;
+      min-width: 720px !important;
+    }
+
+    th,
+    td {
+      padding: 10px 8px !important;
+    }
+
+    .watch-item,
+    .alert-item {
+      padding: 9px 0 !important;
+      font-size: 12px !important;
+    }
+
+    .watch-item {
+      grid-template-columns: 22px minmax(0, 1fr) 86px 20px !important;
+    }
+
+    .alert-item {
+      grid-template-columns: 12px minmax(0, 1fr) 48px 58px !important;
+    }
+
+    .badge {
+      font-size: 10px !important;
+      padding: 4px 8px !important;
+    }
+
+    .muted {
+      font-size: 10px !important;
+    }
+
+    .analysis-header-grid {
+      grid-template-columns: minmax(0, 1fr) 170px !important;
+      gap: 12px !important;
+      margin-bottom: 12px !important;
+    }
+
+    .match-main-card,
+    .confidence-card,
+    .analysis-card {
+      padding: 14px !important;
+      border-radius: 16px !important;
+    }
+
+    .match-hero {
+      gap: 14px !important;
+    }
+
+    .club-logo {
+      width: 52px !important;
+      height: 52px !important;
+      font-size: 19px !important;
+    }
+
+    .team-name {
+      font-size: 18px !important;
+    }
+
+    .vs-big {
+      font-size: 22px !important;
+    }
+
+    .match-meta {
+      gap: 14px !important;
+      margin-top: 12px !important;
+      padding-top: 10px !important;
+    }
+
+    .meta-item {
+      font-size: 12px !important;
+    }
+
+    .confidence-card small {
+      font-size: 13px !important;
+      margin-bottom: 10px !important;
+    }
+
+    .confidence-big {
+      font-size: 24px !important;
+      margin-bottom: 10px !important;
+    }
+
+    .analysis-layout {
+      grid-template-columns: minmax(0, 1fr) 255px !important;
+      gap: 12px !important;
+    }
+
+    .analysis-card h3 {
+      font-size: 18px !important;
+      margin-bottom: 14px !important;
+    }
+
+    .winner-row {
+      grid-template-columns: 32px minmax(110px, 1fr) minmax(150px, 360px) 42px !important;
+      gap: 10px !important;
+      padding: 12px 0 !important;
+    }
+
+    .winner-label,
+    .winner-value {
+      font-size: 14px !important;
+    }
+
+    .winner-section + .winner-section {
+      margin-top: 20px !important;
+      padding-top: 20px !important;
+    }
+
+    .quick-mini,
+    .ai-guide,
+    .impact-card,
+    .insight-card,
+    .insight-final {
+      padding: 12px !important;
+    }
+
+    .quick-mini strong,
+    .insight-head h4 {
+      font-size: 13px !important;
+    }
+
+    .insight-card p,
+    .panel-text {
+      font-size: 12px !important;
+    }
+
+    .footer-note {
+      padding: 11px 12px !important;
+      font-size: 11px !important;
+    }
+
+    @media (max-width: 1180px) {
+      .topbar {
+        grid-template-columns: 1fr 1fr !important;
+      }
+
+      .title-block {
+        grid-column: 1 / -1 !important;
+      }
+
+      .kpis {
+        grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+      }
+
+      .bottom-grid,
+      .analysis-header-grid,
+      .analysis-layout {
+        grid-template-columns: 1fr !important;
+      }
+
+      .right-stack {
+        display: grid !important;
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+        gap: 12px !important;
+      }
+    }
+
+    @media (max-width: 920px) {
+      .sidebar {
+        position: static !important;
+        width: 100% !important;
+        height: auto !important;
+      }
+
+      .nav {
+        display: grid !important;
+        grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+        overflow: visible !important;
+      }
+
+      .app-main {
+        margin-left: 0 !important;
+        width: 100% !important;
+      }
+
+      .topbar,
+      .kpis,
+      .match-grid,
+      .simple-grid,
+      .plans-grid,
+      .right-stack,
+      .insight-grid,
+      .impact-summary,
+      .sensor-row {
+        grid-template-columns: 1fr !important;
+      }
+
+      .winner-row {
+        grid-template-columns: 30px minmax(0, 1fr) !important;
+      }
+
+      .winner-track,
+      .winner-value {
+        grid-column: 1 / -1 !important;
+      }
+    }
+
+  
+    /* =====================================================
+       V3.3 — PÁGINA INICIAL NO MODELO DA V1
+       Aplicado somente nas páginas públicas:
+       Landing, Login e Planos públicos.
+       Mantém o app interno/análises como estava.
+    ===================================================== */
+
+    #landingPage,
+    #loginPage,
+    #plansPublic {
+      background:
+        radial-gradient(circle at top left, rgba(0, 174, 255, .12), transparent 30%),
+        radial-gradient(circle at top right, rgba(0, 110, 255, .08), transparent 28%),
+        #050b12 !important;
+      color: #f5f9ff !important;
+    }
+
+    #landingPage .logo-mark,
+    #loginPage .logo-mark,
+    #plansPublic .logo-mark {
+      background: linear-gradient(135deg, #1da8ff, #006cff) !important;
+      color: #ffffff !important;
+      box-shadow: 0 0 30px rgba(0, 160, 255, .26) !important;
+    }
+
+    #landingPage .logo-title,
+    #loginPage .logo-title,
+    #plansPublic .logo-title {
+      color: #ffffff !important;
+    }
+
+    #landingPage .logo-sub,
+    #loginPage .logo-sub,
+    #plansPublic .logo-sub {
+      color: #9fb6cc !important;
+    }
+
+    #landingPage .btn-primary,
+    #loginPage .btn-primary,
+    #plansPublic .btn-primary {
+      background: linear-gradient(135deg, #006cff, #18baff) !important;
+      color: #ffffff !important;
+      box-shadow: 0 0 28px rgba(0, 160, 255, .22) !important;
+    }
+
+    #landingPage .btn-secondary,
+    #loginPage .btn-secondary,
+    #plansPublic .btn-secondary {
+      background: rgba(6, 14, 24, .82) !important;
+      border: 1px solid rgba(77, 164, 255, .24) !important;
+      color: #dcecff !important;
+    }
+
+    #landingPage .hero h1 span {
+      color: #19baff !important;
+      text-shadow: 0 0 35px rgba(0, 183, 255, .24) !important;
+    }
+
+    #landingPage .hero p {
+      color: #c1d4e8 !important;
+    }
+
+    #landingPage .hero-badge {
+      background: rgba(6, 14, 24, .82) !important;
+      border: 1px solid rgba(77, 164, 255, .24) !important;
+      color: #dcecff !important;
+    }
+
+    #landingPage .mock {
+      background: linear-gradient(180deg, rgba(8, 20, 34, .96), rgba(4, 8, 15, .98)) !important;
+      border: 1px solid rgba(0, 183, 255, .22) !important;
+      box-shadow: 0 35px 95px rgba(0, 0, 0, .44), 0 0 42px rgba(0, 150, 255, .08) !important;
+    }
+
+    #landingPage .mock-box,
+    #landingPage .mock-match {
+      background: rgba(5, 10, 18, .78) !important;
+      border: 1px solid rgba(130, 170, 220, .16) !important;
+    }
+
+    #landingPage .mock-box small,
+    #landingPage .mock-match-head {
+      color: #8fa4b8 !important;
+    }
+
+    #landingPage .public-cards .card,
+    #plansPublic .plan-card,
+    #loginPage .login-card {
+      background: linear-gradient(180deg, rgba(8, 18, 31, .95), rgba(5, 10, 18, .98)) !important;
+      border: 1px solid rgba(77, 164, 255, .20) !important;
+      box-shadow: 0 18px 55px rgba(0, 0, 0, .38) !important;
+    }
+
+    #landingPage .card .icon {
+      background: rgba(0, 150, 255, .14) !important;
+      color: #19baff !important;
+    }
+
+    #landingPage .card p,
+    #plansPublic .panel-text,
+    #loginPage .login-card p {
+      color: #9fb6cc !important;
+    }
+
+    #loginPage .field input,
+    #plansPublic .field input,
+    #plansPublic .field select {
+      background: rgba(5, 10, 18, .86) !important;
+      border: 1px solid rgba(77, 164, 255, .22) !important;
+      color: #ffffff !important;
+    }
+
+    #loginPage .login-links {
+      color: #8fcaff !important;
+    }
+
+    #plansPublic .plan-card.featured {
+      border-color: rgba(0, 183, 255, .42) !important;
+      box-shadow: 0 0 55px rgba(0, 183, 255, .12) !important;
+    }
+
+    #landingPage .badge.blue,
+    #plansPublic .badge.blue {
+      background: #18baff !important;
+      color: #04111f !important;
+    }
+
+  
+    /* =====================================================
+       V3.4 — TEMA ÚNICO AZUL EM TODO O SITE
+       Correção:
+       - Remove mistura visual azul + verde.
+       - Landing, dashboard, análise, scanner, planos e admin
+         passam a usar a mesma identidade dark/azul da V1.
+    ===================================================== */
+
+    :root {
+      --bg: #050b12 !important;
+      --bg2: #071421 !important;
+      --panel: rgba(8, 18, 31, 0.94) !important;
+      --panel2: rgba(9, 22, 38, 0.98) !important;
+      --line: rgba(77, 164, 255, 0.22) !important;
+      --line2: rgba(77, 164, 255, 0.13) !important;
+      --text: #f5f9ff !important;
+      --muted: #9fb6cc !important;
+      --green: #18baff !important;
+      --green-2: #74d6ff !important;
+      --pill: #18baff !important;
+      --yellow: #f0c71d !important;
+      --red: #ff4d5f !important;
+      --red2: #ff7180 !important;
+    }
+
+    body {
+      background:
+        radial-gradient(circle at top left, rgba(0, 174, 255, .12), transparent 30%),
+        radial-gradient(circle at top right, rgba(0, 110, 255, .08), transparent 28%),
+        #050b12 !important;
+      color: #f5f9ff !important;
+    }
+
+    .public-page,
+    .dashboard-shell,
+    .app-main {
+      background:
+        radial-gradient(circle at top right, rgba(0, 174, 255, .055), transparent 30%),
+        radial-gradient(circle at top left, rgba(0, 110, 255, .045), transparent 28%),
+        #050b12 !important;
+    }
+
+    .sidebar {
+      background: linear-gradient(180deg, #071421, #050b12) !important;
+      border-right: 1px solid rgba(77, 164, 255, .20) !important;
+    }
+
+    .logo-mark,
+    .sidebar .logo-mark,
+    #landingPage .logo-mark,
+    #loginPage .logo-mark,
+    #plansPublic .logo-mark {
+      background: linear-gradient(135deg, #1da8ff, #006cff) !important;
+      color: #ffffff !important;
+      box-shadow: 0 0 30px rgba(0, 160, 255, .26) !important;
+    }
+
+    .logo-sub,
+    .muted,
+    .panel-text,
+    .title-block p,
+    .meta-item,
+    .match-header,
+    .metric-label,
+    .winner-head span,
+    .quick-mini .muted,
+    .sensor-box span,
+    .impact-top small {
+      color: #9fb6cc !important;
+    }
+
+    .nav-item {
+      color: #dcecff !important;
+    }
+
+    .nav-item:hover {
+      background: rgba(0, 150, 255, .07) !important;
+      color: #ffffff !important;
+    }
+
+    .nav-item.active {
+      background: linear-gradient(90deg, rgba(0, 125, 255, .24), rgba(0, 183, 255, .10)) !important;
+      border-color: rgba(0, 183, 255, .30) !important;
+      color: #38c3ff !important;
+      box-shadow: 0 0 24px rgba(0, 183, 255, .08) !important;
+    }
+
+    .profile-mini,
+    .search-box,
+    .date-box,
+    .bell-box,
+    .profile-box,
+    .field input,
+    .field select,
+    .analysis-select {
+      background: rgba(5, 10, 18, .84) !important;
+      border-color: rgba(77, 164, 255, .22) !important;
+      color: #ffffff !important;
+    }
+
+    .section,
+    .metric-card,
+    .match-card,
+    .plan-card,
+    .match-main-card,
+    .confidence-card,
+    .analysis-card,
+    .quick-mini,
+    .insight-card,
+    .impact-card,
+    .ai-guide,
+    .sensor-box,
+    .mock,
+    .mock-box,
+    .mock-match,
+    .card,
+    .login-card {
+      background: linear-gradient(180deg, rgba(8, 18, 31, .95), rgba(5, 10, 18, .98)) !important;
+      border-color: rgba(77, 164, 255, .18) !important;
+      box-shadow: 0 18px 55px rgba(0, 0, 0, .38) !important;
+    }
+
+    .metric-icon,
+    .card .icon,
+    .club-logo,
+    .impact-logo {
+      background: rgba(0, 150, 255, .14) !important;
+      border-color: rgba(0, 183, 255, .22) !important;
+      color: #19baff !important;
+    }
+
+    .btn-primary,
+    #landingPage .btn-primary,
+    #loginPage .btn-primary,
+    #plansPublic .btn-primary {
+      background: linear-gradient(135deg, #006cff, #18baff) !important;
+      color: #ffffff !important;
+      box-shadow: 0 0 28px rgba(0, 160, 255, .22) !important;
+    }
+
+    .btn-secondary,
+    #landingPage .btn-secondary,
+    #loginPage .btn-secondary,
+    #plansPublic .btn-secondary {
+      background: rgba(6, 14, 24, .82) !important;
+      border: 1px solid rgba(77, 164, 255, .24) !important;
+      color: #dcecff !important;
+    }
+
+    .chip,
+    .analysis-tab,
+    .hero-badge {
+      background: rgba(6, 14, 24, .82) !important;
+      border: 1px solid rgba(77, 164, 255, .22) !important;
+      color: #dcecff !important;
+    }
+
+    .chip.active,
+    .analysis-tab.active {
+      background: linear-gradient(135deg, #006cff, #18baff) !important;
+      color: #ffffff !important;
+      border-color: transparent !important;
+      box-shadow: 0 0 22px rgba(0, 160, 255, .18) !important;
+    }
+
+    .green-text,
+    .blue-text,
+    .see-all,
+    .logo-title,
+    .confidence span,
+    .winner-index.highlight,
+    .winner-label.highlight,
+    .winner-value.green,
+    .vs,
+    .vs-big,
+    .confidence-big,
+    .login-links,
+    #landingPage .hero h1 span {
+      color: #18baff !important;
+    }
+
+    .score {
+      border-color: #18baff !important;
+      color: #74d6ff !important;
+      box-shadow: 0 0 20px rgba(0, 183, 255, .13) !important;
+    }
+
+    .analysis-btn,
+    .plan-btn {
+      background: rgba(0, 150, 255, .12) !important;
+      border-color: rgba(0, 150, 255, .24) !important;
+      color: #74d6ff !important;
+    }
+
+    .bar-bg,
+    .winner-track {
+      background: rgba(130, 170, 220, .16) !important;
+    }
+
+    .badge.green,
+    .badge.blue,
+    .game-pill.green {
+      background: #18baff !important;
+      color: #04111f !important;
+    }
+
+    .badge.yellow,
+    .game-pill.yellow {
+      background: #f0c71d !important;
+      color: #2b1f00 !important;
+    }
+
+    .badge.red,
+    .game-pill.red {
+      background: #ff4d5f !important;
+      color: #ffffff !important;
+    }
+
+    .dot.green,
+    .dot.blue {
+      background: #18baff !important;
+    }
+
+    .footer-note,
+    .insight-final {
+      background: rgba(0, 150, 255, .08) !important;
+      border-color: rgba(0, 150, 255, .24) !important;
+      color: #dcecff !important;
+    }
+
+    .ai-guide {
+      background: rgba(0, 150, 255, .07) !important;
+      border-color: rgba(0, 150, 255, .28) !important;
+    }
+
+    .ai-guide h4,
+    .ai-close {
+      color: #dcecff !important;
+    }
+
+    .ai-guide li::marker {
+      color: #18baff !important;
+    }
+
+    .impact-track {
+      background: linear-gradient(90deg, rgba(255, 77, 95, .85), rgba(240, 199, 29, .85), rgba(24, 186, 255, .85)) !important;
+    }
+
+    .impact-knob {
+      border-color: rgba(24, 186, 255, .92) !important;
+      box-shadow: 0 0 18px rgba(0, 183, 255, .35) !important;
+    }
+
+    .plan-card.featured,
+    #plansPublic .plan-card.featured {
+      border-color: rgba(0, 183, 255, .42) !important;
+      box-shadow: 0 0 55px rgba(0, 183, 255, .12) !important;
+    }
+
+    th {
+      color: #9fb6cc !important;
+      border-bottom-color: rgba(77, 164, 255, .18) !important;
+    }
+
+    td,
+    .winner-row,
+    .watch-item,
+    .alert-item,
+    .divider,
+    .match-meta {
+      border-color: rgba(77, 164, 255, .11) !important;
+    }
+
+    .market-label,
+    .winner-label,
+    .team-name,
+    .section-title,
+    .title-block h2,
+    .mock-teams,
+    .hero h1,
+    .feature-card h3,
+    .login-card h2 {
+      color: #f5f9ff !important;
+    }
+
+  
+    /* =====================================================
+       V5 — CSV REAL FUNCIONAL
+       Ajustes visuais para data, carregamento e telas sem dados.
+    ===================================================== */
+
+    .date-box input {
+      width: 100%;
+      background: transparent;
+      border: 0;
+      outline: 0;
+      color: inherit;
+      font-weight: 900;
+      font-size: 13px;
+      color-scheme: dark;
+    }
+
+    .data-banner {
+      background: rgba(0, 150, 255, .08);
+      border: 1px solid rgba(0, 150, 255, .24);
+      border-radius: 14px;
+      padding: 12px 14px;
+      margin-bottom: 12px;
+      color: #dcecff;
+      font-size: 13px;
+      line-height: 1.5;
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .data-banner.error {
+      background: rgba(255, 77, 95, .08);
+      border-color: rgba(255, 77, 95, .28);
+      color: #ffd6dc;
+    }
+
+    .empty-state {
+      border: 1px dashed rgba(77, 164, 255, .28);
+      background: rgba(6, 14, 24, .58);
+      border-radius: 16px;
+      padding: 20px;
+      color: #9fb6cc;
+      font-size: 14px;
+      line-height: 1.6;
+    }
+
+    .loading-state {
+      border: 1px solid rgba(77, 164, 255, .20);
+      background: rgba(6, 14, 24, .78);
+      border-radius: 16px;
+      padding: 18px;
+      color: #dcecff;
+      font-weight: 850;
+    }
+
+    .csv-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      border-radius: 999px;
+      padding: 5px 10px;
+      background: rgba(0, 150, 255, .10);
+      border: 1px solid rgba(0, 150, 255, .22);
+      color: #74d6ff;
+      font-weight: 900;
+      font-size: 12px;
+    }
+
+  </style>
+</head>
+<body>
+
+  <!-- LANDING -->
+  <section id="landingPage" class="public-page active">
+    <header class="public-header">
+      <div class="logo" onclick="showPublic('landingPage')">
+        <div class="logo-mark">J</div>
+        <div>
+          <div class="logo-title">JTIPS Analytics</div>
+          <span class="logo-sub">Football Intelligence Platform</span>
+        </div>
+      </div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
+        <button class="btn btn-secondary" onclick="showPublic('loginPage')">Entrar</button>
+        <button class="btn btn-primary" onclick="showPublic('loginPage')">Criar conta</button>
+      </div>
+    </header>
+
+    <div class="hero">
+      <div>
+        <h1>Análise estatística para futebol <span>pré-jogo e ao vivo.</span></h1>
+        <p>Plataforma premium com dashboard, scanner de oportunidades e análise completa por jogo nas abas de ganhador, gols, escanteios, cartões, finalizações e chutes a gol.</p>
+
+        <div class="hero-badges">
+          <div class="hero-badge">CSV no GitHub</div>
+          <div class="hero-badge">Assinatura</div>
+          <div class="hero-badge">Sem odds reais na V1</div>
+          <div class="hero-badge">Pré-jogo + ao vivo preparado</div>
+        </div>
+
+        <div class="hero-actions">
+          <button class="btn btn-primary" onclick="showPublic('loginPage')">Acessar protótipo</button>
+          <button class="btn btn-secondary" onclick="showPublic('plansPublic')">Ver planos</button>
+        </div>
+      </div>
+
+      <div class="mock">
+        <div class="mock-head">
+          <strong>Dashboard do dia</strong>
+          <span class="badge blue">Online</span>
+        </div>
+        <div class="mock-grid">
+          <div class="mock-box">
+            <small>Jogos monitorados</small>
+            <div>128</div>
+          </div>
+          <div class="mock-box">
+            <small>Oportunidades</small>
+            <div>42</div>
+          </div>
+          <div class="mock-match">
+            <div class="mock-match-head">
+              <span>Brasileirão</span>
+              <span>Hoje • 21:30</span>
+            </div>
+            <div class="mock-teams">Palmeiras vs Flamengo</div>
+            <div class="mini-row">
+              <span>Gols Over 1.5</span>
+              <div class="bar-bg"><div class="bar" style="width:82%;background:var(--green)"></div></div>
+              <b style="color:var(--green)">82%</b>
+            </div>
+            <div class="mini-row">
+              <span>Escanteios 8.5</span>
+              <div class="bar-bg"><div class="bar" style="width:74%;background:var(--green)"></div></div>
+              <b style="color:var(--green)">74%</b>
+            </div>
+            <div class="mini-row">
+              <span>Chutes a gol</span>
+              <div class="bar-bg"><div class="bar" style="width:69%;background:var(--yellow)"></div></div>
+              <b style="color:var(--yellow)">69%</b>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="public-cards">
+      <div class="card">
+        <div class="icon">🔍</div>
+        <h3>Scanner de oportunidades</h3>
+        <p>Filtre por mercado, liga, risco e probabilidade para localizar oportunidades rapidamente.</p>
+      </div>
+      <div class="card">
+        <div class="icon">📊</div>
+        <h3>Análise completa do jogo</h3>
+        <p>Cada mercado fica em sua própria aba, com leitura organizada e visual profissional.</p>
+      </div>
+      <div class="card">
+        <div class="icon">⚙️</div>
+        <h3>Começo com CSV</h3>
+        <p>Estrutura pronta para a V1 com CSV e preparada para API e login real nas próximas etapas.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- LOGIN -->
+  <section id="loginPage" class="public-page">
+    <header class="public-header">
+      <div class="logo" onclick="showPublic('landingPage')">
+        <div class="logo-mark">J</div>
+        <div>
+          <div class="logo-title">JTIPS Analytics</div>
+          <span class="logo-sub">Football Intelligence Platform</span>
+        </div>
+      </div>
+      <button class="btn btn-secondary" onclick="showPublic('landingPage')">Voltar</button>
+    </header>
+
+    <div class="login-card">
+      <h2>Entrar na plataforma</h2>
+      <p>Login visual de teste. Nesta versão HTML, qualquer e-mail e senha entram no dashboard.</p>
+      <div class="field">
+        <label>E-mail</label>
+        <input type="email" placeholder="seuemail@email.com">
+      </div>
+      <div class="field">
+        <label>Senha</label>
+        <input type="password" placeholder="Digite sua senha">
+      </div>
+      <button class="btn btn-primary full-btn" onclick="login()">Entrar</button>
+      <div class="login-links">
+        <span onclick="alert('Cadastro real será conectado futuramente.')">Criar conta</span>
+        <span onclick="alert('Recuperação de senha será conectada futuramente.')">Esqueci minha senha</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- PUBLIC PLANS -->
+  <section id="plansPublic" class="public-page">
+    <header class="public-header">
+      <div class="logo" onclick="showPublic('landingPage')">
+        <div class="logo-mark">J</div>
+        <div>
+          <div class="logo-title">JTIPS Analytics</div>
+          <span class="logo-sub">Football Intelligence Platform</span>
+        </div>
+      </div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
+        <button class="btn btn-secondary" onclick="showPublic('landingPage')">Voltar</button>
+        <button class="btn btn-primary" onclick="showPublic('loginPage')">Entrar</button>
+      </div>
+    </header>
+
+    <div style="width:min(1180px,100%);margin:44px auto 0;">
+      <div class="section-head">
+        <div>
+          <div class="section-title">💳 Planos</div>
+          <p class="panel-text">Estrutura inicial de planos para venda de assinatura. Valores fictícios.</p>
+        </div>
+      </div>
+      <div id="publicPlansGrid" class="plans-grid"></div>
+    </div>
+  </section>
+
+  <!-- DASHBOARD -->
+  <section id="dashboardShell" class="dashboard-shell">
+    <aside class="sidebar">
+      <div class="logo" onclick="goAppPage('dashboard')">
+        <div class="logo-mark">J</div>
+        <div>
+          <div class="logo-title">JTIPS Analytics</div>
+          <span class="logo-sub">Football Intelligence</span>
+        </div>
+      </div>
+
+      <nav class="nav">
+        <div class="nav-item active" data-page="dashboard">🏠 Dashboard</div>
+        <div class="nav-item" data-page="analysis">📊 Análises</div>
+        <div class="nav-item" data-page="matchCenter">⚽ Jogos</div>
+        <div class="nav-item" data-page="markets">📈 Mercados</div>
+        <div class="nav-item" data-page="scanner">🔍 Scanner</div>
+        <div class="nav-item" data-page="liveCenter">🔴 Ao Vivo</div>
+        <div class="nav-item" data-page="favorites">⭐ Favoritos</div>
+        <div class="nav-item" data-page="history">🕘 Histórico</div>
+        <div class="nav-item" data-page="plans">💳 Planos</div>
+        <div class="nav-item" data-page="admin">⚙️ Configurações</div>
+      </nav>
+
+      <div class="side-bottom">
+        <div class="profile-mini">
+          <strong>Pro Trader</strong>
+          <small>Plano Pro</small>
+        </div>
+        <div class="logout-mini" onclick="logout()">↩ Sair</div>
+      </div>
+    </aside>
+
+    <main class="app-main">
+      <header class="topbar">
+        <div class="title-block">
+          <h2 id="appTitle">Dashboard</h2>
+          <p id="appSubtitle">Visão geral dos jogos, mercados e alertas do dia</p>
+        </div>
+
+        <div class="search-box">
+          🔍
+          <input id="searchInput" type="text" placeholder="Buscar ligas, times, mercados...">
+        </div>
+
+        <div class="date-box">📅 <input id="datePicker" type="date" value="2026-05-26" aria-label="Selecionar data"></div>
+
+        <div class="bell-box">🔔 <span>3</span></div>
+
+        <div class="profile-box">
+          <div class="avatar"></div>
+          <div class="profile-text">
+            <strong>Jonathan</strong>
+            <small>Pro</small>
+          </div>
+        </div>
+      </header>
+
+      <!-- DASHBOARD -->
+      <section id="dashboard" class="app-page active">
+        <div class="kpis">
+          <div class="metric-card">
+            <div class="metric-content">
+              <div class="metric-icon">⚽</div>
+              <div>
+                <div class="metric-label">Jogos monitorados</div>
+                <div class="metric-value">128</div>
+                <div class="delta green-text">CSV carregado</div>
+              </div>
+            </div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-content">
+              <div class="metric-icon">🔴</div>
+              <div>
+                <div class="metric-label">Jogos ao vivo</div>
+                <div class="metric-value">14</div>
+                <div class="delta red-text">Live preparado</div>
+              </div>
+            </div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-content">
+              <div class="metric-icon">🎯</div>
+              <div>
+                <div class="metric-label">Oportunidades</div>
+                <div class="metric-value">42</div>
+                <div class="delta green-text">Mercados fortes</div>
+              </div>
+            </div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-content">
+              <div class="metric-icon">🔔</div>
+              <div>
+                <div class="metric-label">Alertas</div>
+                <div class="metric-value">18</div>
+                <div class="delta yellow-text">Atualizações</div>
+              </div>
+            </div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-content">
+              <div class="metric-icon">🧱</div>
+              <div>
+                <div class="metric-label">Dados incompletos</div>
+                <div class="metric-value">7</div>
+                <div class="delta red-text">Revisar CSV</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="section-head">
+            <div class="section-title">⭐ Partidas em destaque</div>
+            <div class="filters">
+              <div class="chip active">Pré-jogo</div>
+              <div class="chip">Ao vivo 🔴</div>
+              <div class="chip">Hoje</div>
+              <div class="chip">Top ligas ▾</div>
+            </div>
+            <div class="see-all" onclick="goAppPage('matchCenter')">Ver todas →</div>
+          </div>
+          <div id="featuredGrid" class="match-grid"></div>
+        </div>
+
+        <div class="bottom-grid">
+          <div class="section">
+            <div class="section-head">
+              <div class="section-title">◎ Scanner de oportunidades</div>
+              <button class="btn btn-primary" onclick="goAppPage('scanner')">Ver scanner</button>
+            </div>
+            <div id="scannerTable"></div>
+          </div>
+
+          <div class="right-stack">
+            <div class="section">
+              <div class="section-head">
+                <div class="section-title">⭐ Watchlist</div>
+                <div class="see-all" onclick="goAppPage('favorites')">Ver todas →</div>
+              </div>
+              <div id="watchlist"></div>
+            </div>
+
+            <div class="section">
+              <div class="section-head">
+                <div class="section-title">⚡ Alertas rápidos</div>
+              </div>
+              <div id="alerts"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ANALYSIS -->
+      <section id="analysis" class="app-page">
+        <div class="analysis-topbar" onclick="goAppPage('dashboard')">← Voltar</div>
+
+        <div class="analysis-header-grid">
+          <div class="match-main-card">
+            <div class="match-hero" id="analysisHeaderCard"></div>
+          </div>
+
+          <div class="confidence-card">
+            <small>Confiança Geral</small>
+            <div class="confidence-big">🛡 <span id="analysisScoreBig">78%</span></div>
+            <span class="badge blue" id="analysisConfidenceLabel">Alta</span>
+          </div>
+        </div>
+
+        <div class="analysis-tabs" id="analysisTabs"></div>
+
+        <div class="analysis-filter-row">
+          <select class="analysis-select">
+            <option>Jogo Inteiro</option>
+            <option>1º Tempo</option>
+            <option>2º Tempo</option>
+          </select>
+        </div>
+
+        <div class="analysis-layout">
+          <div>
+            <div class="analysis-card" id="analysisMainContent"></div>
+            <div class="footer-note">
+              <span>ⓘ Probabilidades calculadas com base em modelos estatísticos, desempenho recente e condições do jogo.</span>
+              <span>Última atualização: 25/05/2025 09:15</span>
+            </div>
+          </div>
+
+          <div class="right-stack">
+            <div class="section">
+              <div class="section-title">Resumo rápido</div>
+              <div class="quick-box" id="quickSummary"></div>
+            </div>
+
+            <div class="section">
+              <div class="section-title">Observação</div>
+              <p class="panel-text">Nesta V1, a leitura é estatística e ainda não utiliza odds reais. O próximo passo é conectar os CSVs do GitHub.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- MATCH CENTER -->
+      <section id="matchCenter" class="app-page">
+        <div class="section">
+          <div class="section-head">
+            <div>
+              <div class="section-title">⚽ Jogos</div>
+              <p class="panel-text">Lista completa das partidas monitoradas.</p>
+            </div>
+          </div>
+
+          <div class="filters" style="margin-bottom:16px">
+            <div class="chip active">Todos</div>
+            <div class="chip">Pré-jogo</div>
+            <div class="chip">Ao vivo</div>
+            <div class="chip">Ganhador</div>
+            <div class="chip">Gols</div>
+            <div class="chip">Escanteios</div>
+            <div class="chip">Cartões</div>
+            <div class="chip">Finalizações</div>
+            <div class="chip">Chutes a gol</div>
+          </div>
+
+          <div id="allMatches" class="simple-grid"></div>
+        </div>
+      </section>
+
+      <!-- MARKETS -->
+      <section id="markets" class="app-page">
+        <div class="section">
+          <div class="section-title">📈 Mercados</div>
+          <p class="panel-text">Resumo de força média dos mercados principais do JTIPS Analytics.</p>
+
+          <div class="simple-grid" style="margin-top:18px;">
+            <div class="metric-card">
+              <div class="metric-label">Média Gols Over 1.5</div>
+              <div class="metric-value" id="avgOver15">0%</div>
+              <div class="delta green-text">Mercado de gols</div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-label">Média Escanteios</div>
+              <div class="metric-value" id="avgCorners">0%</div>
+              <div class="delta yellow-text">Linha 8.5 / 9.5</div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-label">Média Chutes a gol</div>
+              <div class="metric-value" id="avgShotsTarget">0%</div>
+              <div class="delta blue-text">Mercado ofensivo</div>
+            </div>
+          </div>
+
+          <div class="section" style="margin-top:18px;background:rgba(5,17,13,.45);">
+            <div class="section-title">Força média por mercado</div>
+            <div id="marketBars" style="margin-top:14px;"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- SCANNER -->
+      <section id="scanner" class="app-page">
+        <div class="section">
+          <div class="section-head">
+            <div>
+              <div class="section-title">🔍 Scanner</div>
+              <p class="panel-text">Radar de mercados com maior força estatística.</p>
+            </div>
+          </div>
+
+          <div class="filters" style="margin-bottom:16px">
+            <div class="chip active">Todos mercados</div>
+            <div class="chip">Ganhador</div>
+            <div class="chip">Gols</div>
+            <div class="chip">Escanteios</div>
+            <div class="chip">Cartões</div>
+            <div class="chip">Finalizações</div>
+            <div class="chip">Chutes a gol</div>
+            <div class="chip">Prob. 70%+</div>
+          </div>
+
+          <div id="scannerTableFull"></div>
+        </div>
+      </section>
+
+      <!-- LIVE -->
+      <section id="liveCenter" class="app-page">
+        <div class="section">
+          <div class="section-head">
+            <div>
+              <div class="section-title">🔴 Ao Vivo</div>
+              <p class="panel-text">Tela preparada para dados ao vivo. Os dados abaixo são fictícios.</p>
+            </div>
+            <span class="badge red">Live API futura</span>
+          </div>
+          <div id="liveMatches" class="simple-grid"></div>
+        </div>
+      </section>
+
+      <!-- FAVORITES -->
+      <section id="favorites" class="app-page">
+        <div class="section">
+          <div class="section-title">⭐ Favoritos</div>
+          <p class="panel-text">Lista simulada de jogos salvos pelo usuário.</p>
+          <div id="favoritesList" style="margin-top:14px;"></div>
+        </div>
+      </section>
+
+      <!-- HISTORY -->
+      <section id="history" class="app-page">
+        <div class="section">
+          <div class="section-title">🕘 Histórico</div>
+          <p class="panel-text">Histórico fictício para demonstrar resultados e análises anteriores.</p>
+          <div class="table-wrap" style="margin-top:16px">
+            <table>
+              <thead>
+                <tr>
+                  <th>Data</th>
+                  <th>Jogo</th>
+                  <th>Mercado</th>
+                  <th>Probabilidade</th>
+                  <th>Resultado</th>
+                </tr>
+              </thead>
+              <tbody id="historyRows"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- PLANS -->
+      <section id="plans" class="app-page">
+        <div class="section">
+          <div class="section-head">
+            <div>
+              <div class="section-title">💳 Planos</div>
+              <p class="panel-text">Estrutura inicial de assinatura. Valores fictícios.</p>
+            </div>
+          </div>
+          <div id="plansGrid" class="plans-grid"></div>
+        </div>
+      </section>
+
+      <!-- ADMIN -->
+      <section id="admin" class="app-page">
+        <div class="section">
+          <div class="section-title">⚙️ Configurações</div>
+          <p class="panel-text">Área administrativa simulada. Depois será conectada ao CSV do GitHub e autenticação real.</p>
+          <div class="form-grid">
+            <div class="field">
+              <label>URL do CSV no GitHub</label>
+              <input value="https://raw.githubusercontent.com/seu-usuario/seu-repo/main/jogos.csv">
+            </div>
+            <div class="field">
+              <label>Status da importação</label>
+              <select>
+                <option>Dados fictícios carregados</option>
+                <option>Aguardando CSV</option>
+                <option>Erro de estrutura</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>Fonte atual</label>
+              <input value="CSV GitHub">
+            </div>
+            <div class="field">
+              <label>Odds reais</label>
+              <input value="Desativado na V1">
+            </div>
+          </div>
+
+          <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:18px">
+            <button class="btn btn-primary">Atualizar dados</button>
+            <button class="btn btn-secondary">Validar estrutura</button>
+            <button class="btn btn-secondary">Limpar cache</button>
+          </div>
+        </div>
+      </section>
+    </main>
+  </section>
+
+  <script>
+    const CSV_BASE_PATH = "data/";
+    const DEFAULT_DATE = "2026-05-26";
+    const AVAILABLE_CSV_DATES = ["2026-05-26"];
+
+    const plans = [
+      {
+        name: "Free",
+        price: "R$0",
+        subtitle: "Para testar a plataforma",
+        features: ["Acesso limitado", "Alguns jogos por dia", "Dashboard básico", "Sem scanner avançado"],
+        featured: false
+      },
+      {
+        name: "Pro",
+        price: "R$39,90",
+        subtitle: "Para uso diário",
+        features: ["Todos os jogos", "Scanner completo", "Análise completa por jogo", "Favoritos e histórico"],
+        featured: true
+      },
+      {
+        name: "Premium",
+        price: "R$79,90",
+        subtitle: "Para uso avançado",
+        features: ["Pré-jogo + ao vivo", "Alertas avançados", "Filtros premium", "Histórico completo"],
+        featured: false
+      }
+    ];
+
+    const analysisTabs = [
+      { key: "winners", label: "Vencedores" },
+      { key: "goals", label: "Gols" },
+      { key: "corners", label: "Escanteios" },
+      { key: "cards", label: "Cartões" },
+      { key: "finishes", label: "Finalizações" },
+      { key: "shots", label: "Chutes a gol" },
+      { key: "insights", label: "Insights IA" }
+    ];
+
+    let matches = [];
+    let selectedMatch = null;
+    let selectedAnalysisTab = "winners";
+    let currentCsvFile = "";
+    let currentDate = DEFAULT_DATE;
+    let lastLoadError = "";
+
+    function pctColor(pct){
+      if(pct === null || pct === undefined || Number.isNaN(pct)) return "rgba(130,170,220,.35)";
+      if(pct >= 70) return "var(--green)";
+      if(pct >= 55) return "var(--yellow)";
+      return "var(--red)";
+    }
+
+    function pillClass(pct){
+      if(pct === null || pct === undefined || Number.isNaN(pct)) return "blue";
+      if(pct >= 70) return "green";
+      if(pct >= 55) return "yellow";
+      return "red";
+    }
+
+    function badgeClass(value){
+      if(["Baixo","Oportunidade","Alta","Green","CSV carregado"].includes(value)) return "green";
+      if(["Médio","Em análise","Pendente","Boa"].includes(value)) return "yellow";
+      if(["Alto","Red","Indisponível"].includes(value)) return "red";
+      return "blue";
+    }
+
+    function safeNum(value){
+      if(value === null || value === undefined) return null;
+      const cleaned = String(value).replace("%", "").replace(",", ".").trim();
+      if(cleaned === "" || cleaned.toLowerCase() === "nan") return null;
+      const n = Number(cleaned);
+      if(!Number.isFinite(n)) return null;
+      if(n === -1) return null;
+      return n;
+    }
+
+    function clamp(n, min = 0, max = 100){
+      if(n === null || n === undefined || Number.isNaN(n)) return null;
+      return Math.max(min, Math.min(max, Math.round(n)));
+    }
+
+    function pct(value){
+      const n = safeNum(value);
+      return n === null ? null : clamp(n, 0, 100);
+    }
+
+    function calcProbabilityFromAverage(avg, line, sensitivity = 1.15){
+      const n = safeNum(avg);
+      if(n === null) return null;
+      const p = 100 / (1 + Math.exp(-(n - line) * sensitivity));
+      return clamp(p);
+    }
+
+    function estimateTeamPct(gamePct, balance, side){
+      if(gamePct === null) return null;
+      const adj = side === "home" ? balance : -balance;
+      return clamp(gamePct + adj);
+    }
+
+    function formatValue(value){
+      if(value === null || value === undefined || Number.isNaN(value)) return "—";
+      return `${Math.round(value)}%`;
+    }
+
+    function dateToFile(dateStr){
+      const [yyyy, mm, dd] = dateStr.split("-");
+      return `${dd}-${mm}-${yyyy}.csv`;
+    }
+
+    function parseCSV(text){
+      const rows = [];
+      let row = [];
+      let value = "";
+      let insideQuotes = false;
+
+      for(let i = 0; i < text.length; i++){
+        const char = text[i];
+        const next = text[i + 1];
+
+        if(char === '"' && insideQuotes && next === '"'){
+          value += '"';
+          i++;
+          continue;
+        }
+
+        if(char === '"'){
+          insideQuotes = !insideQuotes;
+          continue;
+        }
+
+        if(char === "," && !insideQuotes){
+          row.push(value);
+          value = "";
+          continue;
+        }
+
+        if((char === "\n" || char === "\r") && !insideQuotes){
+          if(char === "\r" && next === "\n") i++;
+          row.push(value);
+          if(row.some(cell => String(cell).trim() !== "")) rows.push(row);
+          row = [];
+          value = "";
+          continue;
+        }
+
+        value += char;
+      }
+
+      if(value.length || row.length){
+        row.push(value);
+        if(row.some(cell => String(cell).trim() !== "")) rows.push(row);
+      }
+
+      if(!rows.length) return [];
+
+      const headers = rows[0].map(h => h.trim());
+      return rows.slice(1).map(cells => {
+        const obj = {};
+        headers.forEach((h, index) => {
+          obj[h] = cells[index] !== undefined ? cells[index].trim() : "";
+        });
+        return obj;
+      });
+    }
+
+    function statusFromCSV(raw){
+      const s = String(raw || "").toLowerCase();
+      if(s.includes("complete") || s.includes("finished") || s.includes("final")) return "Finalizado";
+      if(s.includes("live") || s.includes("progress") || s.includes("1h") || s.includes("2h")) return "Ao vivo";
+      if(s.includes("cancel") || s.includes("postponed") || s.includes("suspend") || s.includes("abandoned")) return "Cancelado";
+      return "Pré-jogo";
+    }
+
+    function formatDateTime(row){
+      const unix = safeNum(row["date_unix"]);
+      if(unix !== null){
+        const d = new Date(unix * 1000);
+        return {
+          date: d.toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" }),
+          time: d.toLocaleTimeString("pt-BR", { timeZone: "America/Sao_Paulo", hour: "2-digit", minute: "2-digit" })
+        };
+      }
+
+      const raw = row["date_GMT"] || "";
+      return { date: raw.split(" - ")[0] || currentDate, time: raw.split(" - ")[1] || "" };
+    }
+
+    function winnerAnalysis(row){
+      const homePPG = safeNum(row["Home Team Overall Points Per Game (Pre-Match)"]) ?? safeNum(row["Home Team Points Per Game (Pre-Match)"]) ?? 1;
+      const awayPPG = safeNum(row["Away Team Overall Points Per Game (Pre-Match)"]) ?? safeNum(row["Away Team Points Per Game (Pre-Match)"]) ?? 1;
+      const diff = homePPG - awayPPG;
+      const draw = clamp(28 - Math.abs(diff) * 4, 18, 32);
+      const remaining = 100 - draw;
+      const homeStrength = Math.max(0.15, homePPG + 0.2);
+      const awayStrength = Math.max(0.15, awayPPG + 0.2);
+      const home = clamp(remaining * homeStrength / (homeStrength + awayStrength));
+      const away = clamp(100 - home - draw);
+
+      const distribution = [
+        { index: "01", label: "Casa", value: home, color: "var(--red)", highlight: home >= Math.max(draw, away) },
+        { index: "02", label: "Empate", value: draw, color: "var(--red)", highlight: draw >= Math.max(home, away) },
+        { index: "03", label: "Visitante", value: away, color: "var(--red)", highlight: away >= Math.max(home, draw) }
+      ];
+
+      const doubleChance = [
+        { index: "01", label: "Casa ou Empate", value: clamp(home + draw), color: "var(--yellow)" },
+        { index: "02", label: "Casa ou Visitante", value: clamp(home + away), color: "var(--yellow)" },
+        { index: "03", label: "Empate ou Visitante", value: clamp(draw + away), color: "var(--yellow)" }
+      ].sort((a,b) => b.value - a.value).map((item, idx) => ({ ...item, index: String(idx + 1).padStart(2, "0"), highlight: idx === 0 }));
+
+      return { distribution, doubleChance, home, draw, away };
+    }
+
+    function buildMarketSection(row, type){
+      if(type === "goals"){
+        const avgGoals = safeNum(row["Average Goals"]);
+        const over05 = pct(row["Over05 Average"]);
+        const over15 = pct(row["Over15 Average"]);
+        const over25 = pct(row["Over25 Average"]);
+        const over35 = pct(row["Over35 Average"]);
+        const over45 = pct(row["Over45 Average"]);
+
+        const homeXg = safeNum(row["Home Team Pre-Match xG"]);
+        const awayXg = safeNum(row["Away Team Pre-Match xG"]);
+        const balance = homeXg !== null && awayXg !== null ? clamp((homeXg - awayXg) * 8, -18, 18) : 0;
+
+        const over = [
+          ["Mais que 0.5", estimateTeamPct(over05, balance, "home"), estimateTeamPct(over05, balance, "away"), over05],
+          ["Mais que 1.5", estimateTeamPct(over15, balance, "home"), estimateTeamPct(over15, balance, "away"), over15],
+          ["Mais que 2.5", estimateTeamPct(over25, balance, "home"), estimateTeamPct(over25, balance, "away"), over25],
+          ["Mais que 3.5", estimateTeamPct(over35, balance, "home"), estimateTeamPct(over35, balance, "away"), over35],
+          ["Mais que 4.5", estimateTeamPct(over45, balance, "home"), estimateTeamPct(over45, balance, "away"), over45]
+        ];
+
+        function underValue(col, overVal){
+          const u = pct(row[col]);
+          return u !== null ? u : (overVal !== null ? clamp(100 - overVal) : null);
+        }
+
+        const under35 = underValue("Under35 Average", over35);
+        const under25 = underValue("Under25 Average", over25);
+        const under15 = underValue("Under15 Average", over15);
+        const under05 = underValue("Under05 Average", over05);
+
+        const under = [
+          ["Menos que 3.5", estimateTeamPct(under35, -balance, "home"), estimateTeamPct(under35, -balance, "away"), under35],
+          ["Menos que 2.5", estimateTeamPct(under25, -balance, "home"), estimateTeamPct(under25, -balance, "away"), under25],
+          ["Menos que 1.5", estimateTeamPct(under15, -balance, "home"), estimateTeamPct(under15, -balance, "away"), under15],
+          ["Menos que 0.5", estimateTeamPct(under05, -balance, "home"), estimateTeamPct(under05, -balance, "away"), under05]
+        ];
+
+        return { over, under, available: over.some(r => r[3] !== null) || under.some(r => r[3] !== null) };
+      }
+
+      if(type === "corners"){
+        const avg = safeNum(row["Average Corners"]);
+        const over65 = calcProbabilityFromAverage(avg, 6.5, 0.75);
+        const over75 = calcProbabilityFromAverage(avg, 7.5, 0.75);
+        const over85 = pct(row["Average Over 8.5 Corners"]) ?? calcProbabilityFromAverage(avg, 8.5, 0.75);
+        const over95 = pct(row["Average Over 9.5 Corners"]) ?? calcProbabilityFromAverage(avg, 9.5, 0.75);
+        const over105 = pct(row["Average Over 10.5 Corners"]) ?? calcProbabilityFromAverage(avg, 10.5, 0.75);
+        const over = [
+          ["Mais que 6.5", over65, over65, over65],
+          ["Mais que 7.5", over75, over75, over75],
+          ["Mais que 8.5", over85, over85, over85],
+          ["Mais que 9.5", over95, over95, over95],
+          ["Mais que 10.5", over105, over105, over105]
+        ];
+        const under = [
+          ["Menos que 10.5", over105 !== null ? clamp(100 - over105) : null, over105 !== null ? clamp(100 - over105) : null, over105 !== null ? clamp(100 - over105) : null],
+          ["Menos que 9.5", over95 !== null ? clamp(100 - over95) : null, over95 !== null ? clamp(100 - over95) : null, over95 !== null ? clamp(100 - over95) : null],
+          ["Menos que 8.5", over85 !== null ? clamp(100 - over85) : null, over85 !== null ? clamp(100 - over85) : null, over85 !== null ? clamp(100 - over85) : null],
+          ["Menos que 7.5", over75 !== null ? clamp(100 - over75) : null, over75 !== null ? clamp(100 - over75) : null, over75 !== null ? clamp(100 - over75) : null]
+        ];
+        return { over, under, available: avg !== null || over85 !== null || over95 !== null };
+      }
+
+      if(type === "cards"){
+        const avg = safeNum(row["Average Cards"]);
+        const over25 = calcProbabilityFromAverage(avg, 2.5, 1.1);
+        const over35 = calcProbabilityFromAverage(avg, 3.5, 1.1);
+        const over45 = calcProbabilityFromAverage(avg, 4.5, 1.1);
+        const over55 = calcProbabilityFromAverage(avg, 5.5, 1.1);
+
+        const over = [
+          ["Mais que 2.5", over25, over25, over25],
+          ["Mais que 3.5", over35, over35, over35],
+          ["Mais que 4.5", over45, over45, over45],
+          ["Mais que 5.5", over55, over55, over55]
+        ];
+
+        const under = [
+          ["Menos que 5.5", over55 !== null ? clamp(100 - over55) : null, over55 !== null ? clamp(100 - over55) : null, over55 !== null ? clamp(100 - over55) : null],
+          ["Menos que 4.5", over45 !== null ? clamp(100 - over45) : null, over45 !== null ? clamp(100 - over45) : null, over45 !== null ? clamp(100 - over45) : null],
+          ["Menos que 3.5", over35 !== null ? clamp(100 - over35) : null, over35 !== null ? clamp(100 - over35) : null, over35 !== null ? clamp(100 - over35) : null],
+          ["Menos que 2.5", over25 !== null ? clamp(100 - over25) : null, over25 !== null ? clamp(100 - over25) : null, over25 !== null ? clamp(100 - over25) : null]
+        ];
+
+        return { over, under, available: avg !== null };
+      }
+
+      if(type === "finishes"){
+        const home = safeNum(row["Home Team Shots"]);
+        const away = safeNum(row["Away Team Shots"]);
+        if(home === null || away === null) return { over: [], under: [], available: false };
+        const total = home + away;
+        const over = [
+          ["Mais que 13.5", calcProbabilityFromAverage(total, 13.5, .8), calcProbabilityFromAverage(total, 13.5, .8), calcProbabilityFromAverage(total, 13.5, .8)],
+          ["Mais que 15.5", calcProbabilityFromAverage(total, 15.5, .8), calcProbabilityFromAverage(total, 15.5, .8), calcProbabilityFromAverage(total, 15.5, .8)],
+          ["Mais que 17.5", calcProbabilityFromAverage(total, 17.5, .8), calcProbabilityFromAverage(total, 17.5, .8), calcProbabilityFromAverage(total, 17.5, .8)],
+          ["Mais que 19.5", calcProbabilityFromAverage(total, 19.5, .8), calcProbabilityFromAverage(total, 19.5, .8), calcProbabilityFromAverage(total, 19.5, .8)]
+        ];
+        const under = over.slice().reverse().map(r => [r[0].replace("Mais", "Menos"), r[3] !== null ? clamp(100 - r[3]) : null, r[3] !== null ? clamp(100 - r[3]) : null, r[3] !== null ? clamp(100 - r[3]) : null]);
+        return { over, under, available: true };
+      }
+
+      if(type === "shots"){
+        const home = safeNum(row["Home Team Shots On Target"]);
+        const away = safeNum(row["Away Team Shots On Target"]);
+        if(home === null || away === null) return { over: [], under: [], available: false };
+        const total = home + away;
+        const over = [
+          ["Mais que 4.5", calcProbabilityFromAverage(total, 4.5, .9), calcProbabilityFromAverage(total, 4.5, .9), calcProbabilityFromAverage(total, 4.5, .9)],
+          ["Mais que 5.5", calcProbabilityFromAverage(total, 5.5, .9), calcProbabilityFromAverage(total, 5.5, .9), calcProbabilityFromAverage(total, 5.5, .9)],
+          ["Mais que 6.5", calcProbabilityFromAverage(total, 6.5, .9), calcProbabilityFromAverage(total, 6.5, .9), calcProbabilityFromAverage(total, 6.5, .9)],
+          ["Mais que 7.5", calcProbabilityFromAverage(total, 7.5, .9), calcProbabilityFromAverage(total, 7.5, .9), calcProbabilityFromAverage(total, 7.5, .9)]
+        ];
+        const under = over.slice().reverse().map(r => [r[0].replace("Mais", "Menos"), r[3] !== null ? clamp(100 - r[3]) : null, r[3] !== null ? clamp(100 - r[3]) : null, r[3] !== null ? clamp(100 - r[3]) : null]);
+        return { over, under, available: true };
+      }
+
+      return { over: [], under: [], available: false };
+    }
+
+    function normalizeMatch(row, index){
+      const dt = formatDateTime(row);
+      const home = row["Home Team"] || "Mandante";
+      const away = row["Away Team"] || "Visitante";
+      const league = row["League"] || "Liga";
+      const country = row["Country"] || "";
+      const status = statusFromCSV(row["Match Status"]);
+
+      const winnerData = winnerAnalysis(row);
+      const over15 = pct(row["Over15 Average"]);
+      const over25 = pct(row["Over25 Average"]);
+      const btts = pct(row["BTTS Average"]);
+      const corners = pct(row["Average Over 8.5 Corners"]) ?? calcProbabilityFromAverage(safeNum(row["Average Corners"]), 8.5, .75);
+      const cards = calcProbabilityFromAverage(safeNum(row["Average Cards"]), 3.5, 1.1);
+      const finishes = safeNum(row["Home Team Shots"]) !== null && safeNum(row["Away Team Shots"]) !== null ? clamp(safeNum(row["Home Team Shots"]) + safeNum(row["Away Team Shots"]) * 3) : null;
+      const shotsTarget = safeNum(row["Home Team Shots On Target"]) !== null && safeNum(row["Away Team Shots On Target"]) !== null ? clamp((safeNum(row["Home Team Shots On Target"]) + safeNum(row["Away Team Shots On Target"])) * 8) : null;
+
+      const parts = [winnerData.home, over15, over25, btts, corners, cards].filter(v => v !== null);
+      const score = parts.length ? clamp(parts.reduce((a,b) => a+b, 0) / parts.length) : 0;
+
+      let confidence = "Baixa";
+      if(score >= 75) confidence = "Alta";
+      else if(score >= 62) confidence = "Boa";
+      else if(score >= 50) confidence = "Média";
+
+      let risk = "Alto";
+      if(score >= 75) risk = "Baixo";
+      else if(score >= 58) risk = "Médio";
+
+      let tag = "Indisponível";
+      if(score >= 70) tag = "Oportunidade";
+      else if(score >= 55) tag = "Em análise";
+
+      const analysis = {
+        winners: winnerData,
+        goals: buildMarketSection(row, "goals"),
+        corners: buildMarketSection(row, "corners"),
+        cards: buildMarketSection(row, "cards"),
+        finishes: buildMarketSection(row, "finishes"),
+        shots: buildMarketSection(row, "shots")
+      };
+
+      return {
+        id: index + 1,
+        league,
+        country,
+        leagueFull: country ? `${country} • ${league}` : league,
+        home,
+        away,
+        date: dt.date,
+        time: dt.time,
+        stadium: "Dados via CSV",
+        status,
+        score,
+        confidence,
+        winner: winnerData.home,
+        draw: winnerData.draw,
+        awayWin: winnerData.away,
+        over15,
+        over25,
+        btts,
+        corners,
+        cards,
+        finishes,
+        shotsTarget,
+        risk,
+        tag,
+        raw: row,
+        analysis
+      };
+    }
+
+    function showPublic(pageId){
+      document.querySelectorAll(".public-page").forEach(p => p.classList.remove("active"));
+      document.getElementById("dashboardShell").classList.remove("active");
+      document.getElementById(pageId).classList.add("active");
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+
+    function login(){
+      document.querySelectorAll(".public-page").forEach(p => p.classList.remove("active"));
+      document.getElementById("dashboardShell").classList.add("active");
+      goAppPage("dashboard");
+    }
+
+    function logout(){
+      document.getElementById("dashboardShell").classList.remove("active");
+      showPublic("landingPage");
+    }
+
+    function pageTitles(page){
+      const map = {
+        dashboard: ["Dashboard", "Dados reais carregados do CSV selecionado"],
+        analysis: ["Análises", "Tela completa de análise por jogo e por mercado"],
+        matchCenter: ["Jogos", "Lista de partidas carregadas do CSV"],
+        markets: ["Mercados", "Resumo dos mercados analisados pela plataforma"],
+        scanner: ["Scanner", "Radar de oportunidades por mercado e probabilidade"],
+        liveCenter: ["Ao Vivo", "Central de partidas ao vivo quando houver dados no CSV"],
+        favorites: ["Favoritos", "Jogos salvos pelo usuário"],
+        history: ["Histórico", "Histórico será conectado na próxima etapa"],
+        plans: ["Planos", "Assinatura e acesso premium"],
+        admin: ["Configurações", "Importação de CSV, usuários e ajustes"]
+      };
+      return map[page] || map.dashboard;
+    }
+
+    function goAppPage(pageId){
+      document.querySelectorAll(".app-page").forEach(p => p.classList.remove("active"));
+      const page = document.getElementById(pageId);
+      if(page) page.classList.add("active");
+
+      document.querySelectorAll(".nav-item").forEach(item => {
+        item.classList.toggle("active", item.dataset.page === pageId);
+      });
+
+      const [title, subtitle] = pageTitles(pageId);
+      document.getElementById("appTitle").textContent = title;
+      document.getElementById("appSubtitle").textContent = subtitle;
+
+      if(pageId === "analysis" && !selectedMatch && matches.length){
+        selectedMatch = matches[0];
+        renderAnalysis();
+      }
+
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+
+    function emptyState(message){
+      return `<div class="empty-state">${message}</div>`;
+    }
+
+    function loadingState(message = "Carregando dados do CSV..."){
+      return `<div class="loading-state">${message}</div>`;
+    }
+
+    function marketRow(label, pct){
+      const color = pctColor(pct);
+      const value = formatValue(pct);
+      return `
+        <div class="market-row">
+          <div class="market-label">${label}</div>
+          <div class="bar-bg"><div class="bar" style="width:${pct ?? 0}%;background:${color}"></div></div>
+          <div class="pct" style="color:${color}">${value}</div>
+        </div>
+      `;
+    }
+
+    function matchCard(match){
+      const statusLabel = match.status === "Ao vivo"
+        ? `<span><span style="display:inline-block;width:8px;height:8px;border-radius:999px;background:var(--red);margin-right:5px;box-shadow:0 0 12px rgba(255,55,55,.5)"></span>Ao vivo</span>`
+        : `<span>${match.date} • ${match.time}</span>`;
+
+      return `
+        <div class="match-card">
+          <div class="match-header">
+            <span>🏆 ${match.league}</span>
+            ${statusLabel}
+          </div>
+
+          <div class="teams">
+            ${match.home} <span class="vs">VS</span> ${match.away}
+          </div>
+
+          <div class="confidence">
+            <small>CONFIANÇA</small>
+            <div class="score">${match.score}</div>
+            <span>${match.confidence}</span>
+          </div>
+
+          <div class="divider"></div>
+
+          ${marketRow("Ganhador", match.winner)}
+          ${marketRow("Gols Over 1.5", match.over15)}
+          ${marketRow("Escanteios 8.5", match.corners)}
+          ${marketRow("Cartões 3.5", match.cards)}
+          ${marketRow("Chutes a gol", match.shotsTarget)}
+
+          <div class="analysis-btn" onclick="openAnalysis(${match.id})">Ver análise completa</div>
+        </div>
+      `;
+    }
+
+    function bestMarket(match){
+      const options = [
+        ["Ganhador", match.winner],
+        ["Gols Over 2.5", match.over25],
+        ["Gols Over 1.5", match.over15],
+        ["BTTS Sim", match.btts],
+        ["Escanteios Over 8.5", match.corners],
+        ["Cartões Over 3.5", match.cards],
+        ["Finalizações", match.finishes],
+        ["Chutes a gol", match.shotsTarget]
+      ].filter(item => item[1] !== null && item[1] !== undefined);
+
+      return options.length ? options.sort((a,b) => b[1] - a[1])[0] : ["Sem mercado disponível", 0];
+    }
+
+    function openAnalysis(id){
+      selectedMatch = matches.find(m => m.id === id) || matches[0] || null;
+      selectedAnalysisTab = "winners";
+      renderAnalysis();
+      goAppPage("analysis");
+    }
+
+    function renderDataBanner(){
+      const banner = document.getElementById("dataBanner");
+      if(!banner) return;
+
+      if(lastLoadError){
+        banner.className = "data-banner error";
+        banner.innerHTML = `<span>⚠️ ${lastLoadError}</span><span>Arquivo esperado: <strong>${currentCsvFile}</strong></span>`;
+        return;
+      }
+
+      banner.className = "data-banner";
+      banner.innerHTML = `<span>✅ Dados carregados do CSV real: <strong>${currentCsvFile}</strong></span><span>${matches.length} jogos encontrados</span>`;
+    }
+
+    function ensureDataBanner(){
+      const dashboard = document.getElementById("dashboard");
+      if(!dashboard || document.getElementById("dataBanner")) return;
+      dashboard.insertAdjacentHTML("afterbegin", `<div id="dataBanner" class="data-banner"></div>`);
+    }
+
+    function renderDashboardKpis(){
+      const live = matches.filter(m => m.status === "Ao vivo").length;
+      const opp = matches.filter(m => m.score >= 70).length;
+      const missing = matches.filter(m => [m.over15, m.corners, m.cards].some(v => v === null)).length;
+      const alerts = opp + missing;
+
+      const kpis = document.querySelector("#dashboard .kpis");
+      if(!kpis) return;
+
+      kpis.innerHTML = `
+        <div class="metric-card">
+          <div class="metric-content">
+            <div class="metric-icon">⚽</div>
+            <div>
+              <div class="metric-label">Jogos monitorados</div>
+              <div class="metric-value">${matches.length}</div>
+              <div class="delta green-text">CSV real</div>
+            </div>
+          </div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-content">
+            <div class="metric-icon">🔴</div>
+            <div>
+              <div class="metric-label">Jogos ao vivo</div>
+              <div class="metric-value">${live}</div>
+              <div class="delta ${live ? "red-text" : "yellow-text"}">${live ? "Em andamento" : "Sem live"}</div>
+            </div>
+          </div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-content">
+            <div class="metric-icon">🎯</div>
+            <div>
+              <div class="metric-label">Oportunidades</div>
+              <div class="metric-value">${opp}</div>
+              <div class="delta green-text">Score 70+</div>
+            </div>
+          </div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-content">
+            <div class="metric-icon">🔔</div>
+            <div>
+              <div class="metric-label">Alertas</div>
+              <div class="metric-value">${alerts}</div>
+              <div class="delta yellow-text">Leitura</div>
+            </div>
+          </div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-content">
+            <div class="metric-icon">🧱</div>
+            <div>
+              <div class="metric-label">Dados incompletos</div>
+              <div class="metric-value">${missing}</div>
+              <div class="delta red-text">Revisar CSV</div>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderFeatured(){
+      const target = document.getElementById("featuredGrid");
+      if(!target) return;
+      if(!matches.length){
+        target.innerHTML = emptyState("Nenhum jogo carregado. Selecione uma data que tenha CSV na pasta /data.");
+        return;
+      }
+      const featured = [...matches].filter(m => m.status !== "Cancelado").sort((a,b) => b.score - a.score).slice(0,3);
+      target.innerHTML = featured.map(matchCard).join("");
+    }
+
+    function renderAllMatches(){
+      const target = document.getElementById("allMatches");
+      if(!target) return;
+      target.innerHTML = matches.length ? matches.map(matchCard).join("") : emptyState("Nenhum jogo encontrado para esta data.");
+    }
+
+    function renderLiveMatches(){
+      const target = document.getElementById("liveMatches");
+      if(!target) return;
+      const live = matches.filter(m => m.status === "Ao vivo");
+      target.innerHTML = live.length ? live.map(matchCard).join("") : emptyState("Não há jogos ao vivo no CSV selecionado.");
+    }
+
+    function renderScanner(targetId, limit = null){
+      const target = document.getElementById(targetId);
+      if(!target) return;
+
+      if(!matches.length){
+        target.innerHTML = emptyState("Nenhum mercado encontrado porque não há CSV carregado para esta data.");
+        return;
+      }
+
+      const list = [...matches].sort((a,b) => b.score - a.score);
+      const rows = (limit ? list.slice(0, limit) : list).map(match => {
+        const [market, prob] = bestMarket(match);
+        return `
+          <tr>
+            <td>${match.time}</td>
+            <td>${match.home} vs ${match.away}</td>
+            <td>${match.league}</td>
+            <td>${market}</td>
+            <td>
+              <div class="prob-cell">
+                <span style="width:36px">${formatValue(prob)}</span>
+                <div class="bar-bg mini-bar"><div class="bar" style="width:${prob ?? 0}%;background:${pctColor(prob)}"></div></div>
+              </div>
+            </td>
+            <td><span class="badge ${badgeClass(match.risk)}">${match.risk}</span></td>
+            <td><span class="badge ${badgeClass(match.tag)}">${match.tag}</span></td>
+          </tr>
+        `;
+      }).join("");
+
+      target.innerHTML = `
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Hora</th>
+                <th>Jogo</th>
+                <th>Liga</th>
+                <th>Mercado</th>
+                <th>Probabilidade</th>
+                <th>Risco</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>${rows}</tbody>
+          </table>
+        </div>
+      `;
+    }
+
+    function renderWatchlist(){
+      const target = document.getElementById("watchlist");
+      const fav = document.getElementById("favoritesList");
+      const list = matches.slice(0,4);
+      const html = list.length ? list.map(match => `
+        <div class="watch-item">
+          <div>⭐</div>
+          <div>${match.home} vs ${match.away}<br><span class="muted">${match.league}</span></div>
+          <div>${match.status === "Ao vivo" ? "Ao vivo" : match.time}</div>
+          <div>🔔</div>
+        </div>
+      `).join("") : emptyState("Favoritos ainda não foram salvos.");
+
+      if(target) target.innerHTML = html;
+      if(fav) fav.innerHTML = html;
+    }
+
+    function renderAlerts(){
+      const target = document.getElementById("alerts");
+      if(!target) return;
+
+      if(!matches.length){
+        target.innerHTML = emptyState("Sem alertas porque nenhum CSV foi carregado.");
+        return;
+      }
+
+      const top = [...matches].sort((a,b) => b.score - a.score).slice(0, 3);
+      target.innerHTML = top.map((match, idx) => {
+        const [market, prob] = bestMarket(match);
+        const dot = idx === 0 ? "green" : idx === 1 ? "yellow" : "blue";
+        const level = prob >= 70 ? "Alta" : prob >= 55 ? "Média" : "Info";
+        return `
+          <div class="alert-item">
+            <div class="dot ${dot}"></div>
+            <div>${market} em ${match.home} vs ${match.away}: ${formatValue(prob)}</div>
+            <div class="muted">${match.time}</div>
+            <div><span class="badge ${badgeClass(level)}">${level}</span></div>
+          </div>
+        `;
+      }).join("");
+    }
+
+    function renderMarkets(){
+      const avg = key => {
+        const vals = matches.map(m => m[key]).filter(v => v !== null && v !== undefined);
+        return vals.length ? clamp(vals.reduce((a,b) => a+b, 0) / vals.length) : null;
+      };
+
+      const over = document.getElementById("avgOver15");
+      const corners = document.getElementById("avgCorners");
+      const shots = document.getElementById("avgShotsTarget");
+      if(over) over.textContent = formatValue(avg("over15"));
+      if(corners) corners.textContent = formatValue(avg("corners"));
+      if(shots) shots.textContent = formatValue(avg("shotsTarget"));
+
+      const bars = document.getElementById("marketBars");
+      if(!bars) return;
+
+      if(!matches.length){
+        bars.innerHTML = emptyState("Nenhum mercado disponível para esta data.");
+        return;
+      }
+
+      const rows = [
+        ["Ganhador", avg("winner")],
+        ["Gols Over 1.5", avg("over15")],
+        ["Gols Over 2.5", avg("over25")],
+        ["BTTS Sim", avg("btts")],
+        ["Escanteios", avg("corners")],
+        ["Cartões", avg("cards")],
+        ["Finalizações", avg("finishes")],
+        ["Chutes a gol", avg("shotsTarget")]
+      ];
+      bars.innerHTML = rows.map(([label,val]) => marketRow(label,val)).join("");
+    }
+
+    function renderHistory(){
+      const target = document.getElementById("historyRows");
+      if(!target) return;
+      target.innerHTML = `
+        <tr>
+          <td colspan="5">Histórico real ainda não conectado. Nesta etapa, o site carrega apenas o CSV da data selecionada.</td>
+        </tr>
+      `;
+    }
+
+    function renderPlans(targetId){
+      const html = plans.map(plan => `
+        <div class="plan-card ${plan.featured ? "featured" : ""}">
+          ${plan.featured ? '<span class="badge blue">Mais escolhido</span>' : ''}
+          <h3>${plan.name}</h3>
+          <p class="panel-text">${plan.subtitle}</p>
+          <div class="price">${plan.price}<small>/mês</small></div>
+          <div class="plan-list">
+            ${plan.features.map(f => `<div>✅ ${f}</div>`).join("")}
+          </div>
+          <button class="btn ${plan.featured ? "btn-primary" : "btn-secondary"} full-btn">Escolher ${plan.name}</button>
+        </div>
+      `).join("");
+      const el = document.getElementById(targetId);
+      if(el) el.innerHTML = html;
+    }
+
+    function renderAnalysisTabs(){
+      const target = document.getElementById("analysisTabs");
+      if(!target) return;
+      target.innerHTML = analysisTabs.map(tab => `
+        <div class="analysis-tab ${selectedAnalysisTab === tab.key ? "active" : ""}" onclick="switchAnalysisTab('${tab.key}')">${tab.label}</div>
+      `).join("");
+    }
+
+    function switchAnalysisTab(key){
+      selectedAnalysisTab = key;
+      renderAnalysisTabs();
+      renderAnalysisMainContent();
+    }
+
+    function renderAnalysis(){
+      const match = selectedMatch || matches[0] || null;
+      if(!match){
+        const main = document.getElementById("analysisMainContent");
+        if(main) main.innerHTML = emptyState("Nenhum jogo selecionado. Carregue um CSV válido e abra a análise de uma partida.");
+        return;
+      }
+
+      selectedMatch = match;
+      const mainCard = document.querySelector(".match-main-card");
+      if(mainCard){
+        mainCard.innerHTML = `
+          <div class="match-hero">
+            <div class="team-side">
+              <div class="club-logo">${match.home.charAt(0)}</div>
+              <div><div class="team-name">${match.home}</div></div>
+            </div>
+            <div class="vs-big">VS</div>
+            <div class="team-side right">
+              <div><div class="team-name">${match.away}</div></div>
+              <div class="club-logo">${match.away.charAt(0)}</div>
+            </div>
+          </div>
+          <div class="match-meta">
+            <div class="meta-item">🏆 ${match.leagueFull || match.league}</div>
+            <div class="meta-item">📅 ${match.date}</div>
+            <div class="meta-item">⏰ ${match.time}</div>
+            <div class="meta-item">📄 ${currentCsvFile}</div>
+          </div>
+        `;
+      }
+
+      const scoreBig = document.getElementById("analysisScoreBig");
+      const label = document.getElementById("analysisConfidenceLabel");
+      if(scoreBig) scoreBig.textContent = `${match.score}%`;
+      if(label) label.textContent = match.confidence;
+
+      const quick = document.getElementById("quickSummary");
+      if(quick){
+        const [market, prob] = bestMarket(match);
+        quick.innerHTML = `
+          <div class="quick-mini">
+            <strong>Mercado principal</strong>
+            <div class="muted">${market} • ${formatValue(prob)}</div>
+          </div>
+          <div class="quick-mini">
+            <strong>Risco</strong>
+            <div class="muted">${match.risk}</div>
+          </div>
+          <div class="quick-mini">
+            <strong>Indicadores</strong>
+            ${marketRow("Gols Over 1.5", match.over15)}
+            ${marketRow("Escanteios", match.corners)}
+            ${marketRow("Cartões", match.cards)}
+          </div>
+        `;
+      }
+
+      renderAnalysisTabs();
+      renderAnalysisMainContent();
+    }
+
+    function renderWinnerRows(items, type){
+      return `
+        <div class="winner-section">
+          <div class="winner-head">
+            <strong>${type === "distribution" ? "Vencedor" : "Chance dupla"}</strong>
+            <span>${type === "distribution" ? "distribuição" : "ranking"}</span>
+          </div>
+          ${items.map(item => `
+            <div class="winner-row">
+              <div class="winner-index ${item.highlight ? "highlight" : ""}">${item.index}</div>
+              <div class="winner-label ${item.highlight ? "highlight" : ""}">${item.label}</div>
+              <div class="winner-track">
+                <div class="winner-fill" style="width:${item.value ?? 0}%;background:${item.color}"></div>
+              </div>
+              <div class="winner-value ${item.color === 'var(--yellow)' ? 'yellow' : item.highlight ? 'green' : ''}">${formatValue(item.value)}</div>
+            </div>
+          `).join("")}
+        </div>
+      `;
+    }
+
+    function renderMarketTable(title){
+      const match = selectedMatch || matches[0];
+      if(!match) return emptyState("Nenhum jogo selecionado.");
+      const section = match.analysis[title];
+
+      if(!section || !section.available){
+        const labelMap = { goals: "Gols", corners: "Escanteios", cards: "Cartões", finishes: "Finalizações", shots: "Chutes a gol" };
+        return `
+          <h3>${labelMap[title] || "Mercado"}</h3>
+          ${emptyState("Esta informação não está disponível de forma válida no CSV selecionado para esta partida.")}
+        `;
+      }
+
+      const labelMap = {
+        goals: "Gols",
+        corners: "Escanteios",
+        cards: "Cartões",
+        finishes: "Finalizações",
+        shots: "Chutes a gol"
+      };
+
+      function block(rows){
+        return `
+          <tr class="divider-row">
+            <td class="label-col"></td>
+            <td><strong>Casa</strong></td>
+            <td><strong>Visitante</strong></td>
+            <td><strong>Jogo</strong></td>
+          </tr>
+          ${rows.map(r => `
+            <tr>
+              <td class="label-col">${r[0]}</td>
+              <td><strong>${formatValue(r[1])}</strong></td>
+              <td><strong>${formatValue(r[2])}</strong></td>
+              <td><span class="game-pill ${pillClass(r[3])}">${formatValue(r[3])}</span></td>
+            </tr>
+          `).join("")}
+        `;
+      }
+
+      return `
+        <h3>${labelMap[title]}</h3>
+        <div class="table-wrap" style="overflow-x:auto">
+          <table class="market-table">
+            <tbody>
+              ${block(section.over)}
+              <tr class="divider-row"><td colspan="4"></td></tr>
+              ${block(section.under)}
+            </tbody>
+          </table>
+        </div>
+      `;
+    }
+
+    function renderInsightsIA(){
+      const match = selectedMatch || matches[0];
+      if(!match) return emptyState("Nenhum jogo selecionado.");
+
+      const [bestMarketName, bestMarketPct] = bestMarket(match);
+      const side = Math.abs(match.winner - match.awayWin) <= 8 ? "Neutro" : match.winner > match.awayWin ? match.home : match.away;
+      const winnerRisk = Math.abs(match.winner - match.awayWin) <= 8 ? "Imprevisível" : "Moderado";
+      const goalsTag = match.over25 !== null && match.over25 >= 60 ? "Over 2.5" : match.over15 !== null && match.over15 >= 70 ? "Over 1.5" : "Cautela";
+      const cornersTag = match.corners !== null && match.corners >= 70 ? "Favorável" : match.corners !== null && match.corners >= 55 ? "Moderado" : "Cautela";
+      const cardsTag = match.cards !== null && match.cards >= 70 ? "Favorável" : match.cards !== null && match.cards >= 55 ? "Moderado" : "Cautela";
+
+      return `
+        <div class="ai-guide">
+          <div class="ai-close">×</div>
+          <h4>Como usar Insights da IA</h4>
+          <ul>
+            <li>Resume os mercados em que os dados do CSV mostram uma leitura mais clara.</li>
+            <li>Cada insight é uma interpretação estatística, não uma promessa de acerto.</li>
+            <li>Use como triagem rápida; a decisão final deve considerar odds reais e contexto ao vivo.</li>
+          </ul>
+        </div>
+
+        <div class="impact-card">
+          <div class="impact-top">
+            <div>
+              <h4>Sensor da Partida</h4>
+              <small>Lado favorável: <strong class="green-text">${side}</strong></small>
+            </div>
+            <span class="badge ${match.score >= 70 ? "green" : "yellow"}">Impacto ${match.score >= 70 ? "forte" : "moderado"}</span>
+          </div>
+
+          <div class="impact-scale">
+            <div class="impact-team">
+              <div class="impact-logo">${match.home.charAt(0)}</div>
+              <span>${match.home}</span>
+            </div>
+            <div class="impact-track">
+              <div class="impact-knob" style="left:${clamp(match.winner)}%"></div>
+            </div>
+            <div class="impact-team right">
+              <span>${match.away}</span>
+              <div class="impact-logo">${match.away.charAt(0)}</div>
+            </div>
+          </div>
+
+          <p class="panel-text">
+            A leitura foi calculada com base nos campos disponíveis no CSV: PPG pré-jogo, médias de gols,
+            BTTS, escanteios, cartões e xG pré-jogo quando disponível.
+          </p>
+
+          <div class="sensor-row">
+            <div class="sensor-box">
+              <span>Lado favorável</span>
+              <strong>${side}</strong>
+            </div>
+            <div class="sensor-box">
+              <span>Melhor mercado</span>
+              <strong>${bestMarketName}</strong>
+            </div>
+            <div class="sensor-box">
+              <span>Mais perigoso</span>
+              <strong>Vencedor</strong>
+            </div>
+            <div class="sensor-box">
+              <span>Score geral</span>
+              <strong>${match.score}%</strong>
+            </div>
+          </div>
+        </div>
+
+        <div class="insight-grid">
+          <div class="insight-card">
+            <div class="insight-head">
+              <h4>Vencer</h4>
+              <span class="badge ${winnerRisk === "Imprevisível" ? "yellow" : "green"}">${winnerRisk}</span>
+            </div>
+            <p>
+              Casa ${formatValue(match.winner)}, empate ${formatValue(match.draw)} e visitante ${formatValue(match.awayWin)}.
+              ${winnerRisk === "Imprevisível" ? "As forças estão próximas, então o mercado de vencedor exige cautela." : "Há uma leve inclinação estatística para um dos lados."}
+            </p>
+          </div>
+
+          <div class="insight-card">
+            <div class="insight-head">
+              <h4>Gols</h4>
+              <span class="badge ${match.over15 >= 70 ? "green" : "yellow"}">${goalsTag}</span>
+            </div>
+            <p>
+              Over 1.5 aparece com ${formatValue(match.over15)} e Over 2.5 com ${formatValue(match.over25)}.
+              A leitura usa as colunas de médias de gols do CSV.
+            </p>
+          </div>
+
+          <div class="insight-card">
+            <div class="insight-head">
+              <h4>Escanteios</h4>
+              <span class="badge ${cornersTag === "Favorável" ? "green" : "yellow"}">${cornersTag}</span>
+            </div>
+            <p>
+              O mercado de escanteios aparece com ${formatValue(match.corners)} na principal linha disponível.
+              Se o CSV tiver poucas colunas, a leitura fica limitada.
+            </p>
+          </div>
+
+          <div class="insight-card">
+            <div class="insight-head">
+              <h4>Cartões</h4>
+              <span class="badge ${cardsTag === "Favorável" ? "green" : "yellow"}">${cardsTag}</span>
+            </div>
+            <p>
+              A projeção de cartões foi calculada a partir da média de cartões do confronto.
+              Sem informação de árbitro, a leitura deve ser considerada complementar.
+            </p>
+          </div>
+
+          <div class="insight-card">
+            <div class="insight-head">
+              <h4>Finalizações</h4>
+              <span class="badge ${match.finishes === null ? "red" : "yellow"}">${match.finishes === null ? "Indisponível" : "Monitorar"}</span>
+            </div>
+            <p>
+              ${match.finishes === null ? "O CSV atual não traz finalizações pré-jogo válidas para esta partida." : "Há dados de finalizações disponíveis para leitura do confronto."}
+            </p>
+          </div>
+
+          <div class="insight-card">
+            <div class="insight-head">
+              <h4>Chutes a gol</h4>
+              <span class="badge ${match.shotsTarget === null ? "red" : "yellow"}">${match.shotsTarget === null ? "Indisponível" : "Monitorar"}</span>
+            </div>
+            <p>
+              ${match.shotsTarget === null ? "O CSV atual não traz chutes a gol pré-jogo válidos para esta partida." : "Há dados de chutes a gol disponíveis para leitura do confronto."}
+            </p>
+          </div>
+        </div>
+
+        <div class="insight-final">
+          <strong>Conclusão da IA:</strong>
+          ${bestMarketName === "Sem mercado disponível" ? "não há dados suficientes para uma conclusão estatística confiável." : `o mercado com melhor leitura estatística no CSV é <strong>${bestMarketName}</strong>, com ${formatValue(bestMarketPct)}.`}
+          Esta leitura não utiliza odds reais.
+        </div>
+      `;
+    }
+
+    function renderAnalysisMainContent(){
+      const match = selectedMatch || matches[0];
+      let html = "";
+
+      if(!match){
+        html = emptyState("Nenhum jogo selecionado.");
+      } else if(selectedAnalysisTab === "winners"){
+        html = `
+          <h3>Vencedores</h3>
+          ${renderWinnerRows(match.analysis.winners.distribution, "distribution")}
+          ${renderWinnerRows(match.analysis.winners.doubleChance, "doubleChance")}
+        `;
+      } else if(selectedAnalysisTab === "goals"){
+        html = renderMarketTable("goals");
+      } else if(selectedAnalysisTab === "corners"){
+        html = renderMarketTable("corners");
+      } else if(selectedAnalysisTab === "cards"){
+        html = renderMarketTable("cards");
+      } else if(selectedAnalysisTab === "finishes"){
+        html = renderMarketTable("finishes");
+      } else if(selectedAnalysisTab === "shots"){
+        html = renderMarketTable("shots");
+      } else if(selectedAnalysisTab === "insights"){
+        html = renderInsightsIA();
+      }
+
+      const target = document.getElementById("analysisMainContent");
+      if(target) target.innerHTML = html;
+    }
+
+    function renderAll(){
+      ensureDataBanner();
+      renderDataBanner();
+      renderDashboardKpis();
+      renderFeatured();
+      renderAllMatches();
+      renderLiveMatches();
+      renderScanner("scannerTable", 6);
+      renderScanner("scannerTableFull");
+      renderWatchlist();
+      renderAlerts();
+      renderMarkets();
+      renderHistory();
+      renderPlans("plansGrid");
+      renderPlans("publicPlansGrid");
+      renderAnalysis();
+    }
+
+    async function loadCSVForDate(dateStr){
+      currentDate = dateStr;
+      currentCsvFile = dateToFile(dateStr);
+      lastLoadError = "";
+
+      ensureDataBanner();
+      const banner = document.getElementById("dataBanner");
+      if(banner) {
+        banner.className = "data-banner";
+        banner.innerHTML = `<span>⏳ Carregando CSV: <strong>${currentCsvFile}</strong></span>`;
+      }
+
+      try {
+        const response = await fetch(`${CSV_BASE_PATH}${currentCsvFile}?v=${Date.now()}`);
+
+        if(!response.ok){
+          throw new Error(`CSV não encontrado para ${dateStr}.`);
+        }
+
+        const text = await response.text();
+        const rows = parseCSV(text);
+
+        if(!rows.length){
+          throw new Error(`CSV vazio ou inválido para ${dateStr}.`);
+        }
+
+        matches = rows.map(normalizeMatch).filter(m => m.status !== "Cancelado");
+        selectedMatch = matches[0] || null;
+        selectedAnalysisTab = "winners";
+
+        if(!matches.length){
+          lastLoadError = `O CSV ${currentCsvFile} foi encontrado, mas nenhum jogo válido foi carregado.`;
+        }
+
+      } catch(error){
+        matches = [];
+        selectedMatch = null;
+        selectedAnalysisTab = "winners";
+        lastLoadError = `${error.message} Adicione o arquivo em /data/${currentCsvFile}.`;
+      }
+
+      renderAll();
+    }
+
+    function setupNavigation(){
+      document.querySelectorAll(".nav-item").forEach(item => {
+        item.addEventListener("click", () => goAppPage(item.dataset.page));
+      });
+    }
+
+    function setupSearch(){
+      const search = document.getElementById("searchInput");
+      if(!search) return;
+      search.addEventListener("input", () => {
+        const term = search.value.trim().toLowerCase();
+        const filtered = matches.filter(m =>
+          `${m.home} ${m.away} ${m.league} ${m.country}`.toLowerCase().includes(term)
+        );
+
+        const target = document.getElementById("featuredGrid");
+        if(!target) return;
+
+        if(!term){
+          renderFeatured();
+          return;
+        }
+
+        target.innerHTML = filtered.slice(0,3).map(matchCard).join("") || emptyState("Nenhum jogo encontrado para essa busca.");
+      });
+    }
+
+    function setupDatePicker(){
+      const picker = document.getElementById("datePicker");
+      if(!picker) return;
+      picker.value = DEFAULT_DATE;
+      picker.addEventListener("change", () => {
+        if(picker.value) loadCSVForDate(picker.value);
+      });
+    }
+
+    function init(){
+      setupNavigation();
+      setupSearch();
+      setupDatePicker();
+      renderPlans("plansGrid");
+      renderPlans("publicPlansGrid");
+      loadCSVForDate(DEFAULT_DATE);
+    }
+
+    init();
+  </script>
+
+</body>
+</html>
