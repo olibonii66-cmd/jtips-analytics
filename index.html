@@ -2397,10 +2397,8 @@
           continue;
         }
 
-        if((char === "
-" || char === "") && !insideQuotes){
-          if(char === "" && next === "
-") i++;
+        if((char === "\n" || char === "\r") && !insideQuotes){
+          if(char === "\r" && next === "\n") i++;
           row.push(value);
           if(row.some(cell => String(cell).trim() !== "")) rows.push(row);
           row = [];
