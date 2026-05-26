@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>JTIPS Analytics — V4 CSV Funcional</title>
+  <title>JTIPS Analytics — V5 CSV Real Funcional</title>
   <style>
     :root{
       --bg:#04110d;
@@ -1652,6 +1652,76 @@
       color: #f5f9ff !important;
     }
 
+  
+    /* =====================================================
+       V5 — CSV REAL FUNCIONAL
+       Ajustes visuais para data, carregamento e telas sem dados.
+    ===================================================== */
+
+    .date-box input {
+      width: 100%;
+      background: transparent;
+      border: 0;
+      outline: 0;
+      color: inherit;
+      font-weight: 900;
+      font-size: 13px;
+      color-scheme: dark;
+    }
+
+    .data-banner {
+      background: rgba(0, 150, 255, .08);
+      border: 1px solid rgba(0, 150, 255, .24);
+      border-radius: 14px;
+      padding: 12px 14px;
+      margin-bottom: 12px;
+      color: #dcecff;
+      font-size: 13px;
+      line-height: 1.5;
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .data-banner.error {
+      background: rgba(255, 77, 95, .08);
+      border-color: rgba(255, 77, 95, .28);
+      color: #ffd6dc;
+    }
+
+    .empty-state {
+      border: 1px dashed rgba(77, 164, 255, .28);
+      background: rgba(6, 14, 24, .58);
+      border-radius: 16px;
+      padding: 20px;
+      color: #9fb6cc;
+      font-size: 14px;
+      line-height: 1.6;
+    }
+
+    .loading-state {
+      border: 1px solid rgba(77, 164, 255, .20);
+      background: rgba(6, 14, 24, .78);
+      border-radius: 16px;
+      padding: 18px;
+      color: #dcecff;
+      font-weight: 850;
+    }
+
+    .csv-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      border-radius: 999px;
+      padding: 5px 10px;
+      background: rgba(0, 150, 255, .10);
+      border: 1px solid rgba(0, 150, 255, .22);
+      color: #74d6ff;
+      font-weight: 900;
+      font-size: 12px;
+    }
+
   </style>
 </head>
 <body>
@@ -1853,7 +1923,7 @@
           <input id="searchInput" type="text" placeholder="Buscar ligas, times, mercados...">
         </div>
 
-        <div class="date-box">📅 <span id="todayDate">Hoje</span></div>
+        <div class="date-box">📅 <input id="datePicker" type="date" value="2026-05-26" aria-label="Selecionar data"></div>
 
         <div class="bell-box">🔔 <span>3</span></div>
 
@@ -2191,370 +2261,9 @@
   </section>
 
   <script>
-    let matches = [];
-    let selectedMatch = null;
-
-    const CSV_FILE_URL = "data/26-05-2026.csv";
-
-    function clamp(value, min = 0, max = 100){
-      const n = Number(value);
-      if(!Number.isFinite(n)) return min;
-      return Math.max(min, Math.min(max, n));
-    }
-
-    function toNum(value, fallback = null){
-      if(value === undefined || value === null || value === "") return fallback;
-      const n = Number(String(value).replace(",", "."));
-      if(!Number.isFinite(n) || n === -1) return fallback;
-      return n;
-    }
-
-    function pct(value, fallback = 0){
-      return Math.round(clamp(toNum(value, fallback), 0, 100));
-    }
-
-    function probFromAverage(avg, line){
-      const n = toNum(avg, 0);
-      return Math.round(clamp(50 + ((n - line) * 15), 5, 95));
-    }
-
-    function formatDateFromUnix(unix){
-      const n = toNum(unix, null);
-      if(!n) return "Data indisponível";
-      const d = new Date(n * 1000);
-      return d.toLocaleDateString("pt-BR", {
-        day: "2-digit",
-        month: "2-digit",
-        year: "numeric"
-      });
-    }
-
-    function formatTimeFromUnix(unix){
-      const n = toNum(unix, null);
-      if(!n) return "--:--";
-      const d = new Date(n * 1000);
-      return d.toLocaleTimeString("pt-BR", {
-        hour: "2-digit",
-        minute: "2-digit"
-      });
-    }
-
-    function parseCSV(text){
-      const rows = [];
-      let current = [];
-      let value = "";
-      let insideQuotes = false;
-
-      for(let i = 0; i < text.length; i++){
-        const char = text[i];
-        const next = text[i + 1];
-
-        if(char === '"' && insideQuotes && next === '"'){
-          value += '"';
-          i++;
-          continue;
-        }
-
-        if(char === '"'){
-          insideQuotes = !insideQuotes;
-          continue;
-        }
-
-        if(char === "," && !insideQuotes){
-          current.push(value);
-          value = "";
-          continue;
-        }
-
-        if((char === "\n" || char === "\r") && !insideQuotes){
-          if(char === "\r" && next === "\n") i++;
-          current.push(value);
-          value = "";
-          if(current.some(cell => String(cell).trim() !== "")) rows.push(current);
-          current = [];
-          continue;
-        }
-
-        value += char;
-      }
-
-      if(value.length || current.length){
-        current.push(value);
-        if(current.some(cell => String(cell).trim() !== "")) rows.push(current);
-      }
-
-      if(!rows.length) return [];
-
-      const headers = rows[0].map(h => String(h).trim());
-      return rows.slice(1).map(row => {
-        const obj = {};
-        headers.forEach((h, idx) => obj[h] = row[idx] ?? "");
-        return obj;
-      });
-    }
-
-    function normalizeStatus(status){
-      const s = String(status || "").toLowerCase();
-      if(s.includes("complete") || s.includes("final")) return "Finalizado";
-      if(s.includes("live") || s.includes("in play") || s.includes("playing")) return "Ao vivo";
-      return "Pré-jogo";
-    }
-
-    function winnerAnalysis(row){
-      const hppg = toNum(row["Home Team Points Per Game (Pre-Match)"], 1);
-      const appg = toNum(row["Away Team Points Per Game (Pre-Match)"], 1);
-      const hxg = toNum(row["Home Team Pre-Match xG"], 1);
-      const axg = toNum(row["Away Team Pre-Match xG"], 1);
-
-      const homeStrength = Math.max(0.1, (hppg * 0.62) + (hxg * 0.38));
-      const awayStrength = Math.max(0.1, (appg * 0.62) + (axg * 0.38));
-      const diff = homeStrength - awayStrength;
-      const draw = Math.round(clamp(27 - Math.abs(diff) * 5, 18, 32));
-      const remaining = 100 - draw;
-      const home = Math.round(clamp((homeStrength / (homeStrength + awayStrength)) * remaining, 15, 70));
-      const away = Math.max(5, 100 - draw - home);
-
-      const dist = [
-        { index: "01", label: "Casa", value: home, color: "var(--red)" },
-        { index: "02", label: "Empate", value: draw, color: "var(--red)" },
-        { index: "03", label: "Visitante", value: away, color: "var(--red)" }
-      ];
-
-      const maxIdx = dist.reduce((best, item, idx) => item.value > dist[best].value ? idx : best, 0);
-      dist[maxIdx].highlight = true;
-
-      const dc = [
-        { index: "01", label: "Casa ou Empate", value: home + draw, color: "var(--yellow)" },
-        { index: "02", label: "Casa ou Visitante", value: home + away, color: "var(--yellow)" },
-        { index: "03", label: "Empate ou Visitante", value: draw + away, color: "var(--yellow)" }
-      ];
-
-      const dcMax = dc.reduce((best, item, idx) => item.value > dc[best].value ? idx : best, 0);
-      dc[dcMax].highlight = true;
-
-      return { distribution: dist, doubleChance: dc };
-    }
-
-    function buildAnalysis(row){
-      const over05 = pct(row["Over05 Average"], 70);
-      const over15 = pct(row["Over15 Average"], 55);
-      const over25 = pct(row["Over25 Average"], 40);
-      const over35 = pct(row["Over35 Average"], 25);
-      const over45 = pct(row["Over45 Average"], 10);
-
-      const under05 = pct(row["Under05 Average"], Math.max(0, 100 - over05));
-      const under15 = pct(row["Under15 Average"], Math.max(0, 100 - over15));
-      const under25 = pct(row["Under25 Average"], Math.max(0, 100 - over25));
-      const under35 = pct(row["Under35 Average"], Math.max(0, 100 - over35));
-      const under45 = pct(row["Under45 Average"], Math.max(0, 100 - over45));
-
-      const avgCorners = toNum(row["Average Corners"], 9);
-      const c85 = pct(row["Average Over 8.5 Corners"], probFromAverage(avgCorners, 8.5));
-      const c95 = pct(row["Average Over 9.5 Corners"], probFromAverage(avgCorners, 9.5));
-      const c105 = pct(row["Average Over 10.5 Corners"], probFromAverage(avgCorners, 10.5));
-      const c65 = Math.round(clamp(c85 + 18, 0, 95));
-      const c75 = Math.round(clamp(c85 + 10, 0, 95));
-
-      const avgCards = toNum(row["Average Cards"], 3.6);
-      const card25 = probFromAverage(avgCards, 2.5);
-      const card35 = probFromAverage(avgCards, 3.5);
-      const card45 = probFromAverage(avgCards, 4.5);
-      const card55 = probFromAverage(avgCards, 5.5);
-
-      const avgGoals = toNum(row["Average Goals"], 2.4);
-      const hxg = toNum(row["Home Team Pre-Match xG"], avgGoals / 2);
-      const axg = toNum(row["Away Team Pre-Match xG"], avgGoals / 2);
-      const shotBase = clamp((avgGoals * 5.2) + (avgCorners * 0.45) + 7, 7, 26);
-      const targetBase = clamp((hxg + axg) * 1.9 + 2.2, 2, 10);
-
-      const fin135 = probFromAverage(shotBase, 13.5);
-      const fin155 = probFromAverage(shotBase, 15.5);
-      const fin175 = probFromAverage(shotBase, 17.5);
-      const fin195 = probFromAverage(shotBase, 19.5);
-
-      const sog45 = probFromAverage(targetBase, 4.5);
-      const sog55 = probFromAverage(targetBase, 5.5);
-      const sog65 = probFromAverage(targetBase, 6.5);
-      const sog75 = probFromAverage(targetBase, 7.5);
-
-      return {
-        winners: winnerAnalysis(row),
-        goals: {
-          over: [
-            ["Mais que 0.5", over05, over05, over05],
-            ["Mais que 1.5", over15, over15, over15],
-            ["Mais que 2.5", over25, over25, over25],
-            ["Mais que 3.5", over35, over35, over35],
-            ["Mais que 4.5", over45, over45, over45]
-          ],
-          under: [
-            ["Menos que 4.5", under45, under45, under45],
-            ["Menos que 3.5", under35, under35, under35],
-            ["Menos que 2.5", under25, under25, under25],
-            ["Menos que 1.5", under15, under15, under15],
-            ["Menos que 0.5", under05, under05, under05]
-          ]
-        },
-        corners: {
-          over: [
-            ["Mais que 6.5", Math.max(5, c65 - 6), Math.min(95, c65 + 6), c65],
-            ["Mais que 7.5", Math.max(5, c75 - 6), Math.min(95, c75 + 6), c75],
-            ["Mais que 8.5", Math.max(5, c85 - 6), Math.min(95, c85 + 6), c85],
-            ["Mais que 9.5", Math.max(5, c95 - 6), Math.min(95, c95 + 6), c95],
-            ["Mais que 10.5", Math.max(5, c105 - 6), Math.min(95, c105 + 6), c105]
-          ],
-          under: [
-            ["Menos que 10.5", Math.max(5, 100 - c105 - 4), Math.min(95, 100 - c105 + 4), 100 - c105],
-            ["Menos que 9.5", Math.max(5, 100 - c95 - 4), Math.min(95, 100 - c95 + 4), 100 - c95],
-            ["Menos que 8.5", Math.max(5, 100 - c85 - 4), Math.min(95, 100 - c85 + 4), 100 - c85],
-            ["Menos que 7.5", Math.max(5, 100 - c75 - 4), Math.min(95, 100 - c75 + 4), 100 - c75]
-          ]
-        },
-        cards: {
-          over: [
-            ["Mais que 2.5", card25, card25, card25],
-            ["Mais que 3.5", card35, card35, card35],
-            ["Mais que 4.5", card45, card45, card45],
-            ["Mais que 5.5", card55, card55, card55]
-          ],
-          under: [
-            ["Menos que 5.5", 100 - card55, 100 - card55, 100 - card55],
-            ["Menos que 4.5", 100 - card45, 100 - card45, 100 - card45],
-            ["Menos que 3.5", 100 - card35, 100 - card35, 100 - card35],
-            ["Menos que 2.5", 100 - card25, 100 - card25, 100 - card25]
-          ]
-        },
-        finishes: {
-          over: [
-            ["Mais que 13.5", fin135, fin135, fin135],
-            ["Mais que 15.5", fin155, fin155, fin155],
-            ["Mais que 17.5", fin175, fin175, fin175],
-            ["Mais que 19.5", fin195, fin195, fin195]
-          ],
-          under: [
-            ["Menos que 19.5", 100 - fin195, 100 - fin195, 100 - fin195],
-            ["Menos que 17.5", 100 - fin175, 100 - fin175, 100 - fin175],
-            ["Menos que 15.5", 100 - fin155, 100 - fin155, 100 - fin155],
-            ["Menos que 13.5", 100 - fin135, 100 - fin135, 100 - fin135]
-          ]
-        },
-        shots: {
-          over: [
-            ["Mais que 4.5", sog45, sog45, sog45],
-            ["Mais que 5.5", sog55, sog55, sog55],
-            ["Mais que 6.5", sog65, sog65, sog65],
-            ["Mais que 7.5", sog75, sog75, sog75]
-          ],
-          under: [
-            ["Menos que 7.5", 100 - sog75, 100 - sog75, 100 - sog75],
-            ["Menos que 6.5", 100 - sog65, 100 - sog65, 100 - sog65],
-            ["Menos que 5.5", 100 - sog55, 100 - sog55, 100 - sog55],
-            ["Menos que 4.5", 100 - sog45, 100 - sog45, 100 - sog45]
-          ]
-        }
-      };
-    }
-
-    function mapCsvRowToMatch(row, index){
-      const analysis = buildAnalysis(row);
-      const winnerBest = Math.max(...analysis.winners.distribution.map(x => x.value));
-      const over15 = pct(row["Over15 Average"], 55);
-      const over25 = pct(row["Over25 Average"], 40);
-      const corners = pct(row["Average Over 8.5 Corners"], 50);
-      const cards = probFromAverage(toNum(row["Average Cards"], 3.6), 3.5);
-      const finishes = analysis.finishes.over[0][3];
-      const shotsTarget = analysis.shots.over[0][3];
-
-      const score = Math.round(clamp(
-        (winnerBest * 0.12) +
-        (over15 * 0.22) +
-        (over25 * 0.18) +
-        (corners * 0.16) +
-        (cards * 0.12) +
-        (finishes * 0.10) +
-        (shotsTarget * 0.10),
-        0,
-        100
-      ));
-
-      const confidence = score >= 75 ? "Alta" : score >= 62 ? "Boa" : "Monitorar";
-      const risk = score >= 75 ? "Baixo" : score >= 62 ? "Médio" : "Alto";
-      const tag = score >= 70 ? "Oportunidade" : score >= 58 ? "Em análise" : "Nova";
-
-      return {
-        id: index + 1,
-        league: row["League"] || "Liga não informada",
-        country: row["Country"] || "",
-        home: row["Home Team"] || "Mandante",
-        away: row["Away Team"] || "Visitante",
-        date: formatDateFromUnix(row["date_unix"]),
-        time: formatTimeFromUnix(row["date_unix"]),
-        stadium: row["Country"] ? `${row["Country"]}` : "Local não informado",
-        status: normalizeStatus(row["Match Status"]),
-        score,
-        confidence,
-        winner: winnerBest,
-        over15,
-        over25,
-        btts: pct(row["BTTS Average"], 50),
-        corners,
-        cards,
-        finishes,
-        shotsTarget,
-        risk,
-        tag,
-        analysis
-      };
-    }
-
-    async function loadCsvMatches(){
-      try {
-        const response = await fetch(CSV_FILE_URL, { cache: "no-store" });
-        if(!response.ok) throw new Error("Não foi possível carregar o CSV.");
-        const text = await response.text();
-        const rows = parseCSV(text);
-
-        matches = rows
-          .map(mapCsvRowToMatch)
-          .filter(match => match.home && match.away)
-          .sort((a, b) => {
-            const ta = a.time || "99:99";
-            const tb = b.time || "99:99";
-            return ta.localeCompare(tb);
-          });
-
-        if(!matches.length) throw new Error("CSV carregado, mas nenhum jogo foi identificado.");
-
-        selectedMatch = matches[0];
-      } catch(error) {
-        console.error(error);
-        matches = [{
-          id: 1,
-          league: "CSV não carregado",
-          country: "",
-          home: "Dados",
-          away: "Indisponíveis",
-          date: "--/--/----",
-          time: "--:--",
-          stadium: "Verifique se o arquivo data/26-05-2026.csv está no projeto.",
-          status: "Pré-jogo",
-          score: 0,
-          confidence: "Erro",
-          winner: 0,
-          over15: 0,
-          over25: 0,
-          btts: 0,
-          corners: 0,
-          cards: 0,
-          finishes: 0,
-          shotsTarget: 0,
-          risk: "Alto",
-          tag: "Erro",
-          analysis: buildAnalysis({})
-        }];
-        selectedMatch = matches[0];
-      }
-    }
+    const CSV_BASE_PATH = "data/";
+    const DEFAULT_DATE = "2026-05-26";
+    const AVAILABLE_CSV_DATES = ["2026-05-26"];
 
     const plans = [
       {
@@ -2590,34 +2299,447 @@
       { key: "insights", label: "Insights IA" }
     ];
 
+    let matches = [];
+    let selectedMatch = null;
     let selectedAnalysisTab = "winners";
+    let currentCsvFile = "";
+    let currentDate = DEFAULT_DATE;
+    let lastLoadError = "";
 
     function pctColor(pct){
+      if(pct === null || pct === undefined || Number.isNaN(pct)) return "rgba(130,170,220,.35)";
       if(pct >= 70) return "var(--green)";
       if(pct >= 55) return "var(--yellow)";
       return "var(--red)";
     }
 
     function pillClass(pct){
+      if(pct === null || pct === undefined || Number.isNaN(pct)) return "blue";
       if(pct >= 70) return "green";
       if(pct >= 55) return "yellow";
       return "red";
     }
 
     function badgeClass(value){
-      if(["Baixo","Oportunidade","Alta","Green"].includes(value)) return "green";
-      if(["Médio","Em análise","Pendente"].includes(value)) return "yellow";
-      if(["Alto","Red"].includes(value)) return "red";
+      if(["Baixo","Oportunidade","Alta","Green","CSV carregado"].includes(value)) return "green";
+      if(["Médio","Em análise","Pendente","Boa"].includes(value)) return "yellow";
+      if(["Alto","Red","Indisponível"].includes(value)) return "red";
       return "blue";
     }
 
-    function marketRow(label,pct){
+    function safeNum(value){
+      if(value === null || value === undefined) return null;
+      const cleaned = String(value).replace("%", "").replace(",", ".").trim();
+      if(cleaned === "" || cleaned.toLowerCase() === "nan") return null;
+      const n = Number(cleaned);
+      if(!Number.isFinite(n)) return null;
+      if(n === -1) return null;
+      return n;
+    }
+
+    function clamp(n, min = 0, max = 100){
+      if(n === null || n === undefined || Number.isNaN(n)) return null;
+      return Math.max(min, Math.min(max, Math.round(n)));
+    }
+
+    function pct(value){
+      const n = safeNum(value);
+      return n === null ? null : clamp(n, 0, 100);
+    }
+
+    function calcProbabilityFromAverage(avg, line, sensitivity = 1.15){
+      const n = safeNum(avg);
+      if(n === null) return null;
+      const p = 100 / (1 + Math.exp(-(n - line) * sensitivity));
+      return clamp(p);
+    }
+
+    function estimateTeamPct(gamePct, balance, side){
+      if(gamePct === null) return null;
+      const adj = side === "home" ? balance : -balance;
+      return clamp(gamePct + adj);
+    }
+
+    function formatValue(value){
+      if(value === null || value === undefined || Number.isNaN(value)) return "—";
+      return `${Math.round(value)}%`;
+    }
+
+    function dateToFile(dateStr){
+      const [yyyy, mm, dd] = dateStr.split("-");
+      return `${dd}-${mm}-${yyyy}.csv`;
+    }
+
+    function parseCSV(text){
+      const rows = [];
+      let row = [];
+      let value = "";
+      let insideQuotes = false;
+
+      for(let i = 0; i < text.length; i++){
+        const char = text[i];
+        const next = text[i + 1];
+
+        if(char === '"' && insideQuotes && next === '"'){
+          value += '"';
+          i++;
+          continue;
+        }
+
+        if(char === '"'){
+          insideQuotes = !insideQuotes;
+          continue;
+        }
+
+        if(char === "," && !insideQuotes){
+          row.push(value);
+          value = "";
+          continue;
+        }
+
+        if((char === "
+" || char === "") && !insideQuotes){
+          if(char === "" && next === "
+") i++;
+          row.push(value);
+          if(row.some(cell => String(cell).trim() !== "")) rows.push(row);
+          row = [];
+          value = "";
+          continue;
+        }
+
+        value += char;
+      }
+
+      if(value.length || row.length){
+        row.push(value);
+        if(row.some(cell => String(cell).trim() !== "")) rows.push(row);
+      }
+
+      if(!rows.length) return [];
+
+      const headers = rows[0].map(h => h.trim());
+      return rows.slice(1).map(cells => {
+        const obj = {};
+        headers.forEach((h, index) => {
+          obj[h] = cells[index] !== undefined ? cells[index].trim() : "";
+        });
+        return obj;
+      });
+    }
+
+    function statusFromCSV(raw){
+      const s = String(raw || "").toLowerCase();
+      if(s.includes("complete") || s.includes("finished") || s.includes("final")) return "Finalizado";
+      if(s.includes("live") || s.includes("progress") || s.includes("1h") || s.includes("2h")) return "Ao vivo";
+      if(s.includes("cancel") || s.includes("postponed") || s.includes("suspend") || s.includes("abandoned")) return "Cancelado";
+      return "Pré-jogo";
+    }
+
+    function formatDateTime(row){
+      const unix = safeNum(row["date_unix"]);
+      if(unix !== null){
+        const d = new Date(unix * 1000);
+        return {
+          date: d.toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" }),
+          time: d.toLocaleTimeString("pt-BR", { timeZone: "America/Sao_Paulo", hour: "2-digit", minute: "2-digit" })
+        };
+      }
+
+      const raw = row["date_GMT"] || "";
+      return { date: raw.split(" - ")[0] || currentDate, time: raw.split(" - ")[1] || "" };
+    }
+
+    function winnerAnalysis(row){
+      const homePPG = safeNum(row["Home Team Overall Points Per Game (Pre-Match)"]) ?? safeNum(row["Home Team Points Per Game (Pre-Match)"]) ?? 1;
+      const awayPPG = safeNum(row["Away Team Overall Points Per Game (Pre-Match)"]) ?? safeNum(row["Away Team Points Per Game (Pre-Match)"]) ?? 1;
+      const diff = homePPG - awayPPG;
+      const draw = clamp(28 - Math.abs(diff) * 4, 18, 32);
+      const remaining = 100 - draw;
+      const homeStrength = Math.max(0.15, homePPG + 0.2);
+      const awayStrength = Math.max(0.15, awayPPG + 0.2);
+      const home = clamp(remaining * homeStrength / (homeStrength + awayStrength));
+      const away = clamp(100 - home - draw);
+
+      const distribution = [
+        { index: "01", label: "Casa", value: home, color: "var(--red)", highlight: home >= Math.max(draw, away) },
+        { index: "02", label: "Empate", value: draw, color: "var(--red)", highlight: draw >= Math.max(home, away) },
+        { index: "03", label: "Visitante", value: away, color: "var(--red)", highlight: away >= Math.max(home, draw) }
+      ];
+
+      const doubleChance = [
+        { index: "01", label: "Casa ou Empate", value: clamp(home + draw), color: "var(--yellow)" },
+        { index: "02", label: "Casa ou Visitante", value: clamp(home + away), color: "var(--yellow)" },
+        { index: "03", label: "Empate ou Visitante", value: clamp(draw + away), color: "var(--yellow)" }
+      ].sort((a,b) => b.value - a.value).map((item, idx) => ({ ...item, index: String(idx + 1).padStart(2, "0"), highlight: idx === 0 }));
+
+      return { distribution, doubleChance, home, draw, away };
+    }
+
+    function buildMarketSection(row, type){
+      if(type === "goals"){
+        const avgGoals = safeNum(row["Average Goals"]);
+        const over05 = pct(row["Over05 Average"]);
+        const over15 = pct(row["Over15 Average"]);
+        const over25 = pct(row["Over25 Average"]);
+        const over35 = pct(row["Over35 Average"]);
+        const over45 = pct(row["Over45 Average"]);
+
+        const homeXg = safeNum(row["Home Team Pre-Match xG"]);
+        const awayXg = safeNum(row["Away Team Pre-Match xG"]);
+        const balance = homeXg !== null && awayXg !== null ? clamp((homeXg - awayXg) * 8, -18, 18) : 0;
+
+        const over = [
+          ["Mais que 0.5", estimateTeamPct(over05, balance, "home"), estimateTeamPct(over05, balance, "away"), over05],
+          ["Mais que 1.5", estimateTeamPct(over15, balance, "home"), estimateTeamPct(over15, balance, "away"), over15],
+          ["Mais que 2.5", estimateTeamPct(over25, balance, "home"), estimateTeamPct(over25, balance, "away"), over25],
+          ["Mais que 3.5", estimateTeamPct(over35, balance, "home"), estimateTeamPct(over35, balance, "away"), over35],
+          ["Mais que 4.5", estimateTeamPct(over45, balance, "home"), estimateTeamPct(over45, balance, "away"), over45]
+        ];
+
+        function underValue(col, overVal){
+          const u = pct(row[col]);
+          return u !== null ? u : (overVal !== null ? clamp(100 - overVal) : null);
+        }
+
+        const under35 = underValue("Under35 Average", over35);
+        const under25 = underValue("Under25 Average", over25);
+        const under15 = underValue("Under15 Average", over15);
+        const under05 = underValue("Under05 Average", over05);
+
+        const under = [
+          ["Menos que 3.5", estimateTeamPct(under35, -balance, "home"), estimateTeamPct(under35, -balance, "away"), under35],
+          ["Menos que 2.5", estimateTeamPct(under25, -balance, "home"), estimateTeamPct(under25, -balance, "away"), under25],
+          ["Menos que 1.5", estimateTeamPct(under15, -balance, "home"), estimateTeamPct(under15, -balance, "away"), under15],
+          ["Menos que 0.5", estimateTeamPct(under05, -balance, "home"), estimateTeamPct(under05, -balance, "away"), under05]
+        ];
+
+        return { over, under, available: over.some(r => r[3] !== null) || under.some(r => r[3] !== null) };
+      }
+
+      if(type === "corners"){
+        const avg = safeNum(row["Average Corners"]);
+        const over65 = calcProbabilityFromAverage(avg, 6.5, 0.75);
+        const over75 = calcProbabilityFromAverage(avg, 7.5, 0.75);
+        const over85 = pct(row["Average Over 8.5 Corners"]) ?? calcProbabilityFromAverage(avg, 8.5, 0.75);
+        const over95 = pct(row["Average Over 9.5 Corners"]) ?? calcProbabilityFromAverage(avg, 9.5, 0.75);
+        const over105 = pct(row["Average Over 10.5 Corners"]) ?? calcProbabilityFromAverage(avg, 10.5, 0.75);
+        const over = [
+          ["Mais que 6.5", over65, over65, over65],
+          ["Mais que 7.5", over75, over75, over75],
+          ["Mais que 8.5", over85, over85, over85],
+          ["Mais que 9.5", over95, over95, over95],
+          ["Mais que 10.5", over105, over105, over105]
+        ];
+        const under = [
+          ["Menos que 10.5", over105 !== null ? clamp(100 - over105) : null, over105 !== null ? clamp(100 - over105) : null, over105 !== null ? clamp(100 - over105) : null],
+          ["Menos que 9.5", over95 !== null ? clamp(100 - over95) : null, over95 !== null ? clamp(100 - over95) : null, over95 !== null ? clamp(100 - over95) : null],
+          ["Menos que 8.5", over85 !== null ? clamp(100 - over85) : null, over85 !== null ? clamp(100 - over85) : null, over85 !== null ? clamp(100 - over85) : null],
+          ["Menos que 7.5", over75 !== null ? clamp(100 - over75) : null, over75 !== null ? clamp(100 - over75) : null, over75 !== null ? clamp(100 - over75) : null]
+        ];
+        return { over, under, available: avg !== null || over85 !== null || over95 !== null };
+      }
+
+      if(type === "cards"){
+        const avg = safeNum(row["Average Cards"]);
+        const over25 = calcProbabilityFromAverage(avg, 2.5, 1.1);
+        const over35 = calcProbabilityFromAverage(avg, 3.5, 1.1);
+        const over45 = calcProbabilityFromAverage(avg, 4.5, 1.1);
+        const over55 = calcProbabilityFromAverage(avg, 5.5, 1.1);
+
+        const over = [
+          ["Mais que 2.5", over25, over25, over25],
+          ["Mais que 3.5", over35, over35, over35],
+          ["Mais que 4.5", over45, over45, over45],
+          ["Mais que 5.5", over55, over55, over55]
+        ];
+
+        const under = [
+          ["Menos que 5.5", over55 !== null ? clamp(100 - over55) : null, over55 !== null ? clamp(100 - over55) : null, over55 !== null ? clamp(100 - over55) : null],
+          ["Menos que 4.5", over45 !== null ? clamp(100 - over45) : null, over45 !== null ? clamp(100 - over45) : null, over45 !== null ? clamp(100 - over45) : null],
+          ["Menos que 3.5", over35 !== null ? clamp(100 - over35) : null, over35 !== null ? clamp(100 - over35) : null, over35 !== null ? clamp(100 - over35) : null],
+          ["Menos que 2.5", over25 !== null ? clamp(100 - over25) : null, over25 !== null ? clamp(100 - over25) : null, over25 !== null ? clamp(100 - over25) : null]
+        ];
+
+        return { over, under, available: avg !== null };
+      }
+
+      if(type === "finishes"){
+        const home = safeNum(row["Home Team Shots"]);
+        const away = safeNum(row["Away Team Shots"]);
+        if(home === null || away === null) return { over: [], under: [], available: false };
+        const total = home + away;
+        const over = [
+          ["Mais que 13.5", calcProbabilityFromAverage(total, 13.5, .8), calcProbabilityFromAverage(total, 13.5, .8), calcProbabilityFromAverage(total, 13.5, .8)],
+          ["Mais que 15.5", calcProbabilityFromAverage(total, 15.5, .8), calcProbabilityFromAverage(total, 15.5, .8), calcProbabilityFromAverage(total, 15.5, .8)],
+          ["Mais que 17.5", calcProbabilityFromAverage(total, 17.5, .8), calcProbabilityFromAverage(total, 17.5, .8), calcProbabilityFromAverage(total, 17.5, .8)],
+          ["Mais que 19.5", calcProbabilityFromAverage(total, 19.5, .8), calcProbabilityFromAverage(total, 19.5, .8), calcProbabilityFromAverage(total, 19.5, .8)]
+        ];
+        const under = over.slice().reverse().map(r => [r[0].replace("Mais", "Menos"), r[3] !== null ? clamp(100 - r[3]) : null, r[3] !== null ? clamp(100 - r[3]) : null, r[3] !== null ? clamp(100 - r[3]) : null]);
+        return { over, under, available: true };
+      }
+
+      if(type === "shots"){
+        const home = safeNum(row["Home Team Shots On Target"]);
+        const away = safeNum(row["Away Team Shots On Target"]);
+        if(home === null || away === null) return { over: [], under: [], available: false };
+        const total = home + away;
+        const over = [
+          ["Mais que 4.5", calcProbabilityFromAverage(total, 4.5, .9), calcProbabilityFromAverage(total, 4.5, .9), calcProbabilityFromAverage(total, 4.5, .9)],
+          ["Mais que 5.5", calcProbabilityFromAverage(total, 5.5, .9), calcProbabilityFromAverage(total, 5.5, .9), calcProbabilityFromAverage(total, 5.5, .9)],
+          ["Mais que 6.5", calcProbabilityFromAverage(total, 6.5, .9), calcProbabilityFromAverage(total, 6.5, .9), calcProbabilityFromAverage(total, 6.5, .9)],
+          ["Mais que 7.5", calcProbabilityFromAverage(total, 7.5, .9), calcProbabilityFromAverage(total, 7.5, .9), calcProbabilityFromAverage(total, 7.5, .9)]
+        ];
+        const under = over.slice().reverse().map(r => [r[0].replace("Mais", "Menos"), r[3] !== null ? clamp(100 - r[3]) : null, r[3] !== null ? clamp(100 - r[3]) : null, r[3] !== null ? clamp(100 - r[3]) : null]);
+        return { over, under, available: true };
+      }
+
+      return { over: [], under: [], available: false };
+    }
+
+    function normalizeMatch(row, index){
+      const dt = formatDateTime(row);
+      const home = row["Home Team"] || "Mandante";
+      const away = row["Away Team"] || "Visitante";
+      const league = row["League"] || "Liga";
+      const country = row["Country"] || "";
+      const status = statusFromCSV(row["Match Status"]);
+
+      const winnerData = winnerAnalysis(row);
+      const over15 = pct(row["Over15 Average"]);
+      const over25 = pct(row["Over25 Average"]);
+      const btts = pct(row["BTTS Average"]);
+      const corners = pct(row["Average Over 8.5 Corners"]) ?? calcProbabilityFromAverage(safeNum(row["Average Corners"]), 8.5, .75);
+      const cards = calcProbabilityFromAverage(safeNum(row["Average Cards"]), 3.5, 1.1);
+      const finishes = safeNum(row["Home Team Shots"]) !== null && safeNum(row["Away Team Shots"]) !== null ? clamp(safeNum(row["Home Team Shots"]) + safeNum(row["Away Team Shots"]) * 3) : null;
+      const shotsTarget = safeNum(row["Home Team Shots On Target"]) !== null && safeNum(row["Away Team Shots On Target"]) !== null ? clamp((safeNum(row["Home Team Shots On Target"]) + safeNum(row["Away Team Shots On Target"])) * 8) : null;
+
+      const parts = [winnerData.home, over15, over25, btts, corners, cards].filter(v => v !== null);
+      const score = parts.length ? clamp(parts.reduce((a,b) => a+b, 0) / parts.length) : 0;
+
+      let confidence = "Baixa";
+      if(score >= 75) confidence = "Alta";
+      else if(score >= 62) confidence = "Boa";
+      else if(score >= 50) confidence = "Média";
+
+      let risk = "Alto";
+      if(score >= 75) risk = "Baixo";
+      else if(score >= 58) risk = "Médio";
+
+      let tag = "Indisponível";
+      if(score >= 70) tag = "Oportunidade";
+      else if(score >= 55) tag = "Em análise";
+
+      const analysis = {
+        winners: winnerData,
+        goals: buildMarketSection(row, "goals"),
+        corners: buildMarketSection(row, "corners"),
+        cards: buildMarketSection(row, "cards"),
+        finishes: buildMarketSection(row, "finishes"),
+        shots: buildMarketSection(row, "shots")
+      };
+
+      return {
+        id: index + 1,
+        league,
+        country,
+        leagueFull: country ? `${country} • ${league}` : league,
+        home,
+        away,
+        date: dt.date,
+        time: dt.time,
+        stadium: "Dados via CSV",
+        status,
+        score,
+        confidence,
+        winner: winnerData.home,
+        draw: winnerData.draw,
+        awayWin: winnerData.away,
+        over15,
+        over25,
+        btts,
+        corners,
+        cards,
+        finishes,
+        shotsTarget,
+        risk,
+        tag,
+        raw: row,
+        analysis
+      };
+    }
+
+    function showPublic(pageId){
+      document.querySelectorAll(".public-page").forEach(p => p.classList.remove("active"));
+      document.getElementById("dashboardShell").classList.remove("active");
+      document.getElementById(pageId).classList.add("active");
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+
+    function login(){
+      document.querySelectorAll(".public-page").forEach(p => p.classList.remove("active"));
+      document.getElementById("dashboardShell").classList.add("active");
+      goAppPage("dashboard");
+    }
+
+    function logout(){
+      document.getElementById("dashboardShell").classList.remove("active");
+      showPublic("landingPage");
+    }
+
+    function pageTitles(page){
+      const map = {
+        dashboard: ["Dashboard", "Dados reais carregados do CSV selecionado"],
+        analysis: ["Análises", "Tela completa de análise por jogo e por mercado"],
+        matchCenter: ["Jogos", "Lista de partidas carregadas do CSV"],
+        markets: ["Mercados", "Resumo dos mercados analisados pela plataforma"],
+        scanner: ["Scanner", "Radar de oportunidades por mercado e probabilidade"],
+        liveCenter: ["Ao Vivo", "Central de partidas ao vivo quando houver dados no CSV"],
+        favorites: ["Favoritos", "Jogos salvos pelo usuário"],
+        history: ["Histórico", "Histórico será conectado na próxima etapa"],
+        plans: ["Planos", "Assinatura e acesso premium"],
+        admin: ["Configurações", "Importação de CSV, usuários e ajustes"]
+      };
+      return map[page] || map.dashboard;
+    }
+
+    function goAppPage(pageId){
+      document.querySelectorAll(".app-page").forEach(p => p.classList.remove("active"));
+      const page = document.getElementById(pageId);
+      if(page) page.classList.add("active");
+
+      document.querySelectorAll(".nav-item").forEach(item => {
+        item.classList.toggle("active", item.dataset.page === pageId);
+      });
+
+      const [title, subtitle] = pageTitles(pageId);
+      document.getElementById("appTitle").textContent = title;
+      document.getElementById("appSubtitle").textContent = subtitle;
+
+      if(pageId === "analysis" && !selectedMatch && matches.length){
+        selectedMatch = matches[0];
+        renderAnalysis();
+      }
+
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+
+    function emptyState(message){
+      return `<div class="empty-state">${message}</div>`;
+    }
+
+    function loadingState(message = "Carregando dados do CSV..."){
+      return `<div class="loading-state">${message}</div>`;
+    }
+
+    function marketRow(label, pct){
       const color = pctColor(pct);
+      const value = formatValue(pct);
       return `
         <div class="market-row">
           <div class="market-label">${label}</div>
-          <div class="bar-bg"><div class="bar" style="width:${pct}%;background:${color}"></div></div>
-          <div class="pct" style="color:${color}">${pct}%</div>
+          <div class="bar-bg"><div class="bar" style="width:${pct ?? 0}%;background:${color}"></div></div>
+          <div class="pct" style="color:${color}">${value}</div>
         </div>
       `;
     }
@@ -2662,86 +2784,139 @@
         ["Ganhador", match.winner],
         ["Gols Over 2.5", match.over25],
         ["Gols Over 1.5", match.over15],
+        ["BTTS Sim", match.btts],
         ["Escanteios Over 8.5", match.corners],
         ["Cartões Over 3.5", match.cards],
-        ["Finalizações Over", match.finishes],
-        ["Chutes a gol Over", match.shotsTarget]
-      ];
-      return options.sort((a,b) => b[1] - a[1])[0];
-    }
+        ["Finalizações", match.finishes],
+        ["Chutes a gol", match.shotsTarget]
+      ].filter(item => item[1] !== null && item[1] !== undefined);
 
-    function showPublic(pageId){
-      document.querySelectorAll(".public-page").forEach(p => p.classList.remove("active"));
-      document.getElementById("dashboardShell").classList.remove("active");
-      document.getElementById(pageId).classList.add("active");
-      window.scrollTo({ top: 0, behavior: "smooth" });
-    }
-
-    function login(){
-      document.querySelectorAll(".public-page").forEach(p => p.classList.remove("active"));
-      document.getElementById("dashboardShell").classList.add("active");
-      goAppPage("dashboard");
-    }
-
-    function logout(){
-      document.getElementById("dashboardShell").classList.remove("active");
-      showPublic("landingPage");
-    }
-
-    function pageTitles(page){
-      const map = {
-        dashboard: ["Dashboard", "Visão geral dos jogos, mercados e alertas do dia"],
-        analysis: ["Análises", "Tela completa de análise por jogo e por mercado"],
-        matchCenter: ["Jogos", "Lista de partidas monitoradas"],
-        markets: ["Mercados", "Resumo dos mercados analisados pela plataforma"],
-        scanner: ["Scanner", "Radar de oportunidades por mercado e probabilidade"],
-        liveCenter: ["Ao Vivo", "Central de partidas em andamento preparada para API"],
-        favorites: ["Favoritos", "Jogos salvos pelo usuário"],
-        history: ["Histórico", "Análises e resultados anteriores"],
-        plans: ["Planos", "Assinatura e acesso premium"],
-        admin: ["Configurações", "Importação de CSV, usuários e ajustes"]
-      };
-      return map[page] || map.dashboard;
-    }
-
-    function goAppPage(pageId){
-      document.querySelectorAll(".app-page").forEach(p => p.classList.remove("active"));
-      const page = document.getElementById(pageId);
-      if(page) page.classList.add("active");
-
-      document.querySelectorAll(".nav-item").forEach(item => {
-        item.classList.toggle("active", item.dataset.page === pageId);
-      });
-
-      const [title, subtitle] = pageTitles(pageId);
-      document.getElementById("appTitle").textContent = title;
-      document.getElementById("appSubtitle").textContent = subtitle;
-
-      window.scrollTo({ top: 0, behavior: "smooth" });
+      return options.length ? options.sort((a,b) => b[1] - a[1])[0] : ["Sem mercado disponível", 0];
     }
 
     function openAnalysis(id){
-      selectedMatch = matches.find(m => m.id === id) || matches[0];
+      selectedMatch = matches.find(m => m.id === id) || matches[0] || null;
       selectedAnalysisTab = "winners";
       renderAnalysis();
       goAppPage("analysis");
     }
 
+    function renderDataBanner(){
+      const banner = document.getElementById("dataBanner");
+      if(!banner) return;
+
+      if(lastLoadError){
+        banner.className = "data-banner error";
+        banner.innerHTML = `<span>⚠️ ${lastLoadError}</span><span>Arquivo esperado: <strong>${currentCsvFile}</strong></span>`;
+        return;
+      }
+
+      banner.className = "data-banner";
+      banner.innerHTML = `<span>✅ Dados carregados do CSV real: <strong>${currentCsvFile}</strong></span><span>${matches.length} jogos encontrados</span>`;
+    }
+
+    function ensureDataBanner(){
+      const dashboard = document.getElementById("dashboard");
+      if(!dashboard || document.getElementById("dataBanner")) return;
+      dashboard.insertAdjacentHTML("afterbegin", `<div id="dataBanner" class="data-banner"></div>`);
+    }
+
+    function renderDashboardKpis(){
+      const live = matches.filter(m => m.status === "Ao vivo").length;
+      const opp = matches.filter(m => m.score >= 70).length;
+      const missing = matches.filter(m => [m.over15, m.corners, m.cards].some(v => v === null)).length;
+      const alerts = opp + missing;
+
+      const kpis = document.querySelector("#dashboard .kpis");
+      if(!kpis) return;
+
+      kpis.innerHTML = `
+        <div class="metric-card">
+          <div class="metric-content">
+            <div class="metric-icon">⚽</div>
+            <div>
+              <div class="metric-label">Jogos monitorados</div>
+              <div class="metric-value">${matches.length}</div>
+              <div class="delta green-text">CSV real</div>
+            </div>
+          </div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-content">
+            <div class="metric-icon">🔴</div>
+            <div>
+              <div class="metric-label">Jogos ao vivo</div>
+              <div class="metric-value">${live}</div>
+              <div class="delta ${live ? "red-text" : "yellow-text"}">${live ? "Em andamento" : "Sem live"}</div>
+            </div>
+          </div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-content">
+            <div class="metric-icon">🎯</div>
+            <div>
+              <div class="metric-label">Oportunidades</div>
+              <div class="metric-value">${opp}</div>
+              <div class="delta green-text">Score 70+</div>
+            </div>
+          </div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-content">
+            <div class="metric-icon">🔔</div>
+            <div>
+              <div class="metric-label">Alertas</div>
+              <div class="metric-value">${alerts}</div>
+              <div class="delta yellow-text">Leitura</div>
+            </div>
+          </div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-content">
+            <div class="metric-icon">🧱</div>
+            <div>
+              <div class="metric-label">Dados incompletos</div>
+              <div class="metric-value">${missing}</div>
+              <div class="delta red-text">Revisar CSV</div>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
     function renderFeatured(){
-      const featured = [...matches].sort((a,b) => b.score - a.score).slice(0,3);
-      document.getElementById("featuredGrid").innerHTML = featured.map(matchCard).join("");
+      const target = document.getElementById("featuredGrid");
+      if(!target) return;
+      if(!matches.length){
+        target.innerHTML = emptyState("Nenhum jogo carregado. Selecione uma data que tenha CSV na pasta /data.");
+        return;
+      }
+      const featured = [...matches].filter(m => m.status !== "Cancelado").sort((a,b) => b.score - a.score).slice(0,3);
+      target.innerHTML = featured.map(matchCard).join("");
     }
 
     function renderAllMatches(){
-      document.getElementById("allMatches").innerHTML = matches.map(matchCard).join("");
+      const target = document.getElementById("allMatches");
+      if(!target) return;
+      target.innerHTML = matches.length ? matches.map(matchCard).join("") : emptyState("Nenhum jogo encontrado para esta data.");
     }
 
     function renderLiveMatches(){
+      const target = document.getElementById("liveMatches");
+      if(!target) return;
       const live = matches.filter(m => m.status === "Ao vivo");
-      document.getElementById("liveMatches").innerHTML = live.map(matchCard).join("");
+      target.innerHTML = live.length ? live.map(matchCard).join("") : emptyState("Não há jogos ao vivo no CSV selecionado.");
     }
 
     function renderScanner(targetId, limit = null){
+      const target = document.getElementById(targetId);
+      if(!target) return;
+
+      if(!matches.length){
+        target.innerHTML = emptyState("Nenhum mercado encontrado porque não há CSV carregado para esta data.");
+        return;
+      }
+
       const list = [...matches].sort((a,b) => b.score - a.score);
       const rows = (limit ? list.slice(0, limit) : list).map(match => {
         const [market, prob] = bestMarket(match);
@@ -2753,8 +2928,8 @@
             <td>${market}</td>
             <td>
               <div class="prob-cell">
-                <span style="width:36px">${prob}%</span>
-                <div class="bar-bg mini-bar"><div class="bar" style="width:${prob}%;background:${pctColor(prob)}"></div></div>
+                <span style="width:36px">${formatValue(prob)}</span>
+                <div class="bar-bg mini-bar"><div class="bar" style="width:${prob ?? 0}%;background:${pctColor(prob)}"></div></div>
               </div>
             </td>
             <td><span class="badge ${badgeClass(match.risk)}">${match.risk}</span></td>
@@ -2763,7 +2938,7 @@
         `;
       }).join("");
 
-      document.getElementById(targetId).innerHTML = `
+      target.innerHTML = `
         <div class="table-wrap">
           <table>
             <thead>
@@ -2784,78 +2959,89 @@
     }
 
     function renderWatchlist(){
+      const target = document.getElementById("watchlist");
+      const fav = document.getElementById("favoritesList");
       const list = matches.slice(0,4);
-      document.getElementById("watchlist").innerHTML = list.map(match => `
+      const html = list.length ? list.map(match => `
         <div class="watch-item">
           <div>⭐</div>
           <div>${match.home} vs ${match.away}<br><span class="muted">${match.league}</span></div>
           <div>${match.status === "Ao vivo" ? "Ao vivo" : match.time}</div>
           <div>🔔</div>
         </div>
-      `).join("");
+      `).join("") : emptyState("Favoritos ainda não foram salvos.");
 
-      document.getElementById("favoritesList").innerHTML = list.concat(matches.slice(4,6)).map(match => `
-        <div class="watch-item">
-          <div>⭐</div>
-          <div>${match.home} vs ${match.away}<br><span class="muted">${match.league} • Score ${match.score}</span></div>
-          <div>${match.status === "Ao vivo" ? "Ao vivo" : match.time}</div>
-          <div>🔔</div>
-        </div>
-      `).join("");
+      if(target) target.innerHTML = html;
+      if(fav) fav.innerHTML = html;
     }
 
     function renderAlerts(){
-      const alerts = [
-        ["green","Gols Over 1.5 em Manchester City vs Tottenham atingiu 88%","Agora","Alta","green"],
-        ["yellow","Movimento estatístico detectado em Palmeiras vs Flamengo","5 min","Médio","yellow"],
-        ["red","Dados incompletos em 7 partidas importadas por CSV","12 min","Alto","red"],
-        ["blue","Nova oportunidade encontrada em finalizações","15 min","Info","blue"]
-      ];
-      document.getElementById("alerts").innerHTML = alerts.map(item => `
-        <div class="alert-item">
-          <div class="dot ${item[0]}"></div>
-          <div>${item[1]}</div>
-          <div class="muted">${item[2]}</div>
-          <div><span class="badge ${item[4]}">${item[3]}</span></div>
-        </div>
-      `).join("");
+      const target = document.getElementById("alerts");
+      if(!target) return;
+
+      if(!matches.length){
+        target.innerHTML = emptyState("Sem alertas porque nenhum CSV foi carregado.");
+        return;
+      }
+
+      const top = [...matches].sort((a,b) => b.score - a.score).slice(0, 3);
+      target.innerHTML = top.map((match, idx) => {
+        const [market, prob] = bestMarket(match);
+        const dot = idx === 0 ? "green" : idx === 1 ? "yellow" : "blue";
+        const level = prob >= 70 ? "Alta" : prob >= 55 ? "Média" : "Info";
+        return `
+          <div class="alert-item">
+            <div class="dot ${dot}"></div>
+            <div>${market} em ${match.home} vs ${match.away}: ${formatValue(prob)}</div>
+            <div class="muted">${match.time}</div>
+            <div><span class="badge ${badgeClass(level)}">${level}</span></div>
+          </div>
+        `;
+      }).join("");
     }
 
     function renderMarkets(){
-      const avg = key => Math.round(matches.reduce((sum,m) => sum + m[key], 0) / matches.length);
-      document.getElementById("avgOver15").textContent = `${avg("over15")}%`;
-      document.getElementById("avgCorners").textContent = `${avg("corners")}%`;
-      document.getElementById("avgShotsTarget").textContent = `${avg("shotsTarget")}%`;
+      const avg = key => {
+        const vals = matches.map(m => m[key]).filter(v => v !== null && v !== undefined);
+        return vals.length ? clamp(vals.reduce((a,b) => a+b, 0) / vals.length) : null;
+      };
+
+      const over = document.getElementById("avgOver15");
+      const corners = document.getElementById("avgCorners");
+      const shots = document.getElementById("avgShotsTarget");
+      if(over) over.textContent = formatValue(avg("over15"));
+      if(corners) corners.textContent = formatValue(avg("corners"));
+      if(shots) shots.textContent = formatValue(avg("shotsTarget"));
+
+      const bars = document.getElementById("marketBars");
+      if(!bars) return;
+
+      if(!matches.length){
+        bars.innerHTML = emptyState("Nenhum mercado disponível para esta data.");
+        return;
+      }
 
       const rows = [
         ["Ganhador", avg("winner")],
         ["Gols Over 1.5", avg("over15")],
         ["Gols Over 2.5", avg("over25")],
+        ["BTTS Sim", avg("btts")],
         ["Escanteios", avg("corners")],
         ["Cartões", avg("cards")],
         ["Finalizações", avg("finishes")],
         ["Chutes a gol", avg("shotsTarget")]
       ];
-      document.getElementById("marketBars").innerHTML = rows.map(([label,val]) => marketRow(label,val)).join("");
+      bars.innerHTML = rows.map(([label,val]) => marketRow(label,val)).join("");
     }
 
     function renderHistory(){
-      const results = ["Green","Red","Pendente","Void"];
-      const rows = matches.map((match,index) => {
-        const [market, prob] = bestMarket(match);
-        const result = results[index % results.length];
-        const resultClass = result === "Green" ? "green" : result === "Red" ? "red" : result === "Void" ? "blue" : "yellow";
-        return `
-          <tr>
-            <td>${String(25 - index).padStart(2, "0")}/05/2025</td>
-            <td>${match.home} vs ${match.away}</td>
-            <td>${market}</td>
-            <td>${prob}%</td>
-            <td><span class="badge ${resultClass}">${result}</span></td>
-          </tr>
-        `;
-      }).join("");
-      document.getElementById("historyRows").innerHTML = rows;
+      const target = document.getElementById("historyRows");
+      if(!target) return;
+      target.innerHTML = `
+        <tr>
+          <td colspan="5">Histórico real ainda não conectado. Nesta etapa, o site carrega apenas o CSV da data selecionada.</td>
+        </tr>
+      `;
     }
 
     function renderPlans(targetId){
@@ -2876,7 +3062,9 @@
     }
 
     function renderAnalysisTabs(){
-      document.getElementById("analysisTabs").innerHTML = analysisTabs.map(tab => `
+      const target = document.getElementById("analysisTabs");
+      if(!target) return;
+      target.innerHTML = analysisTabs.map(tab => `
         <div class="analysis-tab ${selectedAnalysisTab === tab.key ? "active" : ""}" onclick="switchAnalysisTab('${tab.key}')">${tab.label}</div>
       `).join("");
     }
@@ -2887,82 +3075,63 @@
       renderAnalysisMainContent();
     }
 
-    function renderAnalysisHeader(){
-      const match = selectedMatch;
-      document.getElementById("analysisHeaderCard").innerHTML = `
-        <div class="team-side">
-          <div class="club-logo">${match.home.charAt(0)}</div>
-          <div>
-            <div class="team-name">${match.home}</div>
-          </div>
-        </div>
-
-        <div class="vs-big">VS</div>
-
-        <div class="team-side right">
-          <div>
-            <div class="team-name">${match.away}</div>
-          </div>
-          <div class="club-logo">${match.away.charAt(0)}</div>
-        </div>
-      `;
-
-      document.getElementById("analysisScoreBig").textContent = `${match.score}%`;
-      document.getElementById("analysisConfidenceLabel").textContent = match.confidence;
-
-      const meta = `
-        <div class="match-meta">
-          <div class="meta-item">🏆 ${match.league}</div>
-          <div class="meta-item">📅 ${match.date}</div>
-          <div class="meta-item">⏰ ${match.time}</div>
-          <div class="meta-item">🏟 ${match.stadium}</div>
-        </div>
-      `;
-      document.getElementById("analysisHeaderCard").insertAdjacentHTML("afterend", "");
-      document.querySelector(".match-main-card").innerHTML = document.getElementById("analysisHeaderCard").parentElement.innerHTML;
-    }
-
     function renderAnalysis(){
-      const match = selectedMatch;
-      const matchMainCard = document.querySelector(".match-main-card");
-      matchMainCard.innerHTML = `
-        <div class="match-hero">
-          <div class="team-side">
-            <div class="club-logo">${match.home.charAt(0)}</div>
-            <div><div class="team-name">${match.home}</div></div>
-          </div>
-          <div class="vs-big">VS</div>
-          <div class="team-side right">
-            <div><div class="team-name">${match.away}</div></div>
-            <div class="club-logo">${match.away.charAt(0)}</div>
-          </div>
-        </div>
-        <div class="match-meta">
-          <div class="meta-item">🏆 ${match.league}</div>
-          <div class="meta-item">📅 ${match.date}</div>
-          <div class="meta-item">⏰ ${match.time}</div>
-          <div class="meta-item">🏟 ${match.stadium}</div>
-        </div>
-      `;
-      document.getElementById("analysisScoreBig").textContent = `${match.score}%`;
-      document.getElementById("analysisConfidenceLabel").textContent = match.confidence;
+      const match = selectedMatch || matches[0] || null;
+      if(!match){
+        const main = document.getElementById("analysisMainContent");
+        if(main) main.innerHTML = emptyState("Nenhum jogo selecionado. Carregue um CSV válido e abra a análise de uma partida.");
+        return;
+      }
 
-      document.getElementById("quickSummary").innerHTML = `
-        <div class="quick-mini">
-          <strong>Mercado principal</strong>
-          <div class="muted">${bestMarket(match)[0]}</div>
-        </div>
-        <div class="quick-mini">
-          <strong>Risco</strong>
-          <div class="muted">${match.risk}</div>
-        </div>
-        <div class="quick-mini">
-          <strong>Melhores indicadores</strong>
-          ${marketRow("Gols Over 1.5", match.over15)}
-          ${marketRow("Escanteios", match.corners)}
-          ${marketRow("Chutes a gol", match.shotsTarget)}
-        </div>
-      `;
+      selectedMatch = match;
+      const mainCard = document.querySelector(".match-main-card");
+      if(mainCard){
+        mainCard.innerHTML = `
+          <div class="match-hero">
+            <div class="team-side">
+              <div class="club-logo">${match.home.charAt(0)}</div>
+              <div><div class="team-name">${match.home}</div></div>
+            </div>
+            <div class="vs-big">VS</div>
+            <div class="team-side right">
+              <div><div class="team-name">${match.away}</div></div>
+              <div class="club-logo">${match.away.charAt(0)}</div>
+            </div>
+          </div>
+          <div class="match-meta">
+            <div class="meta-item">🏆 ${match.leagueFull || match.league}</div>
+            <div class="meta-item">📅 ${match.date}</div>
+            <div class="meta-item">⏰ ${match.time}</div>
+            <div class="meta-item">📄 ${currentCsvFile}</div>
+          </div>
+        `;
+      }
+
+      const scoreBig = document.getElementById("analysisScoreBig");
+      const label = document.getElementById("analysisConfidenceLabel");
+      if(scoreBig) scoreBig.textContent = `${match.score}%`;
+      if(label) label.textContent = match.confidence;
+
+      const quick = document.getElementById("quickSummary");
+      if(quick){
+        const [market, prob] = bestMarket(match);
+        quick.innerHTML = `
+          <div class="quick-mini">
+            <strong>Mercado principal</strong>
+            <div class="muted">${market} • ${formatValue(prob)}</div>
+          </div>
+          <div class="quick-mini">
+            <strong>Risco</strong>
+            <div class="muted">${match.risk}</div>
+          </div>
+          <div class="quick-mini">
+            <strong>Indicadores</strong>
+            ${marketRow("Gols Over 1.5", match.over15)}
+            ${marketRow("Escanteios", match.corners)}
+            ${marketRow("Cartões", match.cards)}
+          </div>
+        `;
+      }
 
       renderAnalysisTabs();
       renderAnalysisMainContent();
@@ -2980,21 +3149,26 @@
               <div class="winner-index ${item.highlight ? "highlight" : ""}">${item.index}</div>
               <div class="winner-label ${item.highlight ? "highlight" : ""}">${item.label}</div>
               <div class="winner-track">
-                <div class="winner-fill" style="width:${item.value}%;background:${item.color}"></div>
+                <div class="winner-fill" style="width:${item.value ?? 0}%;background:${item.color}"></div>
               </div>
-              <div class="winner-value ${item.color === 'var(--yellow)' ? 'yellow' : item.highlight ? 'green' : ''}">${item.value}%</div>
+              <div class="winner-value ${item.color === 'var(--yellow)' ? 'yellow' : item.highlight ? 'green' : ''}">${formatValue(item.value)}</div>
             </div>
           `).join("")}
         </div>
       `;
     }
 
-    function renderMarketTable(title, data){
-      const baseAnalysis = selectedMatch.analysis || matches[0].analysis;
-      const section = baseAnalysis[title];
+    function renderMarketTable(title){
+      const match = selectedMatch || matches[0];
+      if(!match) return emptyState("Nenhum jogo selecionado.");
+      const section = match.analysis[title];
 
-      if(!section) {
-        return `<h3>Mercado indisponível</h3><p class="panel-text">Sem dados fictícios para esta aba.</p>`;
+      if(!section || !section.available){
+        const labelMap = { goals: "Gols", corners: "Escanteios", cards: "Cartões", finishes: "Finalizações", shots: "Chutes a gol" };
+        return `
+          <h3>${labelMap[title] || "Mercado"}</h3>
+          ${emptyState("Esta informação não está disponível de forma válida no CSV selecionado para esta partida.")}
+        `;
       }
 
       const labelMap = {
@@ -3016,9 +3190,9 @@
           ${rows.map(r => `
             <tr>
               <td class="label-col">${r[0]}</td>
-              <td><strong>${r[1]}%</strong></td>
-              <td><strong>${r[2]}%</strong></td>
-              <td><span class="game-pill ${pillClass(r[3])}">${r[3]}%</span></td>
+              <td><strong>${formatValue(r[1])}</strong></td>
+              <td><strong>${formatValue(r[2])}</strong></td>
+              <td><span class="game-pill ${pillClass(r[3])}">${formatValue(r[3])}</span></td>
             </tr>
           `).join("")}
         `;
@@ -3039,16 +3213,23 @@
     }
 
     function renderInsightsIA(){
-      const match = selectedMatch;
+      const match = selectedMatch || matches[0];
+      if(!match) return emptyState("Nenhum jogo selecionado.");
+
       const [bestMarketName, bestMarketPct] = bestMarket(match);
+      const side = Math.abs(match.winner - match.awayWin) <= 8 ? "Neutro" : match.winner > match.awayWin ? match.home : match.away;
+      const winnerRisk = Math.abs(match.winner - match.awayWin) <= 8 ? "Imprevisível" : "Moderado";
+      const goalsTag = match.over25 !== null && match.over25 >= 60 ? "Over 2.5" : match.over15 !== null && match.over15 >= 70 ? "Over 1.5" : "Cautela";
+      const cornersTag = match.corners !== null && match.corners >= 70 ? "Favorável" : match.corners !== null && match.corners >= 55 ? "Moderado" : "Cautela";
+      const cardsTag = match.cards !== null && match.cards >= 70 ? "Favorável" : match.cards !== null && match.cards >= 55 ? "Moderado" : "Cautela";
 
       return `
         <div class="ai-guide">
           <div class="ai-close">×</div>
           <h4>Como usar Insights da IA</h4>
           <ul>
-            <li>Resume os mercados em que a análise encontrou uma leitura mais clara para a partida.</li>
-            <li>Cada insight traz uma justificativa curta baseada nos dados estatísticos disponíveis.</li>
+            <li>Resume os mercados em que os dados do CSV mostram uma leitura mais clara.</li>
+            <li>Cada insight é uma interpretação estatística, não uma promessa de acerto.</li>
             <li>Use como triagem rápida; a decisão final deve considerar odds reais e contexto ao vivo.</li>
           </ul>
         </div>
@@ -3057,9 +3238,9 @@
           <div class="impact-top">
             <div>
               <h4>Sensor da Partida</h4>
-              <small>Lado favorável: <strong class="green-text">Neutro</strong></small>
+              <small>Lado favorável: <strong class="green-text">${side}</strong></small>
             </div>
-            <span class="badge green">Impacto leve</span>
+            <span class="badge ${match.score >= 70 ? "green" : "yellow"}">Impacto ${match.score >= 70 ? "forte" : "moderado"}</span>
           </div>
 
           <div class="impact-scale">
@@ -3068,7 +3249,7 @@
               <span>${match.home}</span>
             </div>
             <div class="impact-track">
-              <div class="impact-knob"></div>
+              <div class="impact-knob" style="left:${clamp(match.winner)}%"></div>
             </div>
             <div class="impact-team right">
               <span>${match.away}</span>
@@ -3077,14 +3258,14 @@
           </div>
 
           <p class="panel-text">
-            O confronto apresenta leitura equilibrada entre os lados. A força estatística principal não está em escolher vencedor,
-            mas em mercados de volume, especialmente gols controlados, escanteios e chutes a gol.
+            A leitura foi calculada com base nos campos disponíveis no CSV: PPG pré-jogo, médias de gols,
+            BTTS, escanteios, cartões e xG pré-jogo quando disponível.
           </p>
 
           <div class="sensor-row">
             <div class="sensor-box">
               <span>Lado favorável</span>
-              <strong>Neutro</strong>
+              <strong>${side}</strong>
             </div>
             <div class="sensor-box">
               <span>Melhor mercado</span>
@@ -3095,8 +3276,8 @@
               <strong>Vencedor</strong>
             </div>
             <div class="sensor-box">
-              <span>Cautela</span>
-              <strong>Moderada</strong>
+              <span>Score geral</span>
+              <strong>${match.score}%</strong>
             </div>
           </div>
         </div>
@@ -3105,125 +3286,166 @@
           <div class="insight-card">
             <div class="insight-head">
               <h4>Vencer</h4>
-              <span class="badge yellow">Imprevisível</span>
+              <span class="badge ${winnerRisk === "Imprevisível" ? "yellow" : "green"}">${winnerRisk}</span>
             </div>
             <p>
-              As probabilidades de vencedor estão equilibradas. O cenário não apresenta vantagem suficientemente clara
-              para indicar lado seco ou chance dupla como leitura principal.
+              Casa ${formatValue(match.winner)}, empate ${formatValue(match.draw)} e visitante ${formatValue(match.awayWin)}.
+              ${winnerRisk === "Imprevisível" ? "As forças estão próximas, então o mercado de vencedor exige cautela." : "Há uma leve inclinação estatística para um dos lados."}
             </p>
           </div>
 
           <div class="insight-card">
             <div class="insight-head">
               <h4>Gols</h4>
-              <span class="badge green">Menos que 3.5</span>
+              <span class="badge ${match.over15 >= 70 ? "green" : "yellow"}">${goalsTag}</span>
             </div>
             <p>
-              A combinação das médias sugere um jogo com possibilidade de gols, mas sem projeção forte para placar muito aberto.
-              A leitura mais estável fica em linhas de proteção, como menos que 3.5.
+              Over 1.5 aparece com ${formatValue(match.over15)} e Over 2.5 com ${formatValue(match.over25)}.
+              A leitura usa as colunas de médias de gols do CSV.
             </p>
           </div>
 
           <div class="insight-card">
             <div class="insight-head">
               <h4>Escanteios</h4>
-              <span class="badge yellow">Cautela</span>
+              <span class="badge ${cornersTag === "Favorável" ? "green" : "yellow"}">${cornersTag}</span>
             </div>
             <p>
-              Há volume lateral suficiente para monitoramento, mas a pressão ofensiva não é dominante o bastante para tratar
-              linhas altas de escanteios como prioridade.
+              O mercado de escanteios aparece com ${formatValue(match.corners)} na principal linha disponível.
+              Se o CSV tiver poucas colunas, a leitura fica limitada.
             </p>
           </div>
 
           <div class="insight-card">
             <div class="insight-head">
               <h4>Cartões</h4>
-              <span class="badge yellow">Moderado</span>
+              <span class="badge ${cardsTag === "Favorável" ? "green" : "yellow"}">${cardsTag}</span>
             </div>
             <p>
-              O mercado de cartões depende bastante do contexto da partida. A leitura estatística indica atenção, mas não
-              força máxima sem confirmação de árbitro, rivalidade e momento do jogo.
+              A projeção de cartões foi calculada a partir da média de cartões do confronto.
+              Sem informação de árbitro, a leitura deve ser considerada complementar.
             </p>
           </div>
 
           <div class="insight-card">
             <div class="insight-head">
               <h4>Finalizações</h4>
-              <span class="badge green">Favorável</span>
+              <span class="badge ${match.finishes === null ? "red" : "yellow"}">${match.finishes === null ? "Indisponível" : "Monitorar"}</span>
             </div>
             <p>
-              Os indicadores ofensivos sustentam boa expectativa de volume de finalizações. É um mercado interessante para
-              comparar com as linhas disponíveis quando houver odds reais.
+              ${match.finishes === null ? "O CSV atual não traz finalizações pré-jogo válidas para esta partida." : "Há dados de finalizações disponíveis para leitura do confronto."}
             </p>
           </div>
 
           <div class="insight-card">
             <div class="insight-head">
               <h4>Chutes a gol</h4>
-              <span class="badge yellow">Moderado</span>
+              <span class="badge ${match.shotsTarget === null ? "red" : "yellow"}">${match.shotsTarget === null ? "Indisponível" : "Monitorar"}</span>
             </div>
             <p>
-              Existe volume ofensivo, mas a conversão para chutes certos pode oscilar. Melhor tratar como mercado secundário
-              até haver confirmação de escalações e contexto.
+              ${match.shotsTarget === null ? "O CSV atual não traz chutes a gol pré-jogo válidos para esta partida." : "Há dados de chutes a gol disponíveis para leitura do confronto."}
             </p>
           </div>
         </div>
 
         <div class="insight-final">
           <strong>Conclusão da IA:</strong>
-          a partida tem perfil equilibrado no vencedor, com leitura mais útil em mercados de volume. O melhor caminho é evitar
-          decisão seca no resultado e priorizar mercados com proteção estatística, especialmente linhas controladas de gols
-          e volume ofensivo moderado.
+          ${bestMarketName === "Sem mercado disponível" ? "não há dados suficientes para uma conclusão estatística confiável." : `o mercado com melhor leitura estatística no CSV é <strong>${bestMarketName}</strong>, com ${formatValue(bestMarketPct)}.`}
+          Esta leitura não utiliza odds reais.
         </div>
       `;
     }
 
     function renderAnalysisMainContent(){
-      const baseAnalysis = selectedMatch.analysis || matches[0].analysis;
+      const match = selectedMatch || matches[0];
       let html = "";
 
-      if(selectedAnalysisTab === "winners"){
+      if(!match){
+        html = emptyState("Nenhum jogo selecionado.");
+      } else if(selectedAnalysisTab === "winners"){
         html = `
           <h3>Vencedores</h3>
-          ${renderWinnerRows(baseAnalysis.winners.distribution, "distribution")}
-          ${renderWinnerRows(baseAnalysis.winners.doubleChance, "doubleChance")}
+          ${renderWinnerRows(match.analysis.winners.distribution, "distribution")}
+          ${renderWinnerRows(match.analysis.winners.doubleChance, "doubleChance")}
         `;
-      }
-
-      if(selectedAnalysisTab === "goals"){
-        html = renderMarketTable("goals", baseAnalysis.goals);
-      }
-
-      if(selectedAnalysisTab === "corners"){
-        html = renderMarketTable("corners", baseAnalysis.corners);
-      }
-
-      if(selectedAnalysisTab === "cards"){
-        html = renderMarketTable("cards", baseAnalysis.cards);
-      }
-
-      if(selectedAnalysisTab === "finishes"){
-        html = renderMarketTable("finishes", baseAnalysis.finishes);
-      }
-
-      if(selectedAnalysisTab === "shots"){
-        html = renderMarketTable("shots", baseAnalysis.shots);
-      }
-
-      if(selectedAnalysisTab === "insights"){
+      } else if(selectedAnalysisTab === "goals"){
+        html = renderMarketTable("goals");
+      } else if(selectedAnalysisTab === "corners"){
+        html = renderMarketTable("corners");
+      } else if(selectedAnalysisTab === "cards"){
+        html = renderMarketTable("cards");
+      } else if(selectedAnalysisTab === "finishes"){
+        html = renderMarketTable("finishes");
+      } else if(selectedAnalysisTab === "shots"){
+        html = renderMarketTable("shots");
+      } else if(selectedAnalysisTab === "insights"){
         html = renderInsightsIA();
       }
 
-      document.getElementById("analysisMainContent").innerHTML = html;
+      const target = document.getElementById("analysisMainContent");
+      if(target) target.innerHTML = html;
     }
 
-    function setDate(){
-      const date = new Date();
-      document.getElementById("todayDate").textContent = date.toLocaleDateString("pt-BR", {
-        day: "2-digit",
-        month: "long",
-        year: "numeric"
-      });
+    function renderAll(){
+      ensureDataBanner();
+      renderDataBanner();
+      renderDashboardKpis();
+      renderFeatured();
+      renderAllMatches();
+      renderLiveMatches();
+      renderScanner("scannerTable", 6);
+      renderScanner("scannerTableFull");
+      renderWatchlist();
+      renderAlerts();
+      renderMarkets();
+      renderHistory();
+      renderPlans("plansGrid");
+      renderPlans("publicPlansGrid");
+      renderAnalysis();
+    }
+
+    async function loadCSVForDate(dateStr){
+      currentDate = dateStr;
+      currentCsvFile = dateToFile(dateStr);
+      lastLoadError = "";
+
+      ensureDataBanner();
+      const banner = document.getElementById("dataBanner");
+      if(banner) {
+        banner.className = "data-banner";
+        banner.innerHTML = `<span>⏳ Carregando CSV: <strong>${currentCsvFile}</strong></span>`;
+      }
+
+      try {
+        const response = await fetch(`${CSV_BASE_PATH}${currentCsvFile}?v=${Date.now()}`);
+
+        if(!response.ok){
+          throw new Error(`CSV não encontrado para ${dateStr}.`);
+        }
+
+        const text = await response.text();
+        const rows = parseCSV(text);
+
+        if(!rows.length){
+          throw new Error(`CSV vazio ou inválido para ${dateStr}.`);
+        }
+
+        matches = rows.map(normalizeMatch).filter(m => m.status !== "Cancelado");
+        selectedMatch = matches[0] || null;
+        selectedAnalysisTab = "winners";
+
+        if(!matches.length){
+          lastLoadError = `O CSV ${currentCsvFile} foi encontrado, mas nenhum jogo válido foi carregado.`;
+        }
+
+      } catch(error){
+        matches = [];
+        selectedMatch = null;
+        selectedAnalysisTab = "winners";
+        lastLoadError = `${error.message} Adicione o arquivo em /data/${currentCsvFile}.`;
+      }
+
+      renderAll();
     }
 
     function setupNavigation(){
@@ -3234,48 +3456,45 @@
 
     function setupSearch(){
       const search = document.getElementById("searchInput");
+      if(!search) return;
       search.addEventListener("input", () => {
         const term = search.value.trim().toLowerCase();
         const filtered = matches.filter(m =>
-          `${m.home} ${m.away} ${m.league}`.toLowerCase().includes(term)
+          `${m.home} ${m.away} ${m.league} ${m.country}`.toLowerCase().includes(term)
         );
 
         const target = document.getElementById("featuredGrid");
+        if(!target) return;
+
         if(!term){
           renderFeatured();
           return;
         }
 
-        target.innerHTML = filtered.slice(0,3).map(matchCard).join("") || `
-          <div class="section" style="grid-column:1/-1;background:rgba(5,17,13,.45);">
-            <p class="panel-text">Nenhum jogo encontrado para essa busca.</p>
-          </div>
-        `;
+        target.innerHTML = filtered.slice(0,3).map(matchCard).join("") || emptyState("Nenhum jogo encontrado para essa busca.");
       });
     }
 
-    async function init(){
-      setDate();
+    function setupDatePicker(){
+      const picker = document.getElementById("datePicker");
+      if(!picker) return;
+      picker.value = DEFAULT_DATE;
+      picker.addEventListener("change", () => {
+        if(picker.value) loadCSVForDate(picker.value);
+      });
+    }
+
+    function init(){
       setupNavigation();
       setupSearch();
+      setupDatePicker();
       renderPlans("plansGrid");
       renderPlans("publicPlansGrid");
-
-      await loadCsvMatches();
-
-      renderFeatured();
-      renderAllMatches();
-      renderLiveMatches();
-      renderScanner("scannerTable", 6);
-      renderScanner("scannerTableFull");
-      renderWatchlist();
-      renderAlerts();
-      renderMarkets();
-      renderHistory();
-      renderAnalysis();
+      loadCSVForDate(DEFAULT_DATE);
     }
 
     init();
   </script>
+
 </body>
 </html>

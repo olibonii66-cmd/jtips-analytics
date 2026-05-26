@@ -1,28 +1,29 @@
-# JTIPS Analytics — V4 CSV Funcional
+# JTIPS Analytics V5 — CSV real funcional
 
-Esta versão lê o arquivo `data/26-05-2026.csv` e monta o dashboard com jogos reais do CSV.
+Esta versão remove os dados fictícios do app e carrega o CSV real pela pasta `/data`.
 
 ## Arquivos
 
+- `index.html`
+- `vercel.json`
+- `data/26-05-2026.csv`
+
+## Como usar na Vercel
+
+Substitua os arquivos do repositório atual por estes arquivos e faça commit/push.
+
+## Como adicionar novas datas
+
+Coloque novos CSVs na pasta `data` usando o formato:
+
 ```txt
-index.html
-data/26-05-2026.csv
-vercel.json
-README.md
+DD-MM-YYYY.csv
 ```
 
-## Deploy na Vercel
+Exemplo:
 
-Suba todos estes arquivos no GitHub e aguarde o deploy automático da Vercel.
+```txt
+data/27-05-2026.csv
+```
 
-## Importante
-
-Abrir o `index.html` direto pelo computador pode bloquear o carregamento do CSV por causa do `fetch`.
-Na Vercel funciona normalmente porque o arquivo CSV fica hospedado junto do site.
-
-## Próximas melhorias
-
-- Trocar arquivo CSV por data automaticamente.
-- Ler CSV direto de uma URL raw do GitHub.
-- Criar painel Admin para configurar a URL do CSV.
-- Adicionar login real com Supabase.
+No site, selecione a data no campo de data. O sistema tentará carregar automaticamente o arquivo correspondente.
