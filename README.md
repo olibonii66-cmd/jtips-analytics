@@ -1,32 +1,28 @@
-# JTIPS Analytics — Protótipo
+# JTIPS Analytics — V4 CSV Funcional
 
-Site estático em HTML/CSS/JS puro pronto para publicar na Vercel.
+Esta versão lê o arquivo `data/26-05-2026.csv` e monta o dashboard com jogos reais do CSV.
 
 ## Arquivos
 
 ```txt
-jtips-analytics/
-├── index.html
-├── README.md
-└── vercel.json
+index.html
+data/26-05-2026.csv
+vercel.json
+README.md
 ```
 
-## Publicar na Vercel pelo GitHub
+## Deploy na Vercel
 
-1. Crie um repositório no GitHub chamado `jtips-analytics`.
-2. Envie estes arquivos para o repositório.
-3. Acesse a Vercel.
-4. Clique em `Add New...` > `Project`.
-5. Importe o repositório `jtips-analytics`.
-6. Em `Framework Preset`, selecione `Other`.
-7. Não configure build command.
-8. Não configure output directory.
-9. Clique em `Deploy`.
+Suba todos estes arquivos no GitHub e aguarde o deploy automático da Vercel.
 
-## Teste local
+## Importante
 
-Abra o arquivo `index.html` no navegador.
+Abrir o `index.html` direto pelo computador pode bloquear o carregamento do CSV por causa do `fetch`.
+Na Vercel funciona normalmente porque o arquivo CSV fica hospedado junto do site.
 
-## Próxima etapa
+## Próximas melhorias
 
-Esta versão usa dados fictícios. Depois vamos conectar o CSV real do GitHub.
+- Trocar arquivo CSV por data automaticamente.
+- Ler CSV direto de uma URL raw do GitHub.
+- Criar painel Admin para configurar a URL do CSV.
+- Adicionar login real com Supabase.

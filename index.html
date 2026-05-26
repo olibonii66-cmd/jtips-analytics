@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>JTIPS Analytics — V3.4 Tema Azul Unificado</title>
+  <title>JTIPS Analytics — V4 CSV Funcional</title>
   <style>
     :root{
       --bg:#04110d;
@@ -2191,225 +2191,370 @@
   </section>
 
   <script>
-    const matches = [
-      {
-        id: 1,
-        league: "Brasileirão Série A",
-        home: "Palmeiras",
-        away: "Flamengo",
-        date: "25/05/2025",
-        time: "16:00",
-        stadium: "Allianz Parque, São Paulo - SP",
-        status: "Pré-jogo",
-        score: 78,
-        confidence: "Alta",
-        winner: 59,
-        over15: 81,
-        over25: 67,
-        btts: 65,
-        corners: 61,
-        cards: 53,
-        finishes: 74,
-        shotsTarget: 69,
-        risk: "Médio",
-        tag: "Oportunidade",
-        analysis: {
-          winners: {
-            distribution: [
-              { index: "01", label: "Casa", value: 43, color: "var(--red)" },
-              { index: "02", label: "Empate", value: 27, color: "var(--red)" },
-              { index: "03", label: "Visitante", value: 30, color: "var(--red)", highlight: true }
-            ],
-            doubleChance: [
-              { index: "01", label: "Casa ou Empate", value: 70, color: "var(--yellow)" },
-              { index: "02", label: "Casa ou Visitante", value: 73, color: "var(--yellow)", highlight: true },
-              { index: "03", label: "Empate ou Visitante", value: 57, color: "var(--yellow)" }
-            ]
-          },
-          goals: {
-            over: [
-              ["Mais que 0.5", 94, 94, 95],
-              ["Mais que 1.5", 67, 69, 68],
-              ["Mais que 2.5", 37, 41, 39],
-              ["Mais que 3.5", 18, 23, 21],
-              ["Mais que 4.5", 8, 11, 10]
-            ],
-            under: [
-              ["Menos que 3.5", 82, 77, 80],
-              ["Menos que 2.5", 62, 59, 60],
-              ["Menos que 1.5", 32, 31, 32],
-              ["Menos que 0.5", 6, 6, 6]
-            ]
-          },
-          corners: {
-            over: [
-              ["Mais que 6.5", 73, 92, 83],
-              ["Mais que 7.5", 60, 85, 72],
-              ["Mais que 8.5", 46, 62, 54],
-              ["Mais que 9.5", 33, 46, 39]
-            ],
-            under: [
-              ["Menos que 9.5", 90, 54, 73],
-              ["Menos que 8.5", 77, 38, 58],
-              ["Menos que 7.5", 54, 15, 34],
-              ["Menos que 6.5", 28, 8, 17]
-            ]
-          },
-          cards: {
-            over: [
-              ["Mais que 2.5", 71, 66, 68],
-              ["Mais que 3.5", 48, 46, 47],
-              ["Mais que 4.5", 28, 30, 29],
-              ["Mais que 5.5", 16, 18, 17]
-            ],
-            under: [
-              ["Menos que 5.5", 84, 82, 83],
-              ["Menos que 4.5", 72, 70, 71],
-              ["Menos que 3.5", 52, 50, 51],
-              ["Menos que 2.5", 28, 26, 27]
-            ]
-          },
-          finishes: {
-            over: [
-              ["Mais que 13.5", 78, 74, 76],
-              ["Mais que 15.5", 61, 59, 60],
-              ["Mais que 17.5", 40, 37, 38],
-              ["Mais que 19.5", 24, 22, 23]
-            ],
-            under: [
-              ["Menos que 19.5", 86, 79, 85],
-              ["Menos que 17.5", 68, 56, 66],
-              ["Menos que 15.5", 45, 32, 38],
-              ["Menos que 13.5", 21, 15, 18]
-            ]
-          },
-          shots: {
-            over: [
-              ["Mais que 4.5", 69, 63, 66],
-              ["Mais que 5.5", 49, 48, 48],
-              ["Mais que 6.5", 29, 28, 29],
-              ["Mais que 7.5", 16, 15, 16]
-            ],
-            under: [
-              ["Menos que 7.5", 84, 85, 85],
-              ["Menos que 6.5", 67, 66, 66],
-              ["Menos que 5.5", 44, 47, 46],
-              ["Menos que 4.5", 22, 24, 23]
-            ]
-          }
+    let matches = [];
+    let selectedMatch = null;
+
+    const CSV_FILE_URL = "data/26-05-2026.csv";
+
+    function clamp(value, min = 0, max = 100){
+      const n = Number(value);
+      if(!Number.isFinite(n)) return min;
+      return Math.max(min, Math.min(max, n));
+    }
+
+    function toNum(value, fallback = null){
+      if(value === undefined || value === null || value === "") return fallback;
+      const n = Number(String(value).replace(",", "."));
+      if(!Number.isFinite(n) || n === -1) return fallback;
+      return n;
+    }
+
+    function pct(value, fallback = 0){
+      return Math.round(clamp(toNum(value, fallback), 0, 100));
+    }
+
+    function probFromAverage(avg, line){
+      const n = toNum(avg, 0);
+      return Math.round(clamp(50 + ((n - line) * 15), 5, 95));
+    }
+
+    function formatDateFromUnix(unix){
+      const n = toNum(unix, null);
+      if(!n) return "Data indisponível";
+      const d = new Date(n * 1000);
+      return d.toLocaleDateString("pt-BR", {
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric"
+      });
+    }
+
+    function formatTimeFromUnix(unix){
+      const n = toNum(unix, null);
+      if(!n) return "--:--";
+      const d = new Date(n * 1000);
+      return d.toLocaleTimeString("pt-BR", {
+        hour: "2-digit",
+        minute: "2-digit"
+      });
+    }
+
+    function parseCSV(text){
+      const rows = [];
+      let current = [];
+      let value = "";
+      let insideQuotes = false;
+
+      for(let i = 0; i < text.length; i++){
+        const char = text[i];
+        const next = text[i + 1];
+
+        if(char === '"' && insideQuotes && next === '"'){
+          value += '"';
+          i++;
+          continue;
         }
-      },
-      {
-        id: 2,
-        league: "Premier League",
-        home: "Manchester City",
-        away: "Tottenham",
-        date: "25/05/2025",
-        time: "17:00",
-        stadium: "Etihad Stadium, Manchester",
-        status: "Ao vivo",
-        score: 84,
-        confidence: "Alta",
-        winner: 67,
-        over15: 88,
-        over25: 74,
-        btts: 70,
-        corners: 62,
-        cards: 40,
-        finishes: 81,
-        shotsTarget: 76,
-        risk: "Baixo",
-        tag: "Oportunidade"
-      },
-      {
-        id: 3,
-        league: "Bundesliga",
-        home: "Bayer Leverkusen",
-        away: "Borussia Dortmund",
-        date: "25/05/2025",
-        time: "16:30",
-        stadium: "BayArena, Leverkusen",
-        status: "Pré-jogo",
-        score: 80,
-        confidence: "Alta",
-        winner: 63,
-        over15: 86,
-        over25: 72,
-        btts: 69,
-        corners: 60,
-        cards: 41,
-        finishes: 77,
-        shotsTarget: 72,
-        risk: "Baixo",
-        tag: "Oportunidade"
-      },
-      {
-        id: 4,
-        league: "La Liga",
-        home: "Real Sociedad",
-        away: "Real Betis",
-        date: "25/05/2025",
-        time: "18:30",
-        stadium: "Reale Arena, San Sebastián",
-        status: "Pré-jogo",
-        score: 75,
-        confidence: "Alta",
-        winner: 56,
-        over15: 78,
-        over25: 61,
-        btts: 59,
-        corners: 54,
-        cards: 38,
-        finishes: 68,
-        shotsTarget: 60,
-        risk: "Baixo",
-        tag: "Oportunidade"
-      },
-      {
-        id: 5,
-        league: "Serie A",
-        home: "Inter Milan",
-        away: "AC Milan",
-        date: "25/05/2025",
-        time: "21:00",
-        stadium: "San Siro, Milan",
-        status: "Pré-jogo",
-        score: 73,
-        confidence: "Boa",
-        winner: 57,
-        over15: 77,
-        over25: 62,
-        btts: 58,
-        corners: 56,
-        cards: 50,
-        finishes: 66,
-        shotsTarget: 63,
-        risk: "Médio",
-        tag: "Em análise"
-      },
-      {
-        id: 6,
-        league: "Ligue 1",
-        home: "Lille",
-        away: "Marseille",
-        date: "25/05/2025",
-        time: "19:00",
-        stadium: "Stade Pierre-Mauroy, Lille",
-        status: "Ao vivo",
-        score: 69,
-        confidence: "Boa",
-        winner: 54,
-        over15: 76,
-        over25: 64,
-        btts: 61,
-        corners: 58,
-        cards: 44,
-        finishes: 70,
-        shotsTarget: 64,
-        risk: "Baixo",
-        tag: "Oportunidade"
+
+        if(char === '"'){
+          insideQuotes = !insideQuotes;
+          continue;
+        }
+
+        if(char === "," && !insideQuotes){
+          current.push(value);
+          value = "";
+          continue;
+        }
+
+        if((char === "\n" || char === "\r") && !insideQuotes){
+          if(char === "\r" && next === "\n") i++;
+          current.push(value);
+          value = "";
+          if(current.some(cell => String(cell).trim() !== "")) rows.push(current);
+          current = [];
+          continue;
+        }
+
+        value += char;
       }
-    ];
+
+      if(value.length || current.length){
+        current.push(value);
+        if(current.some(cell => String(cell).trim() !== "")) rows.push(current);
+      }
+
+      if(!rows.length) return [];
+
+      const headers = rows[0].map(h => String(h).trim());
+      return rows.slice(1).map(row => {
+        const obj = {};
+        headers.forEach((h, idx) => obj[h] = row[idx] ?? "");
+        return obj;
+      });
+    }
+
+    function normalizeStatus(status){
+      const s = String(status || "").toLowerCase();
+      if(s.includes("complete") || s.includes("final")) return "Finalizado";
+      if(s.includes("live") || s.includes("in play") || s.includes("playing")) return "Ao vivo";
+      return "Pré-jogo";
+    }
+
+    function winnerAnalysis(row){
+      const hppg = toNum(row["Home Team Points Per Game (Pre-Match)"], 1);
+      const appg = toNum(row["Away Team Points Per Game (Pre-Match)"], 1);
+      const hxg = toNum(row["Home Team Pre-Match xG"], 1);
+      const axg = toNum(row["Away Team Pre-Match xG"], 1);
+
+      const homeStrength = Math.max(0.1, (hppg * 0.62) + (hxg * 0.38));
+      const awayStrength = Math.max(0.1, (appg * 0.62) + (axg * 0.38));
+      const diff = homeStrength - awayStrength;
+      const draw = Math.round(clamp(27 - Math.abs(diff) * 5, 18, 32));
+      const remaining = 100 - draw;
+      const home = Math.round(clamp((homeStrength / (homeStrength + awayStrength)) * remaining, 15, 70));
+      const away = Math.max(5, 100 - draw - home);
+
+      const dist = [
+        { index: "01", label: "Casa", value: home, color: "var(--red)" },
+        { index: "02", label: "Empate", value: draw, color: "var(--red)" },
+        { index: "03", label: "Visitante", value: away, color: "var(--red)" }
+      ];
+
+      const maxIdx = dist.reduce((best, item, idx) => item.value > dist[best].value ? idx : best, 0);
+      dist[maxIdx].highlight = true;
+
+      const dc = [
+        { index: "01", label: "Casa ou Empate", value: home + draw, color: "var(--yellow)" },
+        { index: "02", label: "Casa ou Visitante", value: home + away, color: "var(--yellow)" },
+        { index: "03", label: "Empate ou Visitante", value: draw + away, color: "var(--yellow)" }
+      ];
+
+      const dcMax = dc.reduce((best, item, idx) => item.value > dc[best].value ? idx : best, 0);
+      dc[dcMax].highlight = true;
+
+      return { distribution: dist, doubleChance: dc };
+    }
+
+    function buildAnalysis(row){
+      const over05 = pct(row["Over05 Average"], 70);
+      const over15 = pct(row["Over15 Average"], 55);
+      const over25 = pct(row["Over25 Average"], 40);
+      const over35 = pct(row["Over35 Average"], 25);
+      const over45 = pct(row["Over45 Average"], 10);
+
+      const under05 = pct(row["Under05 Average"], Math.max(0, 100 - over05));
+      const under15 = pct(row["Under15 Average"], Math.max(0, 100 - over15));
+      const under25 = pct(row["Under25 Average"], Math.max(0, 100 - over25));
+      const under35 = pct(row["Under35 Average"], Math.max(0, 100 - over35));
+      const under45 = pct(row["Under45 Average"], Math.max(0, 100 - over45));
+
+      const avgCorners = toNum(row["Average Corners"], 9);
+      const c85 = pct(row["Average Over 8.5 Corners"], probFromAverage(avgCorners, 8.5));
+      const c95 = pct(row["Average Over 9.5 Corners"], probFromAverage(avgCorners, 9.5));
+      const c105 = pct(row["Average Over 10.5 Corners"], probFromAverage(avgCorners, 10.5));
+      const c65 = Math.round(clamp(c85 + 18, 0, 95));
+      const c75 = Math.round(clamp(c85 + 10, 0, 95));
+
+      const avgCards = toNum(row["Average Cards"], 3.6);
+      const card25 = probFromAverage(avgCards, 2.5);
+      const card35 = probFromAverage(avgCards, 3.5);
+      const card45 = probFromAverage(avgCards, 4.5);
+      const card55 = probFromAverage(avgCards, 5.5);
+
+      const avgGoals = toNum(row["Average Goals"], 2.4);
+      const hxg = toNum(row["Home Team Pre-Match xG"], avgGoals / 2);
+      const axg = toNum(row["Away Team Pre-Match xG"], avgGoals / 2);
+      const shotBase = clamp((avgGoals * 5.2) + (avgCorners * 0.45) + 7, 7, 26);
+      const targetBase = clamp((hxg + axg) * 1.9 + 2.2, 2, 10);
+
+      const fin135 = probFromAverage(shotBase, 13.5);
+      const fin155 = probFromAverage(shotBase, 15.5);
+      const fin175 = probFromAverage(shotBase, 17.5);
+      const fin195 = probFromAverage(shotBase, 19.5);
+
+      const sog45 = probFromAverage(targetBase, 4.5);
+      const sog55 = probFromAverage(targetBase, 5.5);
+      const sog65 = probFromAverage(targetBase, 6.5);
+      const sog75 = probFromAverage(targetBase, 7.5);
+
+      return {
+        winners: winnerAnalysis(row),
+        goals: {
+          over: [
+            ["Mais que 0.5", over05, over05, over05],
+            ["Mais que 1.5", over15, over15, over15],
+            ["Mais que 2.5", over25, over25, over25],
+            ["Mais que 3.5", over35, over35, over35],
+            ["Mais que 4.5", over45, over45, over45]
+          ],
+          under: [
+            ["Menos que 4.5", under45, under45, under45],
+            ["Menos que 3.5", under35, under35, under35],
+            ["Menos que 2.5", under25, under25, under25],
+            ["Menos que 1.5", under15, under15, under15],
+            ["Menos que 0.5", under05, under05, under05]
+          ]
+        },
+        corners: {
+          over: [
+            ["Mais que 6.5", Math.max(5, c65 - 6), Math.min(95, c65 + 6), c65],
+            ["Mais que 7.5", Math.max(5, c75 - 6), Math.min(95, c75 + 6), c75],
+            ["Mais que 8.5", Math.max(5, c85 - 6), Math.min(95, c85 + 6), c85],
+            ["Mais que 9.5", Math.max(5, c95 - 6), Math.min(95, c95 + 6), c95],
+            ["Mais que 10.5", Math.max(5, c105 - 6), Math.min(95, c105 + 6), c105]
+          ],
+          under: [
+            ["Menos que 10.5", Math.max(5, 100 - c105 - 4), Math.min(95, 100 - c105 + 4), 100 - c105],
+            ["Menos que 9.5", Math.max(5, 100 - c95 - 4), Math.min(95, 100 - c95 + 4), 100 - c95],
+            ["Menos que 8.5", Math.max(5, 100 - c85 - 4), Math.min(95, 100 - c85 + 4), 100 - c85],
+            ["Menos que 7.5", Math.max(5, 100 - c75 - 4), Math.min(95, 100 - c75 + 4), 100 - c75]
+          ]
+        },
+        cards: {
+          over: [
+            ["Mais que 2.5", card25, card25, card25],
+            ["Mais que 3.5", card35, card35, card35],
+            ["Mais que 4.5", card45, card45, card45],
+            ["Mais que 5.5", card55, card55, card55]
+          ],
+          under: [
+            ["Menos que 5.5", 100 - card55, 100 - card55, 100 - card55],
+            ["Menos que 4.5", 100 - card45, 100 - card45, 100 - card45],
+            ["Menos que 3.5", 100 - card35, 100 - card35, 100 - card35],
+            ["Menos que 2.5", 100 - card25, 100 - card25, 100 - card25]
+          ]
+        },
+        finishes: {
+          over: [
+            ["Mais que 13.5", fin135, fin135, fin135],
+            ["Mais que 15.5", fin155, fin155, fin155],
+            ["Mais que 17.5", fin175, fin175, fin175],
+            ["Mais que 19.5", fin195, fin195, fin195]
+          ],
+          under: [
+            ["Menos que 19.5", 100 - fin195, 100 - fin195, 100 - fin195],
+            ["Menos que 17.5", 100 - fin175, 100 - fin175, 100 - fin175],
+            ["Menos que 15.5", 100 - fin155, 100 - fin155, 100 - fin155],
+            ["Menos que 13.5", 100 - fin135, 100 - fin135, 100 - fin135]
+          ]
+        },
+        shots: {
+          over: [
+            ["Mais que 4.5", sog45, sog45, sog45],
+            ["Mais que 5.5", sog55, sog55, sog55],
+            ["Mais que 6.5", sog65, sog65, sog65],
+            ["Mais que 7.5", sog75, sog75, sog75]
+          ],
+          under: [
+            ["Menos que 7.5", 100 - sog75, 100 - sog75, 100 - sog75],
+            ["Menos que 6.5", 100 - sog65, 100 - sog65, 100 - sog65],
+            ["Menos que 5.5", 100 - sog55, 100 - sog55, 100 - sog55],
+            ["Menos que 4.5", 100 - sog45, 100 - sog45, 100 - sog45]
+          ]
+        }
+      };
+    }
+
+    function mapCsvRowToMatch(row, index){
+      const analysis = buildAnalysis(row);
+      const winnerBest = Math.max(...analysis.winners.distribution.map(x => x.value));
+      const over15 = pct(row["Over15 Average"], 55);
+      const over25 = pct(row["Over25 Average"], 40);
+      const corners = pct(row["Average Over 8.5 Corners"], 50);
+      const cards = probFromAverage(toNum(row["Average Cards"], 3.6), 3.5);
+      const finishes = analysis.finishes.over[0][3];
+      const shotsTarget = analysis.shots.over[0][3];
+
+      const score = Math.round(clamp(
+        (winnerBest * 0.12) +
+        (over15 * 0.22) +
+        (over25 * 0.18) +
+        (corners * 0.16) +
+        (cards * 0.12) +
+        (finishes * 0.10) +
+        (shotsTarget * 0.10),
+        0,
+        100
+      ));
+
+      const confidence = score >= 75 ? "Alta" : score >= 62 ? "Boa" : "Monitorar";
+      const risk = score >= 75 ? "Baixo" : score >= 62 ? "Médio" : "Alto";
+      const tag = score >= 70 ? "Oportunidade" : score >= 58 ? "Em análise" : "Nova";
+
+      return {
+        id: index + 1,
+        league: row["League"] || "Liga não informada",
+        country: row["Country"] || "",
+        home: row["Home Team"] || "Mandante",
+        away: row["Away Team"] || "Visitante",
+        date: formatDateFromUnix(row["date_unix"]),
+        time: formatTimeFromUnix(row["date_unix"]),
+        stadium: row["Country"] ? `${row["Country"]}` : "Local não informado",
+        status: normalizeStatus(row["Match Status"]),
+        score,
+        confidence,
+        winner: winnerBest,
+        over15,
+        over25,
+        btts: pct(row["BTTS Average"], 50),
+        corners,
+        cards,
+        finishes,
+        shotsTarget,
+        risk,
+        tag,
+        analysis
+      };
+    }
+
+    async function loadCsvMatches(){
+      try {
+        const response = await fetch(CSV_FILE_URL, { cache: "no-store" });
+        if(!response.ok) throw new Error("Não foi possível carregar o CSV.");
+        const text = await response.text();
+        const rows = parseCSV(text);
+
+        matches = rows
+          .map(mapCsvRowToMatch)
+          .filter(match => match.home && match.away)
+          .sort((a, b) => {
+            const ta = a.time || "99:99";
+            const tb = b.time || "99:99";
+            return ta.localeCompare(tb);
+          });
+
+        if(!matches.length) throw new Error("CSV carregado, mas nenhum jogo foi identificado.");
+
+        selectedMatch = matches[0];
+      } catch(error) {
+        console.error(error);
+        matches = [{
+          id: 1,
+          league: "CSV não carregado",
+          country: "",
+          home: "Dados",
+          away: "Indisponíveis",
+          date: "--/--/----",
+          time: "--:--",
+          stadium: "Verifique se o arquivo data/26-05-2026.csv está no projeto.",
+          status: "Pré-jogo",
+          score: 0,
+          confidence: "Erro",
+          winner: 0,
+          over15: 0,
+          over25: 0,
+          btts: 0,
+          corners: 0,
+          cards: 0,
+          finishes: 0,
+          shotsTarget: 0,
+          risk: "Alto",
+          tag: "Erro",
+          analysis: buildAnalysis({})
+        }];
+        selectedMatch = matches[0];
+      }
+    }
 
     const plans = [
       {
@@ -2445,7 +2590,6 @@
       { key: "insights", label: "Insights IA" }
     ];
 
-    let selectedMatch = matches[0];
     let selectedAnalysisTab = "winners";
 
     function pctColor(pct){
@@ -3110,10 +3254,15 @@
       });
     }
 
-    function init(){
+    async function init(){
       setDate();
       setupNavigation();
       setupSearch();
+      renderPlans("plansGrid");
+      renderPlans("publicPlansGrid");
+
+      await loadCsvMatches();
+
       renderFeatured();
       renderAllMatches();
       renderLiveMatches();
@@ -3123,8 +3272,6 @@
       renderAlerts();
       renderMarkets();
       renderHistory();
-      renderPlans("plansGrid");
-      renderPlans("publicPlansGrid");
       renderAnalysis();
     }
 
