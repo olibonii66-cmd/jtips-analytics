@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>JTIPS Analytics — V9.8 Pré-jogo Responsivo</title>
+  <title>JTIPS Analytics — V9.9 Status e Layout Corrigidos</title>
   <style>
     :root{--bg:#050a12;--bg2:#07111d;--panel:#0b1524;--panel2:#0d1a2a;--line:#183353;--line2:#214d78;--text:#f4f8ff;--muted:#8da8c8;--blue:#1aa8ff;--blue2:#0b79ff;--green:#37e889;--yellow:#ffd53f;--red:#ff4d6a;--shadow:0 20px 60px rgba(0,0,0,.38);--r:18px;--sidebar:214px}
     *{box-sizing:border-box} body{margin:0;background:radial-gradient(circle at 20% 0,rgba(16,130,255,.12),transparent 34%),linear-gradient(135deg,#02060c 0%,#071220 45%,#03080f 100%);font-family:Inter,Segoe UI,Arial,sans-serif;color:var(--text);overflow-x:hidden} button,input,select{font:inherit} .app{min-height:100vh;display:block}
@@ -127,6 +127,23 @@
       .action,button{min-height:42px}
     }
 
+  
+    /* V9.9 — ajustes de encaixe desktop/notebook */
+    @media(min-width:901px) and (max-width:1450px){
+      .main{padding:18px 18px 30px}
+      .filters{grid-template-columns:160px 180px 150px 170px 130px minmax(200px,1fr) 150px!important}
+      .games-header,.game-row{grid-template-columns:2.3fr 1.05fr .72fr .85fr 1.45fr .62fr 118px!important}
+      .game-row{gap:10px}
+      .action{padding:10px 12px;font-size:13px;white-space:nowrap}
+      .league-cell{font-size:14px}
+      .market-cell{font-size:14px}
+      .top-pill{min-width:auto}
+    }
+    @media(max-width:900px){
+      .game-row{box-shadow:0 10px 28px rgba(0,0,0,.22)}
+      .game-row .action{margin-top:4px}
+    }
+
   </style>
 </head>
 <body>
@@ -143,7 +160,7 @@
     <div id="dataBanner" class="data-banner" style="display:none"><span></span></div>
     <section id="dashboard" class="page"><div id="dashboardSummary"></div><div class="section-head"><div class="section-title">Jogos em destaque</div><button class="btn secondary" onclick="goPage('games')">Ver todos</button></div><div id="featuredCards" class="cards-grid"></div></section>
     <section id="games" class="page active">
-      <div class="panel filters"><h2>Filtros</h2><p>Os jogos da data selecionada são carregados automaticamente.</p><div class="filter-grid"><div class="field"><label>Data</label><input id="dateSelect" type="date"></div><div class="field"><label>Liga</label><select id="filterLeague"><option value="all">Todas</option></select></div><div class="field"><label>Status</label><select id="filterStatus"><option value="all">Todos</option><option value="pre">Pré-jogo</option><option value="final">Finalizado</option></select></div><div class="field"><label>Mercado</label><select id="filterMarket"><option value="all">Todos</option><option value="winner">Vencedores</option><option value="goals">Gols</option><option value="btts">Ambas Marcam</option><option value="corners">Escanteios</option></select></div><div class="field"><label>Score mín.</label><select id="filterScore"><option value="0">Todos</option><option value="50">50%+</option><option value="60">60%+</option><option value="70">70%+</option><option value="80">80%+</option></select></div><div class="field"><label>Buscar</label><input id="filterSearch" placeholder="Time, jogo, liga ou país"></div><button class="btn" onclick="refreshData()">Atualizar dados ↻</button></div><div class="result-meta"><div><strong id="resultCount">0 jogos encontrados</strong><br><small id="resultSub">—</small></div><div id="activeTags" class="tag">Sem filtros ativos</div></div></div>
+      <div class="panel filters"><h2>Filtros</h2><p>Os jogos da data selecionada são carregados automaticamente.</p><div class="filter-grid"><div class="field"><label>Data</label><input id="dateSelect" type="date"></div><div class="field"><label>Liga</label><select id="filterLeague"><option value="all">Todas</option></select></div><div class="field"><label>Status</label><select id="filterStatus"><option value="all">Todos</option><option value="pre">Pré-jogo</option><option value="running">Em andamento</option><option value="final">Finalizado</option></select></div><div class="field"><label>Mercado</label><select id="filterMarket"><option value="all">Todos</option><option value="winner">Vencedores</option><option value="goals">Gols</option><option value="btts">Ambas Marcam</option><option value="corners">Escanteios</option></select></div><div class="field"><label>Score mín.</label><select id="filterScore"><option value="0">Todos</option><option value="50">50%+</option><option value="60">60%+</option><option value="70">70%+</option><option value="80">80%+</option></select></div><div class="field"><label>Buscar</label><input id="filterSearch" placeholder="Time, jogo, liga ou país"></div><button class="btn" onclick="refreshData()">Atualizar dados ↻</button></div><div class="result-meta"><div><strong id="resultCount">0 jogos encontrados</strong><br><small id="resultSub">—</small></div><div id="activeTags" class="tag">Sem filtros ativos</div></div></div>
       <div class="panel games-card"><div class="section-head"><div class="section-title">Resultados</div><span id="paginationInfo" class="muted">—</span></div><div class="table-head"><div>Jogo</div><div>Liga</div><div>Horário</div><div>Status</div><div>Melhor mercado</div><div>Score</div><div>Ações</div></div><div id="gamesList"></div><div class="pager"><span id="pageInfo">—</span><div><button class="action" onclick="changePage(-1)">‹</button> <span id="pageNumber">1</span> <button class="action" onclick="changePage(1)">›</button></div></div></div>
     </section>
     <section id="analysis" class="page"><span class="back" onclick="goPage('games')">← Voltar para jogos</span><div class="analysis-layout"><div><div id="analysisHeader" class="panel match-hero"></div><div class="panel best-strip"><h3 style="margin:0 0 10px">Melhores mercados</h3><div id="bestMarkets" class="best-grid"></div></div><div id="tabs" class="tabs"></div><div id="analysisContent" class="panel analysis-content"></div><div class="info-note">ⓘ Probabilidades calculadas com base em dados históricos, odds e métricas pré-jogo disponíveis.</div></div><aside id="quickSummary" class="quick"></aside></div></section>
@@ -173,6 +190,19 @@ function logoEl(url,name){let initial=((name||'?').trim()[0]||'?').toUpperCase()
 function status(row){
   let s=String(row.status||row.Status||'').toLowerCase().trim();
   if(s.includes('cancel')||s.includes('postpon')||s.includes('suspend')||s.includes('abandon')) return 'Cancelado';
+
+  let u=n(row.date_unix);
+  if(u!==null){
+    let start=u*1000;
+    let now=Date.now();
+    let preTolerance=5*60*1000;
+    let matchWindow=150*60*1000;
+
+    if(start > now + preTolerance) return 'Pré-jogo';
+    if(now >= start - preTolerance && now <= start + matchWindow) return 'Em andamento';
+    if(now > start + matchWindow) return 'Finalizado';
+  }
+
   if(s.includes('complete')||s.includes('finished')||s.includes('final')) return 'Finalizado';
   if(s.includes('live')||s.includes('progress')||s==='1h'||s==='2h'||s==='ht'||s.includes('half')) return 'Em andamento';
   return 'Pré-jogo';
@@ -188,7 +218,7 @@ function setData(j){apiMeta=j;columns=j.columns||[];allMatches=(j.dados||[]).map
 function showError(msg){$('dataBanner').className='data-banner error';$('dataBanner').innerHTML=`<span>⚠ ${msg}</span>`}
 function renderAll(){populateLeagues();applyFilters();renderDashboard();renderScanner();renderPlans();renderAdmin();if(!selected&&allMatches[0])selected=allMatches[0];renderAnalysis();$('bellCount').textContent=allMatches.length}
 function populateLeagues(){let val=$('filterLeague').value||'all';let leagues=[...new Set(allMatches.map(m=>m.league).filter(Boolean))].sort();$('filterLeague').innerHTML='<option value="all">Todas</option>'+leagues.map(l=>`<option>${l}</option>`).join('');if(leagues.includes(val))$('filterLeague').value=val}
-function applyFilters(){let q=$('filterSearch').value.toLowerCase().trim(),l=$('filterLeague').value,s=$('filterStatus').value,market=$('filterMarket').value,min=Number($('filterScore').value);filtered=allMatches.filter(m=>{let tx=(m.home+' '+m.away+' '+m.league).toLowerCase();let st=s==='all'||(s==='pre'&&m.status==='Pré-jogo')||(s==='final'&&m.status==='Finalizado');let bm=best(m,market);return(!q||tx.includes(q))&&(l==='all'||m.league===l)&&st&&(market==='all'||bm[1]!=null)&&m.score>=min});page=1;renderGames()}
+function applyFilters(){let q=$('filterSearch').value.toLowerCase().trim(),l=$('filterLeague').value,s=$('filterStatus').value,market=$('filterMarket').value,min=Number($('filterScore').value);filtered=allMatches.filter(m=>{let tx=(m.home+' '+m.away+' '+m.league).toLowerCase();let st=s==='all'||(s==='pre'&&m.status==='Pré-jogo')||(s==='running'&&m.status==='Em andamento')||(s==='final'&&m.status==='Finalizado');let bm=best(m,market);return(!q||tx.includes(q))&&(l==='all'||m.league===l)&&st&&(market==='all'||bm[1]!=null)&&m.score>=min});page=1;renderGames()}
 function renderGames(){let start=(page-1)*perPage,items=filtered.slice(start,start+perPage);$('resultCount').textContent=`${filtered.length} jogos encontrados`;$('resultSub').textContent=`Data: ${brDate(currentDate)}`;$('paginationInfo').textContent=`Atualizado em ${new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}`;$('activeTags').textContent=$('filterLeague').value==='all'?`${new Set(allMatches.map(m=>m.league)).size} ligas com jogos`:$('filterLeague').value;$('gamesList').innerHTML=items.length?items.map(gameRow).join(''):'<div class="empty"><b>Nenhum jogo encontrado.</b><br>Altere os filtros ou escolha outra data.</div>';$('pageInfo').textContent=`Mostrando ${items.length} de ${filtered.length} jogos`;$('pageNumber').textContent=page}
 function gameRow(m){let b=best(m,$('filterMarket').value);return `<div class="game-row"><div class="match-cell"><div class="logos">${logoEl(m.logoHome,m.home)}<span class="vs-mini">vs</span>${logoEl(m.logoAway,m.away)}</div><div class="teams"><strong>${m.home}<br>${m.away}</strong><small>Qualidade: ${m.quality}</small></div></div><div class="league"><strong>${m.league}</strong></div><div>${m.time}</div><div><span class="status ${m.status==='Finalizado'?'final':''}">${m.status}</span></div><div class="market"><b>${marketName(b)}</b><small>${marketLine(b)}</small></div><div class="score">${m.score}%</div><button class="action" onclick="openAnalysis('${m.id}')">Ver análise ›</button></div>`}
 function changePage(d){let max=Math.max(1,Math.ceil(filtered.length/perPage));page=Math.min(max,Math.max(1,page+d));renderGames()}

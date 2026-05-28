@@ -48,3 +48,11 @@ FOOTYSTATS_API_KEY=sua_chave
 - Site focado em pré-jogo e pós-jogo confiável.
 - Adapta layout para desktop, notebook 1366px, tablet e celular.
 - Filtros, lista de jogos, análise, abas e cards passam a quebrar corretamente em telas menores.
+
+## V9.9 — Status e layout corrigidos
+- Corrige status público usando horário do jogo como regra principal.
+- Jogo futuro nunca aparece como Finalizado.
+- Jogo dentro da janela provável aparece como Em andamento.
+- Jogo passado fora da janela aparece como Finalizado.
+- Adiciona filtro Em andamento.
+- Ajusta largura da tabela/lista para notebook 1366px, evitando botão cortado.
