@@ -1,17 +1,17 @@
-# JTIPS Analytics V9 — API Oficial FootyStats
+# JTIPS Analytics V9.1 — Correções de status e mercado
 
 ## Variável obrigatória na Vercel
 
 Cadastre em Project Settings > Environment Variables:
 
 ```txt
-FOOTYSTATS_API_KEY=sua_chave_oficial_footystats
+FOOTYSTATS_API_KEY=sua_chave
 ```
 
-Esta versão usa a API oficial:
+## Correções principais
 
-- `/todays-matches` para Jogos do Dia
-- `/match` para Análise da Partida
-- `/league-list` para diagnóstico de ligas selecionadas
-
-Não usa CSV, pasta `data`, Bet365 ou `FUTPYTHON_TOKEN`.
+- Status futuro ou incompleto aparece como Pré-jogo.
+- A tela pública não exibe menções técnicas à API/fonte.
+- Cartões estimados não entram como melhor entrada.
+- Cartões ficam como leitura estatística quando não houver linha e odd específica.
+- Filtro de data permanece funcional.
