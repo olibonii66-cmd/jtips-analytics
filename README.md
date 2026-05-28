@@ -1,17 +1,11 @@
-# JTIPS Analytics V9.1 — Correções de status e mercado
+# JTIPS Analytics V9.2 — Ajustes Visuais
 
-## Variável obrigatória na Vercel
+Versão baseada na API oficial FootyStats, usando a variável `FOOTYSTATS_API_KEY` na Vercel.
 
-Cadastre em Project Settings > Environment Variables:
-
-```txt
-FOOTYSTATS_API_KEY=sua_chave
-```
-
-## Correções principais
-
-- Status futuro ou incompleto aparece como Pré-jogo.
-- A tela pública não exibe menções técnicas à API/fonte.
-- Cartões estimados não entram como melhor entrada.
-- Cartões ficam como leitura estatística quando não houver linha e odd específica.
-- Filtro de data permanece funcional.
+Ajustes desta versão:
+- Removida a faixa pública “Dados atualizados” da tela de análise e demais páginas.
+- Removido termo técnico 1X2 das telas públicas.
+- Resultado final agora mostra “Nome do time vence”, “Empate” e “Nome do visitante vence”.
+- Dupla chance agora usa nomes dos times em vez de Casa/Visitante.
+- Removida indicação visual de fonte nos cards públicos.
+- Mantido diagnóstico técnico somente na área Admin.
