@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>JTIPS Analytics — V9.2 Ajustes Visuais</title>
+  <title>JTIPS Analytics — V9.4 Ao Vivo Corrigido</title>
   <style>
     :root{--bg:#050a12;--bg2:#07111d;--panel:#0b1524;--panel2:#0d1a2a;--line:#183353;--line2:#214d78;--text:#f4f8ff;--muted:#8da8c8;--blue:#1aa8ff;--blue2:#0b79ff;--green:#37e889;--yellow:#ffd53f;--red:#ff4d6a;--shadow:0 20px 60px rgba(0,0,0,.38);--r:18px;--sidebar:214px}
     *{box-sizing:border-box} body{margin:0;background:radial-gradient(circle at 20% 0,rgba(16,130,255,.12),transparent 34%),linear-gradient(135deg,#02060c 0%,#071220 45%,#03080f 100%);font-family:Inter,Segoe UI,Arial,sans-serif;color:var(--text);overflow-x:hidden} button,input,select{font:inherit} .app{min-height:100vh;display:block}
@@ -35,7 +35,7 @@
     </section>
     <section id="analysis" class="page"><span class="back" onclick="goPage('games')">← Voltar para jogos</span><div class="analysis-layout"><div><div id="analysisHeader" class="panel match-hero"></div><div class="panel best-strip"><h3 style="margin:0 0 10px">Melhores mercados</h3><div id="bestMarkets" class="best-grid"></div></div><div id="tabs" class="tabs"></div><div id="analysisContent" class="panel analysis-content"></div><div class="info-note">ⓘ Probabilidades calculadas com base em dados históricos, odds e métricas pré-jogo disponíveis.</div></div><aside id="quickSummary" class="quick"></aside></div></section>
     <section id="scanner" class="page"><p class="page-subtitle">Oportunidades por mercado e probabilidade.</p><div class="panel games-card"><div id="scannerTable"></div></div></section>
-    <section id="live" class="page"><p class="page-subtitle">Jogos marcados como ao vivo pela base.</p><div id="liveList" class="cards-grid"></div></section>
+    <section id="live" class="page"><p class="page-subtitle">Jogos em andamento identificados no momento.</p><div id="liveList" class="cards-grid"></div></section>
     <section id="plans" class="page"><div id="plansGrid" class="cards-grid"></div></section>
     <section id="admin" class="page"><div class="advanced-grid"><div id="adminFile" class="panel stat-card"></div><div id="adminColumns" class="panel stat-card"></div><div class="panel stat-card"><h4>Colunas recebidas</h4><div id="adminAllColumns" style="display:flex;gap:6px;flex-wrap:wrap"></div></div></div></section>
   </main>
@@ -58,13 +58,44 @@ function dateTimeFromUnix(u){let x=n(u); if(!x)return{dateRaw:'',date:'—',time
 function fix(s){return s==null?'':String(s)}
 function logo(v){if(!v)return'';v=String(v).trim();if(v.startsWith('http'))return v;if(v.startsWith('/'))return 'https://footystats.org'+v;if(v.startsWith('teams/')||v.startsWith('competitions/'))return 'https://cdn.footystats.org/img/'+v;return v}
 function logoEl(url,name){let initial=((name||'?').trim()[0]||'?').toUpperCase();return `<div class="logo-team">${url?`<img src="${url}" onerror="this.remove();this.parentElement.textContent='${initial}'">`:initial}</div>`}
+function hasLiveStats(row){
+  const fields=[
+    'team_a_corners','team_b_corners','totalCornerCount',
+    'team_a_shots','team_b_shots','team_a_shotsOnTarget','team_b_shotsOnTarget',
+    'team_a_shotsOffTarget','team_b_shotsOffTarget',
+    'team_a_yellow_cards','team_b_yellow_cards','team_a_red_cards','team_b_red_cards',
+    'team_a_possession','team_b_possession',
+    'team_a_attacks','team_b_attacks','team_a_dangerous_attacks','team_b_dangerous_attacks',
+    'team_a_xg','team_b_xg','total_xg'
+  ];
+  return fields.some(k=>{
+    let v=n(row[k]);
+    return v!==null && v>=0 && String(row[k])!=='-1' && v>0;
+  });
+}
+function liveByTime(row){
+  let u=n(row.date_unix);
+  if(u===null) return false;
+  let start=u*1000;
+  let now=Date.now();
+  let before=10*60*1000;
+  let liveWindow=150*60*1000;
+  return now>=start-before && now<=start+liveWindow;
+}
 function status(row){
-  let s=String(row.status||row.Status||'').toLowerCase();
+  let s=String(row.status||row.Status||'').toLowerCase().trim();
   if(s.includes('cancel')||s.includes('postpon')||s.includes('suspend')||s.includes('abandon')) return 'Cancelado';
-  if(s.includes('live')||s.includes('progress')||s==='1h'||s==='2h'||s==='ht') return 'Ao vivo';
-  if(s==='incomplete'||s==='pending'||s==='scheduled'||s==='not_started'||s==='not started'||s==='') return 'Pré-jogo';
+  if(s.includes('live')||s.includes('progress')||s==='1h'||s==='2h'||s==='ht'||s.includes('half')) return 'Ao vivo';
   if(s.includes('complete')||s.includes('finished')||s.includes('final')) return 'Finalizado';
-  return 'Pré-jogo';
+
+  // Na base oficial, muitos jogos em andamento chegam como "incomplete".
+  // Por isso, para a aba Ao Vivo, também validamos horário provável e estatísticas realizadas.
+  if(s==='incomplete'||s==='pending'||s==='scheduled'||s==='not_started'||s==='not started'||s===''){
+    if(hasLiveStats(row) || liveByTime(row)) return 'Ao vivo';
+    return 'Pré-jogo';
+  }
+
+  return (hasLiveStats(row)||liveByTime(row)) ? 'Ao vivo' : 'Pré-jogo';
 }
 function normalizeOdds(arr){let vals=arr.map(x=>n(x));if(vals.some(x=>!x||x<=1))return null;let imps=vals.map(x=>1/x),tot=imps.reduce((a,b)=>a+b,0);return imps.map(x=>clamp(x/tot*100))}
 function winner(row){let odds=normalizeOdds([row.odds_ft_1,row.odds_ft_x,row.odds_ft_2]);if(odds)return {home:odds[0],draw:odds[1],away:odds[2]};let hp=n(row.pre_match_home_ppg)||n(row.home_ppg)||1,ap=n(row.pre_match_away_ppg)||n(row.away_ppg)||1,draw=25,home=clamp((100-draw)*(hp+.2)/(hp+ap+.4));return{home,draw,away:clamp(100-home-draw)}}
@@ -100,7 +131,7 @@ function xg(m){let o=m.odds;return `<h2>xG / Força</h2><div class="advanced-gri
 function advanced(m){let o=m.odds,live=m.status==='Ao vivo'||m.status==='Finalizado';return `<h2>Pré-jogo avançado</h2><p class="muted">Métricas e projeções calculadas antes da partida.</p><div class="advanced-grid"><div class="stat-card"><h4>xG Pré-jogo</h4><div class="big-pair"><b class="green">${n(o.team_a_xg_prematch)??'—'}</b><span>vs</span><b class="red">${n(o.team_b_xg_prematch)??'—'}</b></div></div><div class="stat-card"><h4>PPG</h4><div class="big-pair"><b>${n(o.pre_match_home_ppg)??'—'}</b><span>vs</span><b>${n(o.pre_match_away_ppg)??'—'}</b></div></div><div class="stat-card"><h4>Odds 1º Tempo</h4><div class="kv"><span>1</span><b>${odd(o.odds_1st_half_result_1)}</b></div><div class="kv"><span>X</span><b>${odd(o.odds_1st_half_result_x)}</b></div><div class="kv"><span>2</span><b>${odd(o.odds_1st_half_result_2)}</b></div></div><div class="stat-card"><h4>Linhas de Gols</h4><div class="kv"><span>Mais de 1.5</span><b>${fmt(m.over15)}</b></div><div class="kv"><span>Mais de 2.5</span><b>${fmt(m.over25)}</b></div></div><div class="stat-card"><h4>Escanteios</h4><div class="kv"><span>Potencial</span><b>${n(o.corners_potential)??'—'}</b></div><div class="kv"><span>Mais de 8.5</span><b>${fmt(m.corners85)}</b></div></div><div class="stat-card"><h4>Dupla Chance</h4><div class="kv"><span>1X</span><b>${fmt(prob(o.odds_doublechance_1x))}</b></div><div class="kv"><span>12</span><b>${fmt(prob(o.odds_doublechance_12))}</b></div><div class="kv"><span>X2</span><b>${fmt(prob(o.odds_doublechance_x2))}</b></div></div></div><h2 style="margin-top:20px">Ao vivo / Pós-jogo</h2><p class="muted">Métricas dinâmicas disponíveis apenas ao vivo ou após o término da partida.</p><div class="advanced-grid">${['Pressão Ofensiva','Bola Parada','Disciplina','1º Tempo','2º Tempo','Validação / Resultado'].map(x=>`<div class="stat-card ${live?'':'locked'}"><h4>${x}</h4><p class="muted">${live?'Disponível conforme dados da partida':'🔒 Indisponível no pré-jogo'}</p></div>`).join('')}</div><div class="info-note">Essas métricas são liberadas somente durante a partida ou após o término.</div>`}
 function insights(m){let b=best(m),tr=m.odds.trends;let trend='';try{let arr=tr?.home||[];trend=arr[0]?.[1]||''}catch(e){}return `<h2>Insights IA</h2><div class="info-grid two"><div class="stat-card"><h4>Resumo da leitura</h4><p>Melhor entrada estatística: <b>${marketName(b)}</b>, com ${marketLine(b)}.</p></div><div class="stat-card"><h4>Tendência da partida</h4><p class="muted">${trend||'Sem tendência textual disponível para esta partida.'}</p></div></div>`}
 function renderScanner(){let rows=[...allMatches].sort((a,b)=>(best(b)[1]||0)-(best(a)[1]||0)).slice(0,20);$('scannerTable').innerHTML=rows.map(gameRow).join('')||'<div class="empty">Sem oportunidades.</div>'}
-function renderLive(){let live=allMatches.filter(m=>m.status==='Ao vivo');$('liveList').innerHTML=live.map(card).join('')||'<div class="empty">Não há jogos ao vivo na data selecionada.</div>'}
+function renderLive(){let live=allMatches.filter(m=>m.status==='Ao vivo').sort((a,b)=>(a.time||'').localeCompare(b.time||''));$('liveList').innerHTML=live.map(card).join('')||'<div class="empty">Nenhum jogo ao vivo identificado neste momento.</div>'}
 function renderPlans(){$('plansGrid').innerHTML=['Free','Pro','Premium'].map((p,i)=>`<div class="panel stat-card"><h2>${p}</h2><b style="font-size:30px">${i?i==1?'R$39,90':'R$79,90':'R$0'}</b><p class="muted">Plano ${p}</p></div>`).join('')}
 function renderAdmin(){$('adminFile').innerHTML=`<h4>API Oficial</h4><div class="kv"><span>Fonte</span><b>FootyStats</b></div><div class="kv"><span>Data</span><b>${currentDate}</b></div><div class="kv"><span>Jogos</span><b>${allMatches.length}</b></div><div class="kv"><span>Request restante</span><b>${apiMeta.request_remaining||'—'}</b></div>`;$('adminColumns').innerHTML=`<h4>Ligas selecionadas</h4><p class="muted">As ligas são controladas no painel FootyStats.</p><div class="kv"><span>Ligas no dia</span><b>${new Set(allMatches.map(m=>m.league)).size}</b></div>`;$('adminAllColumns').innerHTML=columns.slice(0,80).map(c=>`<span class="tag">${c}</span>`).join('')}
 function goPage(p){document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));$(p).classList.add('active');document.querySelectorAll('.nav-item').forEach(x=>x.classList.toggle('active',x.dataset.page===p));let names={dashboard:['Dashboard','Visão geral dos jogos carregados.'],games:['Jogos do Dia','Escolha a data e veja os jogos disponíveis.'],analysis:['Análise da Partida','Ficha completa do jogo selecionado.'],scanner:['Scanner','Mercados fortes encontrados na data.'],live:['Ao Vivo','Jogos ao vivo quando disponíveis.'],plans:['Planos','Estrutura comercial futura.'],admin:['Admin','Diagnóstico técnico.']};$('pageTitle').textContent=names[p][0];$('pageSubtitle').textContent=names[p][1];window.scrollTo(0,0)}
