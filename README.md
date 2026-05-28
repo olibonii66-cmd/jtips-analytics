@@ -35,3 +35,9 @@ FOOTYSTATS_API_KEY=sua_chave
 - Implementa a página Ao Vivo no formato de ficha/placar ao vivo.
 - Placar central, minuto, abas, estádio, árbitro, chips de escanteios/cartões e barras comparativas.
 - Lista lateral com outros jogos ao vivo.
+
+## V9.7 — Ao Vivo com dados detalhados
+- A tela Ao Vivo agora busca detalhes atualizados de cada partida em andamento.
+- O placar e as estatísticas ao vivo são puxados do detalhe da partida, não apenas da lista do dia.
+- Reduzido cache do detalhe da partida para melhorar atualização ao vivo.
+- O refresh do detalhe usa `no-store`.

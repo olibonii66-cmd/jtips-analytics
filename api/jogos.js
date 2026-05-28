@@ -2,7 +2,7 @@
 const API_BASE = 'https://api.football-data-api.com';
 const TZ = 'America/Sao_Paulo';
 const cache = new Map();
-const TTL = 1000 * 60 * 5;
+const TTL = 1000 * 60;
 
 function todaySP() {
   return new Date().toLocaleDateString('sv-SE', { timeZone: TZ });
@@ -49,7 +49,7 @@ export default async function handler(req, res) {
     const cacheKey = `jogos:${date}`;
     const cached = cache.get(cacheKey);
     if (!req.query.refresh && cached && Date.now() - cached.ts < TTL) {
-      res.setHeader('Cache-Control', 's-maxage=300, stale-while-revalidate=600');
+      res.setHeader('Cache-Control', 's-maxage=60, stale-while-revalidate=120');
       return res.status(200).json(cached.data);
     }
 
@@ -99,7 +99,7 @@ export default async function handler(req, res) {
     };
 
     cache.set(cacheKey, { ts: Date.now(), data: payload });
-    res.setHeader('Cache-Control', 's-maxage=300, stale-while-revalidate=600');
+    res.setHeader('Cache-Control', 's-maxage=60, stale-while-revalidate=120');
     return res.status(200).json(payload);
   } catch (error) {
     return res.status(500).json({ ok: false, error: error.message || 'Erro interno.' });

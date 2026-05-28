@@ -1,7 +1,7 @@
 
 const API_BASE = 'https://api.football-data-api.com';
 const cache = new Map();
-const TTL = 1000 * 60 * 5;
+const TTL = 1000 * 20;
 
 export default async function handler(req, res) {
   try {
@@ -14,7 +14,7 @@ export default async function handler(req, res) {
     const cacheKey = `partida:${matchId}`;
     const cached = cache.get(cacheKey);
     if (!req.query.refresh && cached && Date.now() - cached.ts < TTL) {
-      res.setHeader('Cache-Control', 's-maxage=300, stale-while-revalidate=600');
+      res.setHeader('Cache-Control', 's-maxage=20, stale-while-revalidate=30');
       return res.status(200).json(cached.data);
     }
 
@@ -38,7 +38,7 @@ export default async function handler(req, res) {
       columns: json.data ? Object.keys(json.data) : [],
     };
     cache.set(cacheKey, { ts: Date.now(), data: payload });
-    res.setHeader('Cache-Control', 's-maxage=300, stale-while-revalidate=600');
+    res.setHeader('Cache-Control', req.query.refresh ? 'no-store' : 's-maxage=20, stale-while-revalidate=30');
     return res.status(200).json(payload);
   } catch (error) {
     return res.status(500).json({ ok: false, error: error.message || 'Erro interno.' });

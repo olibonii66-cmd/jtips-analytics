@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>JTIPS Analytics — V9.6 Ao Vivo Layout</title>
+  <title>JTIPS Analytics — V9.7 Ao Vivo Dados Reais</title>
   <style>
     :root{--bg:#050a12;--bg2:#07111d;--panel:#0b1524;--panel2:#0d1a2a;--line:#183353;--line2:#214d78;--text:#f4f8ff;--muted:#8da8c8;--blue:#1aa8ff;--blue2:#0b79ff;--green:#37e889;--yellow:#ffd53f;--red:#ff4d6a;--shadow:0 20px 60px rgba(0,0,0,.38);--r:18px;--sidebar:214px}
     *{box-sizing:border-box} body{margin:0;background:radial-gradient(circle at 20% 0,rgba(16,130,255,.12),transparent 34%),linear-gradient(135deg,#02060c 0%,#071220 45%,#03080f 100%);font-family:Inter,Segoe UI,Arial,sans-serif;color:var(--text);overflow-x:hidden} button,input,select{font:inherit} .app{min-height:100vh;display:block}
@@ -242,9 +242,35 @@ function liveDetail(match,liveMatches){
     <div class="live-bars">${liveBar('Posse de bola',hPoss,aPoss,true)}${liveBar('Finalizações',hShots,aShots)}${liveBar('Chutes no gol',hSot,aSot)}${liveBar('xG (Gols Esperados)',hxg,axg)}${liveBar('Ataques perigosos',hDanger,aDanger)}</div>
   </div><aside class="live-side"><h3>Outros jogos ao vivo</h3>${side || '<div class="empty">Nenhum outro jogo ao vivo.</div>'}</aside></div>`;
 }
-function renderLive(){
+async function hydrateLiveMatches(live){
+  if(!live.length) return [];
+  const detailed = await Promise.all(live.map(async m=>{
+    try{
+      const r = await fetch(`/api/partida?match_id=${encodeURIComponent(m.id)}&refresh=1&t=${Date.now()}`);
+      const j = await r.json();
+      if(r.ok && j.ok && j.data){
+        const merged = {
+          ...m.raw,
+          ...j.data,
+          __league_name:m.league,
+          __league_country:m.country
+        };
+        return normalize(merged,0);
+      }
+    }catch(e){}
+    return m;
+  }));
+  return detailed.sort((a,b)=>(a.time||'').localeCompare(b.time||''));
+}
+async function renderLive(){
   let live=allMatches.filter(m=>m.status==='Ao vivo').sort((a,b)=>(a.time||'').localeCompare(b.time||''));
-  $('liveList').innerHTML=liveDetail(live[0],live);
+  if(!live.length){
+    $('liveList').innerHTML='<div class="empty">Nenhum jogo ao vivo identificado neste momento.</div>';
+    return;
+  }
+  $('liveList').innerHTML='<div class="empty">Carregando estatísticas ao vivo...</div>';
+  const hydrated = await hydrateLiveMatches(live);
+  $('liveList').innerHTML=liveDetail(hydrated[0],hydrated);
 }
 function renderPlans(){$('plansGrid').innerHTML=['Free','Pro','Premium'].map((p,i)=>`<div class="panel stat-card"><h2>${p}</h2><b style="font-size:30px">${i?i==1?'R$39,90':'R$79,90':'R$0'}</b><p class="muted">Plano ${p}</p></div>`).join('')}
 function renderAdmin(){$('adminFile').innerHTML=`<h4>API Oficial</h4><div class="kv"><span>Fonte</span><b>FootyStats</b></div><div class="kv"><span>Data</span><b>${currentDate}</b></div><div class="kv"><span>Jogos</span><b>${allMatches.length}</b></div><div class="kv"><span>Request restante</span><b>${apiMeta.request_remaining||'—'}</b></div>`;$('adminColumns').innerHTML=`<h4>Ligas selecionadas</h4><p class="muted">As ligas são controladas no painel FootyStats.</p><div class="kv"><span>Ligas no dia</span><b>${new Set(allMatches.map(m=>m.league)).size}</b></div>`;$('adminAllColumns').innerHTML=columns.slice(0,80).map(c=>`<span class="tag">${c}</span>`).join('')}
