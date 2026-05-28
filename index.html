@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>JTIPS Analytics — V9.4 Ao Vivo Corrigido</title>
+  <title>JTIPS Analytics — V9.5 Status Corrigido</title>
   <style>
     :root{--bg:#050a12;--bg2:#07111d;--panel:#0b1524;--panel2:#0d1a2a;--line:#183353;--line2:#214d78;--text:#f4f8ff;--muted:#8da8c8;--blue:#1aa8ff;--blue2:#0b79ff;--green:#37e889;--yellow:#ffd53f;--red:#ff4d6a;--shadow:0 20px 60px rgba(0,0,0,.38);--r:18px;--sidebar:214px}
     *{box-sizing:border-box} body{margin:0;background:radial-gradient(circle at 20% 0,rgba(16,130,255,.12),transparent 34%),linear-gradient(135deg,#02060c 0%,#071220 45%,#03080f 100%);font-family:Inter,Segoe UI,Arial,sans-serif;color:var(--text);overflow-x:hidden} button,input,select{font:inherit} .app{min-height:100vh;display:block}
@@ -58,7 +58,7 @@ function dateTimeFromUnix(u){let x=n(u); if(!x)return{dateRaw:'',date:'—',time
 function fix(s){return s==null?'':String(s)}
 function logo(v){if(!v)return'';v=String(v).trim();if(v.startsWith('http'))return v;if(v.startsWith('/'))return 'https://footystats.org'+v;if(v.startsWith('teams/')||v.startsWith('competitions/'))return 'https://cdn.footystats.org/img/'+v;return v}
 function logoEl(url,name){let initial=((name||'?').trim()[0]||'?').toUpperCase();return `<div class="logo-team">${url?`<img src="${url}" onerror="this.remove();this.parentElement.textContent='${initial}'">`:initial}</div>`}
-function hasLiveStats(row){
+function hasRealMatchData(row){
   const fields=[
     'team_a_corners','team_b_corners','totalCornerCount',
     'team_a_shots','team_b_shots','team_a_shotsOnTarget','team_b_shotsOnTarget',
@@ -69,33 +69,48 @@ function hasLiveStats(row){
     'team_a_xg','team_b_xg','total_xg'
   ];
   return fields.some(k=>{
-    let v=n(row[k]);
-    return v!==null && v>=0 && String(row[k])!=='-1' && v>0;
+    let raw=row[k];
+    let v=n(raw);
+    return v!==null && v>0 && String(raw)!=='-1';
   });
 }
-function liveByTime(row){
+function timeStatus(row){
   let u=n(row.date_unix);
-  if(u===null) return false;
-  let start=u*1000;
-  let now=Date.now();
-  let before=10*60*1000;
-  let liveWindow=150*60*1000;
-  return now>=start-before && now<=start+liveWindow;
+  if(u===null) return null;
+
+  const start=u*1000;
+  const now=Date.now();
+
+  const preTolerance=5*60*1000;      // até 5 min antes ainda é pré-jogo
+  const liveBefore=10*60*1000;       // aquecimento/atraso
+  const liveAfter=150*60*1000;       // janela aproximada de partida
+
+  if(start > now + preTolerance) return 'Pré-jogo';
+  if(now >= start - liveBefore && now <= start + liveAfter) return 'Ao vivo';
+  if(now > start + liveAfter) return 'Finalizado';
+
+  return 'Pré-jogo';
 }
 function status(row){
   let s=String(row.status||row.Status||'').toLowerCase().trim();
+  let byTime=timeStatus(row);
+
   if(s.includes('cancel')||s.includes('postpon')||s.includes('suspend')||s.includes('abandon')) return 'Cancelado';
+
+  // Regra principal: o horário manda na tela pública.
+  // Isso impede jogo futuro aparecer como Finalizado e jogo em andamento ficar fora do Ao Vivo.
+  if(byTime==='Pré-jogo') return 'Pré-jogo';
+  if(byTime==='Ao vivo') return 'Ao vivo';
+
   if(s.includes('live')||s.includes('progress')||s==='1h'||s==='2h'||s==='ht'||s.includes('half')) return 'Ao vivo';
   if(s.includes('complete')||s.includes('finished')||s.includes('final')) return 'Finalizado';
 
-  // Na base oficial, muitos jogos em andamento chegam como "incomplete".
-  // Por isso, para a aba Ao Vivo, também validamos horário provável e estatísticas realizadas.
   if(s==='incomplete'||s==='pending'||s==='scheduled'||s==='not_started'||s==='not started'||s===''){
-    if(hasLiveStats(row) || liveByTime(row)) return 'Ao vivo';
-    return 'Pré-jogo';
+    if(hasRealMatchData(row)) return 'Ao vivo';
+    return byTime || 'Pré-jogo';
   }
 
-  return (hasLiveStats(row)||liveByTime(row)) ? 'Ao vivo' : 'Pré-jogo';
+  return byTime || 'Pré-jogo';
 }
 function normalizeOdds(arr){let vals=arr.map(x=>n(x));if(vals.some(x=>!x||x<=1))return null;let imps=vals.map(x=>1/x),tot=imps.reduce((a,b)=>a+b,0);return imps.map(x=>clamp(x/tot*100))}
 function winner(row){let odds=normalizeOdds([row.odds_ft_1,row.odds_ft_x,row.odds_ft_2]);if(odds)return {home:odds[0],draw:odds[1],away:odds[2]};let hp=n(row.pre_match_home_ppg)||n(row.home_ppg)||1,ap=n(row.pre_match_away_ppg)||n(row.away_ppg)||1,draw=25,home=clamp((100-draw)*(hp+.2)/(hp+ap+.4));return{home,draw,away:clamp(100-home-draw)}}

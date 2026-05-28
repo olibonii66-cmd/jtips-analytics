@@ -23,3 +23,10 @@ FOOTYSTATS_API_KEY=sua_chave
 - Corrige identificação de jogos ao vivo usando status, horário provável e estatísticas realizadas.
 - Jogos `incomplete` em andamento agora entram na aba Ao Vivo.
 - Mensagem pública da tela Ao Vivo foi limpa.
+
+## V9.5 — Status corrigido
+- O horário do jogo agora prevalece na tela pública.
+- Jogo futuro aparece como Pré-jogo.
+- Jogo dentro da janela provável da partida aparece como Ao vivo.
+- Jogo passado fora da janela aparece como Finalizado.
+- Corrige casos em que a base marca todos como Finalizado indevidamente.
