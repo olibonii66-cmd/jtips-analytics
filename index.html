@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>JTIPS Analytics — V9.5 Status Corrigido</title>
+  <title>JTIPS Analytics — V9.6 Ao Vivo Layout</title>
   <style>
     :root{--bg:#050a12;--bg2:#07111d;--panel:#0b1524;--panel2:#0d1a2a;--line:#183353;--line2:#214d78;--text:#f4f8ff;--muted:#8da8c8;--blue:#1aa8ff;--blue2:#0b79ff;--green:#37e889;--yellow:#ffd53f;--red:#ff4d6a;--shadow:0 20px 60px rgba(0,0,0,.38);--r:18px;--sidebar:214px}
     *{box-sizing:border-box} body{margin:0;background:radial-gradient(circle at 20% 0,rgba(16,130,255,.12),transparent 34%),linear-gradient(135deg,#02060c 0%,#071220 45%,#03080f 100%);font-family:Inter,Segoe UI,Arial,sans-serif;color:var(--text);overflow-x:hidden} button,input,select{font:inherit} .app{min-height:100vh;display:block}
@@ -14,6 +14,50 @@
     .analysis-layout{display:grid;grid-template-columns:minmax(0,1fr) 290px;gap:16px}.back{color:#62c7ff;font-weight:950;margin-bottom:12px;cursor:pointer;display:inline-block}.match-hero{padding:22px;margin-bottom:14px}.hero-teams{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;text-align:center;gap:20px}.hero-team{display:flex;flex-direction:column;align-items:center;gap:10px;font-size:22px;font-weight:1000}.hero-team .logo-team{width:76px;height:76px}.vs{font-size:27px;color:#29b8ff;font-weight:1000}.hero-meta{margin-top:12px;display:flex;gap:12px;justify-content:center;color:#9dc0dd;font-weight:850}.best-strip{padding:14px;margin-bottom:14px}.best-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.best{background:rgba(7,17,30,.75);border:1px solid rgba(68,145,220,.2);border-radius:13px;padding:13px}.best span{color:#95b6d2;font-weight:850}.best b{display:block;font-size:26px;color:var(--green);margin-top:6px}.tabs{display:flex;gap:8px;overflow:auto;margin-bottom:14px}.tab{white-space:nowrap;border:1px solid rgba(77,145,215,.32);background:rgba(7,17,30,.88);border-radius:999px;padding:10px 14px;font-weight:950;cursor:pointer;color:#e5f2ff}.tab.active{background:linear-gradient(135deg,var(--blue),var(--blue2));border-color:transparent}.analysis-content{padding:18px}.prob-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.prob{border:1px solid rgba(80,150,220,.22);background:rgba(5,14,24,.68);border-radius:15px;padding:22px;text-align:center}.prob span{color:#adc6df;font-weight:900}.prob b{display:block;font-size:38px;color:#38b8ff;margin:10px 0}.prob small{display:inline-block;border-radius:999px;background:rgba(255,255,255,.08);padding:7px 11px;color:#dcecff;font-weight:850}.compare-bar{display:grid;grid-template-columns:49fr 25fr 26fr;gap:3px;margin:14px 0 6px}.compare-bar div{height:10px;border-radius:999px}.quick{position:sticky;top:18px;display:flex;flex-direction:column;gap:12px}.quick .panel{padding:16px}.quick h3{margin:0 0 10px}.kv{display:flex;justify-content:space-between;gap:10px;padding:9px 0;border-bottom:1px solid rgba(72,140,210,.14);color:#a9c5df}.kv b{color:#fff}.advanced-grid,.info-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.info-grid.two{grid-template-columns:repeat(2,1fr)}.stat-card{border:1px solid rgba(80,150,220,.22);background:rgba(6,15,26,.7);border-radius:15px;padding:15px}.stat-card h4{margin:0 0 11px}.big-pair{display:flex;justify-content:space-around;align-items:center;gap:8px}.big-pair b{font-size:25px}.red{color:#ff5f77}.green{color:#38e889}.blue{color:#36b9ff}.locked{opacity:.62;filter:grayscale(.3)}.info-note{margin-top:12px;border:1px solid rgba(26,168,255,.25);background:rgba(26,168,255,.08);border-radius:13px;padding:12px;color:#b8ddf8}.scanner-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}.page-subtitle{color:#94b5d2;margin:0 0 14px}.mobile-only{display:none}
     @media(max-width:1300px){:root{--sidebar:188px}.main{padding:16px}.filter-grid{grid-template-columns:repeat(4,1fr)}.table-head{display:none}.game-row{grid-template-columns:1fr 100px 100px 110px}.market{grid-column:1/3}.action{grid-column:4}.analysis-layout{grid-template-columns:1fr}.quick{position:static;display:grid;grid-template-columns:repeat(3,1fr)}.advanced-grid{grid-template-columns:repeat(2,1fr)}}
     @media(max-width:800px){.sidebar{position:static;width:auto;height:auto}.main{margin-left:0}.filter-grid,.cards-grid,.best-grid,.prob-grid,.advanced-grid,.info-grid,.quick{grid-template-columns:1fr}.top{flex-direction:column}.game-row{grid-template-columns:1fr}.market,.action{grid-column:auto}.hero-teams{grid-template-columns:1fr}.vs{order:0}.top-actions{width:100%;flex-wrap:wrap}.top-pill{flex:1}}
+  
+    .live-layout{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:18px;align-items:start}
+    .live-main{border:1px solid var(--line);background:linear-gradient(180deg,#0b1727,#07111d);border-radius:22px;box-shadow:var(--shadow);overflow:hidden}
+    .live-top{display:flex;align-items:center;justify-content:space-between;padding:16px 18px;border-bottom:1px solid var(--line)}
+    .live-back{border:1px solid var(--line2);background:#091525;color:var(--text);border-radius:10px;padding:9px 13px;font-weight:950;cursor:pointer}
+    .live-league{text-align:center;font-weight:1000;color:var(--text)}
+    .live-league small{display:block;color:var(--muted);font-weight:800;margin-top:2px}
+    .live-badge{display:inline-flex;align-items:center;gap:7px;background:#082b57;border:1px solid #0b7cff;color:#37bfff;border-radius:999px;padding:8px 12px;font-weight:1000}
+    .live-badge:before{content:'';width:8px;height:8px;border-radius:50%;background:#10a7ff;box-shadow:0 0 12px #10a7ff}
+    .scoreboard{margin:16px 18px;border:1px solid var(--line2);border-radius:18px;min-height:190px;background:
+      linear-gradient(90deg,rgba(3,10,20,.85),rgba(4,17,30,.58),rgba(3,10,20,.85)),
+      radial-gradient(circle at 50% 0%,rgba(26,168,255,.16),transparent 45%);display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:18px;padding:24px}
+    .score-team{display:flex;flex-direction:column;align-items:center;gap:10px;font-weight:1000;font-size:24px;text-align:center}
+    .score-team .logo-team{width:96px;height:96px;border-radius:50%;background:#06192b}
+    .score-center{text-align:center}
+    .score-live{color:#28adff;font-size:13px;font-weight:1000;letter-spacing:.08em;margin-bottom:6px}
+    .score-number{font-size:74px;font-weight:1000;line-height:1;color:#fff;text-shadow:0 0 18px rgba(26,168,255,.25)}
+    .minute-pill{display:inline-block;margin-top:14px;background:linear-gradient(90deg,var(--blue2),var(--blue));padding:9px 18px;border-radius:999px;font-size:20px;font-weight:1000}
+    .live-tabs{display:flex;gap:28px;padding:0 18px;border-bottom:1px solid var(--line);overflow:auto}
+    .live-tab{padding:14px 0;color:#b5c7dc;font-weight:900;white-space:nowrap;border-bottom:3px solid transparent}
+    .live-tab.active{color:#27aaff;border-color:#0b8fff}
+    .live-info{margin:14px 18px;display:grid;grid-template-columns:1fr 1fr;gap:14px}
+    .live-info-card{padding:14px;border:1px solid var(--line);background:#0b1727;border-radius:14px;display:flex;gap:12px;align-items:center}
+    .live-info-icon{font-size:26px;color:#22b9ff}
+    .live-info-card small{display:block;color:var(--muted);font-weight:800}
+    .live-chips{margin:14px 18px;display:grid;grid-template-columns:1fr auto 1fr;gap:14px;align-items:center}
+    .chip-group{display:flex;gap:10px;justify-content:center}
+    .live-chip{min-width:104px;padding:11px;border:1px solid var(--line);border-radius:12px;text-align:center;background:#0a1625}
+    .live-chip b{display:block;font-size:20px;color:#fff}.live-chip small{color:var(--muted);font-weight:800}
+    .live-sep{width:1px;height:54px;background:var(--line)}
+    .live-bars{margin:16px 18px 22px;padding:16px;border:1px solid var(--line);background:#081321;border-radius:16px}
+    .live-stat{margin:14px 0}
+    .live-stat-head{display:grid;grid-template-columns:90px 1fr 90px;align-items:center;gap:10px;margin-bottom:7px}
+    .live-left{color:#20aaff;font-size:22px;font-weight:1000}
+    .live-right{text-align:right;color:#a8b9c9;font-size:22px;font-weight:1000}
+    .live-label{text-align:center;color:#fff;font-weight:900}
+    .live-track{height:10px;border-radius:999px;background:#1a2a3d;overflow:hidden;position:relative}
+    .live-fill{height:100%;border-radius:999px;background:linear-gradient(90deg,#0b83ff,#2acbff)}
+    .live-side{border:1px solid var(--line);background:#07111d;border-radius:18px;padding:16px;box-shadow:var(--shadow)}
+    .live-side h3{margin:0 0 14px}.league-live{margin:14px 0 10px;color:#9fb9d6;font-weight:1000;font-size:13px;text-transform:uppercase}
+    .side-game{display:grid;grid-template-columns:1fr auto;gap:10px;padding:10px 12px;border-radius:12px;background:#0b1727;border:1px solid var(--line);margin-bottom:8px}
+    .side-game b{display:block}.side-game small{color:var(--muted)}.side-minute{color:#19a8ff;font-weight:1000}
+    @media(max-width:1180px){.live-layout{grid-template-columns:1fr}.live-side{order:2}.scoreboard{grid-template-columns:1fr;}.score-number{font-size:54px}.live-info,.live-chips{grid-template-columns:1fr}.live-sep{display:none}.chip-group{justify-content:flex-start;flex-wrap:wrap}}
+
   </style>
 </head>
 <body>
@@ -35,7 +79,7 @@
     </section>
     <section id="analysis" class="page"><span class="back" onclick="goPage('games')">← Voltar para jogos</span><div class="analysis-layout"><div><div id="analysisHeader" class="panel match-hero"></div><div class="panel best-strip"><h3 style="margin:0 0 10px">Melhores mercados</h3><div id="bestMarkets" class="best-grid"></div></div><div id="tabs" class="tabs"></div><div id="analysisContent" class="panel analysis-content"></div><div class="info-note">ⓘ Probabilidades calculadas com base em dados históricos, odds e métricas pré-jogo disponíveis.</div></div><aside id="quickSummary" class="quick"></aside></div></section>
     <section id="scanner" class="page"><p class="page-subtitle">Oportunidades por mercado e probabilidade.</p><div class="panel games-card"><div id="scannerTable"></div></div></section>
-    <section id="live" class="page"><p class="page-subtitle">Jogos em andamento identificados no momento.</p><div id="liveList" class="cards-grid"></div></section>
+    <section id="live" class="page"><p class="page-subtitle">Jogos em andamento identificados no momento.</p><div id="liveList"></div></section>
     <section id="plans" class="page"><div id="plansGrid" class="cards-grid"></div></section>
     <section id="admin" class="page"><div class="advanced-grid"><div id="adminFile" class="panel stat-card"></div><div id="adminColumns" class="panel stat-card"></div><div class="panel stat-card"><h4>Colunas recebidas</h4><div id="adminAllColumns" style="display:flex;gap:6px;flex-wrap:wrap"></div></div></div></section>
   </main>
@@ -146,7 +190,62 @@ function xg(m){let o=m.odds;return `<h2>xG / Força</h2><div class="advanced-gri
 function advanced(m){let o=m.odds,live=m.status==='Ao vivo'||m.status==='Finalizado';return `<h2>Pré-jogo avançado</h2><p class="muted">Métricas e projeções calculadas antes da partida.</p><div class="advanced-grid"><div class="stat-card"><h4>xG Pré-jogo</h4><div class="big-pair"><b class="green">${n(o.team_a_xg_prematch)??'—'}</b><span>vs</span><b class="red">${n(o.team_b_xg_prematch)??'—'}</b></div></div><div class="stat-card"><h4>PPG</h4><div class="big-pair"><b>${n(o.pre_match_home_ppg)??'—'}</b><span>vs</span><b>${n(o.pre_match_away_ppg)??'—'}</b></div></div><div class="stat-card"><h4>Odds 1º Tempo</h4><div class="kv"><span>1</span><b>${odd(o.odds_1st_half_result_1)}</b></div><div class="kv"><span>X</span><b>${odd(o.odds_1st_half_result_x)}</b></div><div class="kv"><span>2</span><b>${odd(o.odds_1st_half_result_2)}</b></div></div><div class="stat-card"><h4>Linhas de Gols</h4><div class="kv"><span>Mais de 1.5</span><b>${fmt(m.over15)}</b></div><div class="kv"><span>Mais de 2.5</span><b>${fmt(m.over25)}</b></div></div><div class="stat-card"><h4>Escanteios</h4><div class="kv"><span>Potencial</span><b>${n(o.corners_potential)??'—'}</b></div><div class="kv"><span>Mais de 8.5</span><b>${fmt(m.corners85)}</b></div></div><div class="stat-card"><h4>Dupla Chance</h4><div class="kv"><span>1X</span><b>${fmt(prob(o.odds_doublechance_1x))}</b></div><div class="kv"><span>12</span><b>${fmt(prob(o.odds_doublechance_12))}</b></div><div class="kv"><span>X2</span><b>${fmt(prob(o.odds_doublechance_x2))}</b></div></div></div><h2 style="margin-top:20px">Ao vivo / Pós-jogo</h2><p class="muted">Métricas dinâmicas disponíveis apenas ao vivo ou após o término da partida.</p><div class="advanced-grid">${['Pressão Ofensiva','Bola Parada','Disciplina','1º Tempo','2º Tempo','Validação / Resultado'].map(x=>`<div class="stat-card ${live?'':'locked'}"><h4>${x}</h4><p class="muted">${live?'Disponível conforme dados da partida':'🔒 Indisponível no pré-jogo'}</p></div>`).join('')}</div><div class="info-note">Essas métricas são liberadas somente durante a partida ou após o término.</div>`}
 function insights(m){let b=best(m),tr=m.odds.trends;let trend='';try{let arr=tr?.home||[];trend=arr[0]?.[1]||''}catch(e){}return `<h2>Insights IA</h2><div class="info-grid two"><div class="stat-card"><h4>Resumo da leitura</h4><p>Melhor entrada estatística: <b>${marketName(b)}</b>, com ${marketLine(b)}.</p></div><div class="stat-card"><h4>Tendência da partida</h4><p class="muted">${trend||'Sem tendência textual disponível para esta partida.'}</p></div></div>`}
 function renderScanner(){let rows=[...allMatches].sort((a,b)=>(best(b)[1]||0)-(best(a)[1]||0)).slice(0,20);$('scannerTable').innerHTML=rows.map(gameRow).join('')||'<div class="empty">Sem oportunidades.</div>'}
-function renderLive(){let live=allMatches.filter(m=>m.status==='Ao vivo').sort((a,b)=>(a.time||'').localeCompare(b.time||''));$('liveList').innerHTML=live.map(card).join('')||'<div class="empty">Nenhum jogo ao vivo identificado neste momento.</div>'}
+function liveMinute(m){
+  let u=n(m.raw?.date_unix || m.odds?.date_unix);
+  if(u===null) return 'Ao vivo';
+  let min=Math.max(0,Math.floor((Date.now()-u*1000)/60000));
+  if(min<=45) return `${min}'`;
+  if(min<=60) return 'INT';
+  if(min<=120) return `${min-15}'`;
+  return 'Ao vivo';
+}
+function liveValue(m,key,fallback='0'){
+  let v=n(m.odds?.[key] ?? m.raw?.[key]);
+  return v===null ? fallback : v;
+}
+function livePercentPair(a,b){
+  a=n(a); b=n(b);
+  if(a===null&&b===null) return [50,50];
+  a=a||0; b=b||0;
+  let t=a+b;
+  if(!t) return [50,50];
+  return [Math.round((a/t)*100),Math.round((b/t)*100)];
+}
+function liveBar(label,left,right,isPct=false){
+  let pair=isPct?[n(left)||0,n(right)||0]:livePercentPair(left,right);
+  let width=Math.max(3,Math.min(97,pair[0]));
+  let lv=isPct?`${left}%`:left, rv=isPct?`${right}%`:right;
+  return `<div class="live-stat"><div class="live-stat-head"><div class="live-left">${lv}</div><div class="live-label">${label}</div><div class="live-right">${rv}</div></div><div class="live-track"><div class="live-fill" style="width:${width}%"></div></div></div>`;
+}
+function liveDetail(match,liveMatches){
+  let m=match||liveMatches[0];
+  if(!m) return '<div class="empty">Nenhum jogo ao vivo identificado neste momento.</div>';
+  let o=m.odds||m.raw||{};
+  let homeGoals=liveValue(m,'homeGoalCount','0'),awayGoals=liveValue(m,'awayGoalCount','0');
+  let hCorners=liveValue(m,'team_a_corners','0'),aCorners=liveValue(m,'team_b_corners','0');
+  let hYellow=liveValue(m,'team_a_yellow_cards','0'),aYellow=liveValue(m,'team_b_yellow_cards','0');
+  let hRed=liveValue(m,'team_a_red_cards','0'),aRed=liveValue(m,'team_b_red_cards','0');
+  let hPoss=liveValue(m,'team_a_possession','50'),aPoss=liveValue(m,'team_b_possession','50');
+  let hShots=liveValue(m,'team_a_shots','0'),aShots=liveValue(m,'team_b_shots','0');
+  let hSot=liveValue(m,'team_a_shotsOnTarget','0'),aSot=liveValue(m,'team_b_shotsOnTarget','0');
+  let hxg=liveValue(m,'team_a_xg','0'),axg=liveValue(m,'team_b_xg','0');
+  let hDanger=liveValue(m,'team_a_dangerous_attacks','0'),aDanger=liveValue(m,'team_b_dangerous_attacks','0');
+  let byLeague={};
+  liveMatches.forEach(g=>{(byLeague[g.league]||(byLeague[g.league]=[])).push(g)});
+  let side=Object.entries(byLeague).map(([lg,rows])=>`<div class="league-live">${lg}</div>${rows.map(g=>`<div class="side-game"><div><b>${g.home} ${liveValue(g,'homeGoalCount','0')}</b><small>${g.away} ${liveValue(g,'awayGoalCount','0')}</small></div><div class="side-minute">${liveMinute(g)}</div></div>`).join('')}`).join('');
+  return `<div class="live-layout"><div class="live-main">
+    <div class="live-top"><button class="live-back" onclick="goPage('games')">← Voltar</button><div class="live-league">${m.league}<small>${m.season||''}</small></div><div class="live-badge">AO VIVO</div></div>
+    <div class="scoreboard"><div class="score-team">${logoEl(m.logoHome,m.home)}<span>${m.home}</span></div><div class="score-center"><div class="score-live">AO VIVO</div><div class="score-number">${homeGoals} - ${awayGoals}</div><div class="minute-pill">${liveMinute(m)}</div></div><div class="score-team">${logoEl(m.logoAway,m.away)}<span>${m.away}</span></div></div>
+    <div class="live-tabs"><div class="live-tab active">Sumário</div><div class="live-tab">Estatísticas</div><div class="live-tab">Cronologia</div><div class="live-tab">Estatísticas dos Jogadores</div><div class="live-tab">Elenco</div><div class="live-tab">Tabela</div></div>
+    <div class="live-info"><div class="live-info-card"><div class="live-info-icon">🏟️</div><div><small>Estádio</small><b>${m.odds?.stadium_name||'Não informado'}</b><small>${m.odds?.stadium_location||''}</small></div></div><div class="live-info-card"><div class="live-info-icon">🧑‍⚖️</div><div><small>Árbitro</small><b>${m.odds?.referee_name||'Árbitro ainda não informado'}</b><small>${m.odds?.referee_name?'':'Leitura baseada nos dados disponíveis.'}</small></div></div></div>
+    <div class="live-chips"><div class="chip-group"><div class="live-chip"><b>${hCorners}</b><small>Escanteios</small></div><div class="live-chip"><b>${hYellow}</b><small>Amarelos</small></div><div class="live-chip"><b>${hRed}</b><small>Vermelhos</small></div></div><div class="live-sep"></div><div class="chip-group"><div class="live-chip"><b>${aCorners}</b><small>Escanteios</small></div><div class="live-chip"><b>${aYellow}</b><small>Amarelos</small></div><div class="live-chip"><b>${aRed}</b><small>Vermelhos</small></div></div></div>
+    <div class="live-bars">${liveBar('Posse de bola',hPoss,aPoss,true)}${liveBar('Finalizações',hShots,aShots)}${liveBar('Chutes no gol',hSot,aSot)}${liveBar('xG (Gols Esperados)',hxg,axg)}${liveBar('Ataques perigosos',hDanger,aDanger)}</div>
+  </div><aside class="live-side"><h3>Outros jogos ao vivo</h3>${side || '<div class="empty">Nenhum outro jogo ao vivo.</div>'}</aside></div>`;
+}
+function renderLive(){
+  let live=allMatches.filter(m=>m.status==='Ao vivo').sort((a,b)=>(a.time||'').localeCompare(b.time||''));
+  $('liveList').innerHTML=liveDetail(live[0],live);
+}
 function renderPlans(){$('plansGrid').innerHTML=['Free','Pro','Premium'].map((p,i)=>`<div class="panel stat-card"><h2>${p}</h2><b style="font-size:30px">${i?i==1?'R$39,90':'R$79,90':'R$0'}</b><p class="muted">Plano ${p}</p></div>`).join('')}
 function renderAdmin(){$('adminFile').innerHTML=`<h4>API Oficial</h4><div class="kv"><span>Fonte</span><b>FootyStats</b></div><div class="kv"><span>Data</span><b>${currentDate}</b></div><div class="kv"><span>Jogos</span><b>${allMatches.length}</b></div><div class="kv"><span>Request restante</span><b>${apiMeta.request_remaining||'—'}</b></div>`;$('adminColumns').innerHTML=`<h4>Ligas selecionadas</h4><p class="muted">As ligas são controladas no painel FootyStats.</p><div class="kv"><span>Ligas no dia</span><b>${new Set(allMatches.map(m=>m.league)).size}</b></div>`;$('adminAllColumns').innerHTML=columns.slice(0,80).map(c=>`<span class="tag">${c}</span>`).join('')}
 function goPage(p){document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));$(p).classList.add('active');document.querySelectorAll('.nav-item').forEach(x=>x.classList.toggle('active',x.dataset.page===p));let names={dashboard:['Dashboard','Visão geral dos jogos carregados.'],games:['Jogos do Dia','Escolha a data e veja os jogos disponíveis.'],analysis:['Análise da Partida','Ficha completa do jogo selecionado.'],scanner:['Scanner','Mercados fortes encontrados na data.'],live:['Ao Vivo','Jogos ao vivo quando disponíveis.'],plans:['Planos','Estrutura comercial futura.'],admin:['Admin','Diagnóstico técnico.']};$('pageTitle').textContent=names[p][0];$('pageSubtitle').textContent=names[p][1];window.scrollTo(0,0)}

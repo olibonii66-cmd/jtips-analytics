@@ -30,3 +30,8 @@ FOOTYSTATS_API_KEY=sua_chave
 - Jogo dentro da janela provável da partida aparece como Ao vivo.
 - Jogo passado fora da janela aparece como Finalizado.
 - Corrige casos em que a base marca todos como Finalizado indevidamente.
+
+## V9.6 — Layout Ao Vivo
+- Implementa a página Ao Vivo no formato de ficha/placar ao vivo.
+- Placar central, minuto, abas, estádio, árbitro, chips de escanteios/cartões e barras comparativas.
+- Lista lateral com outros jogos ao vivo.
