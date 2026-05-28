@@ -1,0 +1,1 @@
+module.exports=(req,res)=>res.status(200).json({ok:true,fonte:'footystats',ligas:['BRAZIL 1','ENGLAND 1','FRANCE 1','GERMANY 1','ITALY 1','PORTUGAL 1','SPAIN 1']});
