@@ -64,3 +64,15 @@ FOOTYSTATS_API_KEY=sua_chave
 - Mantém a remoção do Ao Vivo e o foco em pré-jogo.
 - Mantém a responsividade para desktop, notebook, tablet e celular.
 - Ajusta botões, cards, filtros, abas, tabelas e estados ativos para a nova paleta.
+
+## V10.1 — Estatísticas avançadas reais
+- Adiciona endpoint `api/time.js` para buscar `/team?include=stats`.
+- A análise da partida passa a buscar stats do mandante e visitante filtrando por `competition_id`.
+- Adiciona Comparativo dos Times no Resumo.
+- Melhora Finalizações com shotsAVG, shotsOnTargetAVG e shotsOffTargetAVG.
+- Melhora Escanteios com cornersAVG, cornersAgainstAVG, cornersTotalAVG e linhas over.
+- Melhora Cartões com cardsAVG e linhas over.
+- Melhora xG / Força com xg_for_avg e xg_against_avg.
+- Avançadas passa a exibir Impedimentos e Faltas reais quando disponíveis.
+- Ajusta visual do status “Em andamento” para não quebrar linha.
+- Compacta abas e oculta barra branca de rolagem.
