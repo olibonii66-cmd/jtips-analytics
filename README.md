@@ -41,3 +41,10 @@ FOOTYSTATS_API_KEY=sua_chave
 - O placar e as estatísticas ao vivo são puxados do detalhe da partida, não apenas da lista do dia.
 - Reduzido cache do detalhe da partida para melhorar atualização ao vivo.
 - O refresh do detalhe usa `no-store`.
+
+## V9.8 — Pré-jogo responsivo
+- Remove a área Ao Vivo por enquanto.
+- Remove lógica de simulação de ao vivo por horário.
+- Site focado em pré-jogo e pós-jogo confiável.
+- Adapta layout para desktop, notebook 1366px, tablet e celular.
+- Filtros, lista de jogos, análise, abas e cards passam a quebrar corretamente em telas menores.
