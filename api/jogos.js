@@ -1,6 +1,81 @@
-const API_BASE='https://api.futpythontrader.com/api/dados';
-const LEAGUES=['BRAZIL 1','ENGLAND 1','FRANCE 1','GERMANY 1','ITALY 1','PORTUGAL 1','SPAIN 1'];
-const CACHE=new Map(); const TTL=10*60*1000;
-function parseCSV(text){const rows=[];let row=[],v='',q=false;for(let i=0;i<text.length;i++){const c=text[i],n=text[i+1];if(c==='"'&&q&&n==='"'){v+='"';i++;continue}if(c==='"'){q=!q;continue}if(c===','&&!q){row.push(v);v='';continue}if((c==='\n'||c==='\r')&&!q){if(c==='\r'&&n==='\n')i++;row.push(v);if(row.some(x=>String(x).trim()!==''))rows.push(row);row=[];v='';continue}v+=c}if(v.length||row.length){row.push(v);if(row.some(x=>String(x).trim()!==''))rows.push(row)}if(!rows.length)return{columns:[],rows:[]};const columns=rows[0].map(x=>x.trim());return{columns,rows:rows.slice(1).map(cells=>{const o={};columns.forEach((h,i)=>o[h]=(cells[i]??'').trim());return o})}}
-async function fetchLeague({data,league,token}){const url=new URL(`${API_BASE}/footystats/download/`);url.searchParams.set('date',data);url.searchParams.set('league',league);const r=await fetch(url,{headers:{Authorization:`Token ${token}`}});const text=await r.text();if(!r.ok)return{ok:false,league,error:text.slice(0,300),rows:[],columns:[]};const p=parseCSV(text);return{ok:true,league,rows:p.rows,columns:p.columns}}
-module.exports=async(req,res)=>{try{const token=process.env.FUTPYTHON_TOKEN;if(!token)return res.status(500).json({ok:false,error:'FUTPYTHON_TOKEN não configurado na Vercel.'});const data=String(req.query.data||'');const refresh=req.query.refresh==='1';if(!/^\d{4}-\d{2}-\d{2}$/.test(data))return res.status(400).json({ok:false,error:'Data inválida.'});const key=`footystats:${data}:all`;const cached=CACHE.get(key);if(cached&&!refresh&&Date.now()-cached.t<TTL)return res.status(200).json({...cached.payload,cache:true});const results=await Promise.all(LEAGUES.map(league=>fetchLeague({data,league,token})));const dados=results.flatMap(r=>r.rows.map(row=>({...row,__league_requested:r.league})));const columns=[...new Set(results.flatMap(r=>r.columns))];const payload={ok:true,fonte:'footystats',data,ligas_consultadas:LEAGUES,ligas_com_dados:results.filter(r=>r.rows.length).map(r=>r.league),total:dados.length,count:dados.length,columns,dados,erros:results.filter(r=>!r.ok).map(r=>`${r.league}: ${r.error}`)};CACHE.set(key,{t:Date.now(),payload});res.setHeader('Cache-Control','s-maxage=300, stale-while-revalidate=600');return res.status(200).json(payload)}catch(e){return res.status(500).json({ok:false,error:e.message||'Erro interno.'})}};
+
+const API_BASE = 'https://api.football-data-api.com';
+const TZ = 'America/Sao_Paulo';
+const cache = new Map();
+const TTL = 1000 * 60 * 5;
+
+function todaySP() {
+  return new Date().toLocaleDateString('sv-SE', { timeZone: TZ });
+}
+
+async function fetchLeagueMap(key) {
+  try {
+    const url = new URL(`${API_BASE}/league-list`);
+    url.searchParams.set('key', key);
+    url.searchParams.set('chosen_leagues_only', 'true');
+    const response = await fetch(url);
+    const json = await response.json();
+    const map = {};
+    for (const league of json.data || []) {
+      for (const season of league.season || []) {
+        map[String(season.id)] = { name: league.name, country: season.country || league.country || '' };
+      }
+    }
+    return map;
+  } catch {
+    return {};
+  }
+}
+
+export default async function handler(req, res) {
+  try {
+    const key = process.env.FOOTYSTATS_API_KEY;
+    if (!key) return res.status(500).json({ ok: false, error: 'FOOTYSTATS_API_KEY não configurada na Vercel.' });
+
+    const date = String(req.query.data || todaySP());
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return res.status(400).json({ ok: false, error: 'Data inválida. Use YYYY-MM-DD.' });
+
+    const cacheKey = `jogos:${date}`;
+    const cached = cache.get(cacheKey);
+    if (!req.query.refresh && cached && Date.now() - cached.ts < TTL) {
+      res.setHeader('Cache-Control', 's-maxage=300, stale-while-revalidate=600');
+      return res.status(200).json(cached.data);
+    }
+
+    const url = new URL(`${API_BASE}/todays-matches`);
+    url.searchParams.set('key', key);
+    url.searchParams.set('date', date);
+    url.searchParams.set('timezone', TZ);
+
+    const [response, leagueMap] = await Promise.all([fetch(url), fetchLeagueMap(key)]);
+    const json = await response.json();
+
+    if (!response.ok || !json.success) {
+      return res.status(response.status || 500).json({ ok: false, error: json.message || 'Erro na API oficial FootyStats.', raw: json });
+    }
+
+    const dados = (json.data || []).map(row => {
+      const league = leagueMap[String(row.competition_id)] || {};
+      return { ...row, __league_name: league.name || '', __league_country: league.country || '' };
+    });
+
+    const columns = Array.from(new Set(dados.flatMap(row => Object.keys(row))));
+    const payload = {
+      ok: true,
+      fonte: 'footystats_oficial',
+      data: date,
+      total: dados.length,
+      count: dados.length,
+      request_remaining: json.metadata?.request_remaining || null,
+      columns,
+      dados,
+      pager: json.pager || null,
+    };
+
+    cache.set(cacheKey, { ts: Date.now(), data: payload });
+    res.setHeader('Cache-Control', 's-maxage=300, stale-while-revalidate=600');
+    return res.status(200).json(payload);
+  } catch (error) {
+    return res.status(500).json({ ok: false, error: error.message || 'Erro interno.' });
+  }
+}

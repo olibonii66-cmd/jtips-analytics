@@ -1,2 +1,19 @@
-const API_BASE='https://api.futpythontrader.com/api/dados'; let cache=null;
-module.exports=async(req,res)=>{try{const token=process.env.FUTPYTHON_TOKEN;if(!token)return res.status(500).json({ok:false,error:'FUTPYTHON_TOKEN não configurado na Vercel.'});if(cache&&Date.now()-cache.t<10*60*1000)return res.status(200).json(cache.payload);const r=await fetch(`${API_BASE}/jogos-do-dia/footystats/datas/`,{headers:{Authorization:`Token ${token}`}});const text=await r.text();if(!r.ok)return res.status(r.status).json({ok:false,error:text.slice(0,300)});let json=JSON.parse(text);const payload={ok:true,fonte:'footystats',...json};cache={t:Date.now(),payload};res.setHeader('Cache-Control','s-maxage=300, stale-while-revalidate=600');return res.status(200).json(payload)}catch(e){return res.status(500).json({ok:false,error:e.message||'Erro interno.'})}};
+
+function todaySPDate() {
+  const parts = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo', year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(new Date());
+  const y = parts.find(p => p.type === 'year').value;
+  const m = parts.find(p => p.type === 'month').value;
+  const d = parts.find(p => p.type === 'day').value;
+  return `${y}-${m}-${d}`;
+}
+function addDays(date, days) {
+  const d = new Date(`${date}T12:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + days);
+  return d.toISOString().slice(0, 10);
+}
+export default async function handler(req, res) {
+  const today = todaySPDate();
+  const datas = [];
+  for (let i = -30; i <= 30; i++) datas.push(addDays(today, i));
+  res.status(200).json({ ok: true, today, datas_disponiveis: datas.reverse() });
+}

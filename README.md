@@ -1,20 +1,17 @@
-# JTIPS Analytics V8.1 — Redesign FootyStats API
+# JTIPS Analytics V9 — API Oficial FootyStats
 
-Versão API-first, sem pasta data e sem fallback CSV.
+## Variável obrigatória na Vercel
 
-## Variável de ambiente obrigatória na Vercel
+Cadastre em Project Settings > Environment Variables:
 
-FUTPYTHON_TOKEN=seu_token
+```txt
+FOOTYSTATS_API_KEY=sua_chave_oficial_footystats
+```
 
-## Fonte ativa
+Esta versão usa a API oficial:
 
-FootyStats apenas.
+- `/todays-matches` para Jogos do Dia
+- `/match` para Análise da Partida
+- `/league-list` para diagnóstico de ligas selecionadas
 
-## Estrutura
-
-- index.html
-- api/jogos.js
-- api/datas.js
-- api/ligas.js
-- assets/jtips-logo.png
-- vercel.json
+Não usa CSV, pasta `data`, Bet365 ou `FUTPYTHON_TOKEN`.
