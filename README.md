@@ -1,11 +1,19 @@
-# JTIPS Analytics V9.2 — Ajustes Visuais
+# JTIPS Analytics V9.3 — Ligas e data corrigidas
 
-Versão baseada na API oficial FootyStats, usando a variável `FOOTYSTATS_API_KEY` na Vercel.
+Versão API oficial FootyStats.
 
-Ajustes desta versão:
-- Removida a faixa pública “Dados atualizados” da tela de análise e demais páginas.
-- Removido termo técnico 1X2 das telas públicas.
-- Resultado final agora mostra “Nome do time vence”, “Empate” e “Nome do visitante vence”.
-- Dupla chance agora usa nomes dos times em vez de Casa/Visitante.
-- Removida indicação visual de fonte nos cards públicos.
-- Mantido diagnóstico técnico somente na área Admin.
+## Variável obrigatória na Vercel
+
+```txt
+FOOTYSTATS_API_KEY=sua_chave
+```
+
+## Ajustes desta versão
+
+- busca todos os jogos da data selecionada;
+- trata paginação do endpoint de jogos do dia;
+- filtro de liga mostra somente as ligas com jogos naquela data;
+- ao trocar a data, o filtro de liga é recriado automaticamente;
+- jogos com status `incomplete` aparecem como Pré-jogo;
+- remove faixa pública de Dados atualizados após o carregamento;
+- mensagens públicas sem menção técnica à API.
