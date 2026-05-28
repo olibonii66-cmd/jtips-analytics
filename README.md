@@ -56,3 +56,11 @@ FOOTYSTATS_API_KEY=sua_chave
 - Jogo passado fora da janela aparece como Finalizado.
 - Adiciona filtro Em andamento.
 - Ajusta largura da tabela/lista para notebook 1366px, evitando botão cortado.
+
+## V10 — Premium Green/Gold
+- Aplica a nova identidade visual JTIPS baseada na logo verde/dourada.
+- Substitui a identidade azul por verde escuro, grafite e dourado.
+- Aplica a nova logo em assets/jtips-logo.png.
+- Mantém a remoção do Ao Vivo e o foco em pré-jogo.
+- Mantém a responsividade para desktop, notebook, tablet e celular.
+- Ajusta botões, cards, filtros, abas, tabelas e estados ativos para a nova paleta.
