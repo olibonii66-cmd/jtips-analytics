@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>JTIPS Analytics — V11 Resumo e Insights API</title>
+  <title>JTIPS Analytics — V11.1 H2H e Trends Corrigidos — V11.1 H2H e Trends Corrigidos</title>
   <style>
     :root{--bg:#050a12;--bg2:#07111d;--panel:#0b1524;--panel2:#0d1a2a;--line:#183353;--line2:#214d78;--text:#f4f8ff;--muted:#8da8c8;--blue:#1aa8ff;--blue2:#0b79ff;--green:#37e889;--yellow:#ffd53f;--red:#ff4d6a;--shadow:0 20px 60px rgba(0,0,0,.38);--r:18px;--sidebar:214px}
     *{box-sizing:border-box} body{margin:0;background:radial-gradient(circle at 20% 0,rgba(16,130,255,.12),transparent 34%),linear-gradient(135deg,#02060c 0%,#071220 45%,#03080f 100%);font-family:Inter,Segoe UI,Arial,sans-serif;color:var(--text);overflow-x:hidden} button,input,select{font:inherit} .app{min-height:100vh;display:block}
@@ -1196,6 +1196,35 @@ a,.blue{
 .v11-trends-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}.v11-trend-list{display:flex;flex-direction:column;gap:10px;margin-top:12px}.v11-trend{display:grid;grid-template-columns:34px 1fr;gap:12px;align-items:flex-start;padding:12px;border-radius:14px;background:rgba(255,255,255,.035);border:1px solid rgba(216,184,107,.12)}.v11-trend-icon{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;font-weight:950}.v11-trend.great .v11-trend-icon{background:rgba(94,170,102,.18);color:#9ee8a6}.v11-trend.bad .v11-trend-icon{background:rgba(213,109,100,.16);color:#f0aaa3}.v11-trend.chart .v11-trend-icon{background:rgba(216,184,107,.16);color:var(--gold-2)}.v11-trend p{margin:0!important;color:var(--text-2)!important;line-height:1.48}
 .v11-market-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.v11-market{padding:14px;border:1px solid var(--border);border-radius:16px;background:rgba(255,255,255,.035)}.v11-market h4{margin:0 0 8px;color:var(--text)!important}.v11-market b{color:var(--gold-2);font-size:22px}.v11-market p{margin:6px 0 0!important;color:var(--muted)!important}.v11-alert-list{display:grid;gap:10px;margin-top:10px}.v11-alert{padding:12px 14px;border-radius:14px;background:rgba(216,184,107,.07);border:1px dashed rgba(216,184,107,.25);color:var(--text-2)}
 @media(max-width:1200px){.v11-kpi-grid{grid-template-columns:repeat(3,1fr)}.v11-pred-grid,.v11-market-grid{grid-template-columns:repeat(2,1fr)}}@media(max-width:800px){.v11-h2h-head{grid-template-columns:1fr}.v11-trends-grid,.v11-pred-grid,.v11-market-grid{grid-template-columns:1fr}.v11-kpi-grid{grid-template-columns:1fr 1fr}}
+
+
+/* V11.1 — estados de carregamento e ajustes do Insights */
+.v11-loading{
+  border:1px dashed rgba(216,184,107,.32);
+  background:rgba(216,184,107,.06);
+  color:var(--gold-2);
+  border-radius:14px;
+  padding:14px 16px;
+  font-weight:850;
+}
+.v11-error{
+  border:1px dashed rgba(213,109,100,.35);
+  background:rgba(213,109,100,.08);
+  color:#f0aaa3;
+  border-radius:14px;
+  padding:14px 16px;
+}
+.v11-ai-text{
+  max-height:360px;
+  overflow:auto;
+  padding-right:8px;
+}
+.v11-ai-text p{
+  margin-bottom:12px!important;
+}
+.v11-chip{
+  max-width:100%;
+}
 
 </style>
 </head>
@@ -2553,6 +2582,194 @@ function v11Kpi(label,value,sub){return `<div class="v11-kpi"><b>${value}</b><st
 function summaryV103(m){const h=m.h2hData?.indicadores||{},ult=m.h2hData?.ultimos||[],avg=m.leagueAverages||{},o=m.odds||{},hasH=!!h.total_confrontos;return `<div class="v11-summary-shell"><div class="v11-h2h-card"><h2>Confronto Direto</h2>${hasH?`<div class="v11-h2h-head"><div class="v11-h2h-team">${v11Logo(m.logoHome,m.home)}<b>${m.home}</b><span>${h.vitorias_mandante_atual} vitórias (${h.pct_mandante_atual}%)</span></div><div class="v11-h2h-mid"><div class="v11-h2h-total">${h.total_confrontos}</div><div class="v11-h2h-total-label">confrontos anteriores</div><div class="v11-h2h-bar"><div style="width:${h.pct_mandante_atual}%"></div><div style="width:${h.pct_empate}%"></div><div style="width:${h.pct_visitante_atual}%"></div></div><div class="v11-h2h-legend"><span>${h.pct_mandante_atual}% mandante</span><span>${h.pct_empate}% empate</span><span>${h.pct_visitante_atual}% visitante</span></div></div><div class="v11-h2h-team">${v11Logo(m.logoAway,m.away)}<b>${m.away}</b><span>${h.vitorias_visitante_atual} vitórias (${h.pct_visitante_atual}%)</span></div></div><p class="v11-h2h-text">Nos últimos ${h.total_confrontos} confrontos, ${m.home} venceu ${h.vitorias_mandante_atual}, ${m.away} venceu ${h.vitorias_visitante_atual} e houve ${h.empates} empate(s). Nesse recorte, ${m.home} marcou ${h.gols_mandante_atual} gols e ${m.away} marcou ${h.gols_visitante_atual}, com média de ${h.media_gols} gols por jogo.</p>`:`<div class="lineup-empty">Confronto direto ainda não disponível para esta partida.</div>`}</div><div class="v11-kpi-grid">${v11Kpi('Mais de 1.5 gols',v11Pct(h.mais_1_5_gols),hasH?`${Math.round((h.mais_1_5_gols||0)*h.total_confrontos/100)} / ${h.total_confrontos} jogos`:'')}${v11Kpi('Mais de 2.5 gols',v11Pct(h.mais_2_5_gols),hasH?`${Math.round((h.mais_2_5_gols||0)*h.total_confrontos/100)} / ${h.total_confrontos} jogos`:'')}${v11Kpi('Mais de 3.5 gols',v11Pct(h.mais_3_5_gols),hasH?`${Math.round((h.mais_3_5_gols||0)*h.total_confrontos/100)} / ${h.total_confrontos} jogos`:'')}${v11Kpi('Ambas marcam',v11Pct(h.ambas_marcam),hasH?`${Math.round((h.ambas_marcam||0)*h.total_confrontos/100)} / ${h.total_confrontos} jogos`:'')}${v11Kpi(`Jogos sem sofrer gol — ${m.home}`,v11Pct(h.clean_mandante_atual),hasH?`${h.clean_mandante_count} / ${h.total_confrontos} jogos`:'')}${v11Kpi(`Jogos sem sofrer gol — ${m.away}`,v11Pct(h.clean_visitante_atual),hasH?`${h.clean_visitante_count} / ${h.total_confrontos} jogos`:'')}</div><div class="v11-panel"><h2>Últimos confrontos</h2><div class="v11-matches-row">${ult.length?ult.slice(0,10).map(x=>`<div class="v11-match-mini"><small>${x.data_formatada}</small><b>${x.home_name} ${x.homeGoalCount} x ${x.awayGoalCount} ${x.away_name}</b></div>`).join(''):`<div class="lineup-empty">Sem confrontos anteriores carregados.</div>`}</div></div><div class="v11-panel"><h2>Estatísticas de previsão</h2><div class="v11-pred-grid">${v11Pred('Mais de 2.5 gols',v11Pct(o.o25_potential),avg.media_liga_mais_2_5_gols!==null?v11Pct(avg.media_liga_mais_2_5_gols):'—')}${v11Pred('Mais de 1.5 gols',v11Pct(o.o15_potential),avg.media_liga_mais_1_5_gols!==null?v11Pct(avg.media_liga_mais_1_5_gols):'—')}${v11Pred('Ambas marcam',v11Pct(o.btts_potential),avg.media_liga_ambas_marcam!==null?v11Pct(avg.media_liga_ambas_marcam):'—')}${v11Pred('Gols por jogo',v11Val(o.total_xg_prematch||o.avg_potential),avg.media_liga_gols!==null?v11Val(avg.media_liga_gols):'—','xG/expectativa pré-jogo')}${v11Pred('Cartões por jogo',v11Val(o.cards_potential,1),avg.media_liga_cartoes!==null?v11Val(avg.media_liga_cartoes):'—')}${v11Pred('Escanteios por jogo',v11Val(o.corners_potential,1),avg.media_liga_escanteios!==null?v11Val(avg.media_liga_escanteios):'—')}</div></div></div>`}
 function v11TrendIcon(tipo){return tipo==='great'?'↑':tipo==='bad'?'↓':'~'}function v11TrendCard(title,items){return `<div class="v11-panel"><h2>${title}</h2><div class="v11-trend-list">${(items||[]).length?(items||[]).slice(0,7).map(t=>`<div class="v11-trend ${t.tipo||'chart'}"><span class="v11-trend-icon">${v11TrendIcon(t.tipo)}</span><p>${traduzirMercado(t.texto||t)}</p></div>`).join(''):`<div class="lineup-empty">Tendências recentes ainda não disponíveis.</div>`}</div></div>`}function v11Market(label,reading,confidence){return `<div class="v11-market"><h4>${label}</h4><b>${confidence}</b><p>${reading}</p></div>`}
 function insightsV103(m){const o=m.odds||{},ai=v11FirstTextAI(o),trends=m.teamTrends||{},principal=v11ExtractPick(ai,`Entrada principal: ${marketName(best(m))}`),sec=o.btts_potential>=50?'Entrada secundária: Ambas marcam — Sim':'Entrada secundária: Dupla chance / proteção',alt=o.corners_potential>=8?'Alternativa: Mais de 8.5 escanteios':'Alternativa: mercado de escanteios conforme linha disponível',goalsConf=v11Num(o.o25_potential)||v11Num(o.o15_potential)||m.score;return `<div class="v11-insights-shell"><div class="v11-ai-card"><h2>Insights da Partida</h2><div class="v11-ai-text">${v11ShortAI(ai)}</div><div class="v11-chip-row"><span class="v11-chip">${traduzirMercado(principal)}</span><span class="v11-chip">${traduzirMercado(sec)}</span><span class="v11-chip">${traduzirMercado(alt)}</span></div></div><div class="v11-trends-grid">${v11TrendCard(`Tendências — ${m.home}`,trends.home?.trends)}${v11TrendCard(`Tendências — ${m.away}`,trends.away?.trends)}</div><div class="v11-panel"><h2>Leituras por mercado</h2><div class="v11-market-grid">${v11Market('Gols',goalsConf>=60?'Tendência favorável para gols.':'Tendência moderada para gols.',v11Pct(goalsConf))}${v11Market('Ambas marcam',v11Num(o.btts_potential)>=50?'Ambas marcam possível.':'Ambas marcam exige cautela.',v11Pct(o.btts_potential))}${v11Market('Escanteios',v11Num(o.corners_potential)>=8?'Volume esperado acima da média.':'Sem vantagem clara em escanteios.',v11Val(o.corners_potential,1))}${v11Market('Cartões',v11Num(o.cards_potential)>=4?'Jogo com tendência disciplinar.':'Cartões moderados.',v11Val(o.cards_potential,1))}${v11Market('Resultado',`${m.home} tem leitura de mando, mas resultado seco exige filtro.`,v11Pct(typeof winnerPercentFromOdd==='function'?winnerPercentFromOdd(o.odds_ft_1):null))}${v11Market('Intervalo',v11Num(o.o05HT_potential)>=60?'Boa chance de movimento no 1º tempo.':'1º tempo pode ser mais estudado.',v11Pct(o.o05HT_potential))}</div></div><div class="v11-panel"><h2>Pontos de atenção</h2><div class="v11-alert-list"><div class="v11-alert">Evitar entrada se escalações vierem muito diferentes do esperado.</div><div class="v11-alert">Mercados de resultado seco têm risco maior quando a diferença de odds é pequena.</div><div class="v11-alert">Linhas altas de gols, cartões ou escanteios devem ser usadas apenas quando o score e o volume sustentarem.</div></div></div></div>`}
+
+
+/* =========================
+   V11.1 — Correção H2H/Trends no front
+   ========================= */
+function v111Pick(obj, keys){
+  for(const k of keys){
+    if(obj && obj[k] !== undefined && obj[k] !== null && obj[k] !== '' && obj[k] !== -1 && obj[k] !== '-1') return obj[k];
+  }
+  return null;
+}
+function v111Sources(m){
+  const o=m?.odds||{};
+  const raw=m?.raw||{};
+  const base=m||{};
+  return {
+    matchId: v111Pick(o,['id','match_id','fixture_id']) || v111Pick(raw,['id','match_id','fixture_id']) || v111Pick(base,['id','match_id']),
+    seasonId: v111Pick(o,['competition_id','season_id','seasonID','season']) || v111Pick(raw,['competition_id','season_id','seasonID','season']) || v111Pick(base,['competition_id','season_id']),
+    homeId: v111Pick(o,['homeID','home_id','team_a_id']) || v111Pick(raw,['homeID','home_id','team_a_id']) || v111Pick(base,['homeID','home_id']),
+    awayId: v111Pick(o,['awayID','away_id','team_b_id']) || v111Pick(raw,['awayID','away_id','team_b_id']) || v111Pick(base,['awayID','away_id']),
+    homeName: m?.home || v111Pick(o,['home_name']) || v111Pick(raw,['home_name']) || 'Mandante',
+    awayName: m?.away || v111Pick(o,['away_name']) || v111Pick(raw,['away_name']) || 'Visitante'
+  };
+}
+async function v111FetchJson(url,label){
+  const r=await fetch(url);
+  const j=await r.json().catch(()=>({ok:false,error:'Resposta inválida'}));
+  if(!r.ok || j.ok===false){
+    console.warn(`[JTIPS V11.1] Falha em ${label}:`, j);
+    throw new Error(j.error||`Falha em ${label}`);
+  }
+  console.log(`[JTIPS V11.1] ${label}:`, j);
+  return j;
+}
+async function v11LoadResumoInsights(m){
+  if(!m)return;
+  const s=v111Sources(m);
+  m.h2hLoading = !m.h2hData && !!s.matchId;
+  m.trendsLoading = !m.teamTrends && !!(s.seasonId&&s.homeId&&s.awayId);
+  m.avgLoading = !m.leagueAverages && !!s.seasonId;
+
+  const tasks=[];
+  if(!m.h2hData && s.matchId){
+    tasks.push(v111FetchJson(`/api/h2h?match_id=${encodeURIComponent(s.matchId)}`,'H2H')
+      .then(j=>m.h2hData=j)
+      .catch(e=>m.h2hData={ok:false,error:e.message})
+      .finally(()=>m.h2hLoading=false));
+  }
+  if(!m.leagueAverages && s.seasonId){
+    tasks.push(v111FetchJson(`/api/league-averages?season_id=${encodeURIComponent(s.seasonId)}`,'Médias da liga')
+      .then(j=>m.leagueAverages=j)
+      .catch(e=>m.leagueAverages={ok:false,error:e.message})
+      .finally(()=>m.avgLoading=false));
+  }
+  if(!m.teamTrends && s.seasonId && s.homeId && s.awayId){
+    const qs=new URLSearchParams({
+      season_id:s.seasonId,
+      home_id:s.homeId,
+      away_id:s.awayId,
+      home_name:s.homeName,
+      away_name:s.awayName
+    });
+    tasks.push(v111FetchJson(`/api/lastx-trends?${qs.toString()}`,'Team Trends')
+      .then(j=>m.teamTrends=j)
+      .catch(e=>m.teamTrends={ok:false,error:e.message})
+      .finally(()=>m.trendsLoading=false));
+  }
+  if(tasks.length) await Promise.allSettled(tasks);
+}
+const __v111OldOpenAnalysis = typeof openAnalysis==='function'?openAnalysis:null;
+if(__v111OldOpenAnalysis){
+  openAnalysis = async function(id){
+    await __v111OldOpenAnalysis(id);
+    if(selected){
+      selected.h2hLoading=true;
+      selected.trendsLoading=true;
+      selected.avgLoading=true;
+      renderAnalysis();
+      await v11LoadResumoInsights(selected);
+      renderAnalysis();
+    }
+  }
+}
+function v111StatusBox(m,type){
+  if(type==='h2h'){
+    if(m?.h2hLoading) return `<div class="v11-loading">Carregando confronto direto...</div>`;
+    if(m?.h2hData?.error) return `<div class="v11-error">Não foi possível carregar o confronto direto: ${m.h2hData.error}</div>`;
+    return `<div class="lineup-empty">Confronto direto ainda não disponível para esta partida.</div>`;
+  }
+  if(type==='trends'){
+    if(m?.trendsLoading) return `<div class="v11-loading">Carregando tendências recentes...</div>`;
+    if(m?.teamTrends?.error) return `<div class="v11-error">Não foi possível carregar tendências: ${m.teamTrends.error}</div>`;
+    return `<div class="lineup-empty">Tendências recentes ainda não disponíveis.</div>`;
+  }
+  return '';
+}
+function summaryV103(m){
+  const h=m.h2hData?.indicadores||{};
+  const ult=m.h2hData?.ultimos||[];
+  const avg=m.leagueAverages||{};
+  const o=m.odds||{};
+  const hasH=!!h.total_confrontos;
+  return `<div class="v11-summary-shell">
+    <div class="v11-h2h-card">
+      <h2>Confronto Direto</h2>
+      ${hasH?`
+      <div class="v11-h2h-head">
+        <div class="v11-h2h-team">${v11Logo(m.logoHome,m.home)}<b>${m.home}</b><span>${h.vitorias_mandante_atual} vitórias (${h.pct_mandante_atual}%)</span></div>
+        <div class="v11-h2h-mid">
+          <div class="v11-h2h-total">${h.total_confrontos}</div>
+          <div class="v11-h2h-total-label">confrontos anteriores</div>
+          <div class="v11-h2h-bar"><div style="width:${h.pct_mandante_atual}%"></div><div style="width:${h.pct_empate}%"></div><div style="width:${h.pct_visitante_atual}%"></div></div>
+          <div class="v11-h2h-legend"><span>${h.pct_mandante_atual}% mandante</span><span>${h.pct_empate}% empate</span><span>${h.pct_visitante_atual}% visitante</span></div>
+        </div>
+        <div class="v11-h2h-team">${v11Logo(m.logoAway,m.away)}<b>${m.away}</b><span>${h.vitorias_visitante_atual} vitórias (${h.pct_visitante_atual}%)</span></div>
+      </div>
+      <p class="v11-h2h-text">Nos últimos ${h.total_confrontos} confrontos, ${m.home} venceu ${h.vitorias_mandante_atual}, ${m.away} venceu ${h.vitorias_visitante_atual} e houve ${h.empates} empate(s). Nesse recorte, ${m.home} marcou ${h.gols_mandante_atual} gols e ${m.away} marcou ${h.gols_visitante_atual}, com média de ${h.media_gols} gols por jogo.</p>`:
+      v111StatusBox(m,'h2h')}
+    </div>
+    <div class="v11-kpi-grid">
+      ${v11Kpi('Mais de 1.5 gols',v11Pct(h.mais_1_5_gols),hasH?`${Math.round((h.mais_1_5_gols||0)*h.total_confrontos/100)} / ${h.total_confrontos} jogos`:'')}
+      ${v11Kpi('Mais de 2.5 gols',v11Pct(h.mais_2_5_gols),hasH?`${Math.round((h.mais_2_5_gols||0)*h.total_confrontos/100)} / ${h.total_confrontos} jogos`:'')}
+      ${v11Kpi('Mais de 3.5 gols',v11Pct(h.mais_3_5_gols),hasH?`${Math.round((h.mais_3_5_gols||0)*h.total_confrontos/100)} / ${h.total_confrontos} jogos`:'')}
+      ${v11Kpi('Ambas marcam',v11Pct(h.ambas_marcam),hasH?`${Math.round((h.ambas_marcam||0)*h.total_confrontos/100)} / ${h.total_confrontos} jogos`:'')}
+      ${v11Kpi(`Jogos sem sofrer gol — ${m.home}`,v11Pct(h.clean_mandante_atual),hasH?`${h.clean_mandante_count} / ${h.total_confrontos} jogos`:'')}
+      ${v11Kpi(`Jogos sem sofrer gol — ${m.away}`,v11Pct(h.clean_visitante_atual),hasH?`${h.clean_visitante_count} / ${h.total_confrontos} jogos`:'')}
+    </div>
+    <div class="v11-panel">
+      <h2>Últimos confrontos</h2>
+      <div class="v11-matches-row">
+        ${ult.length?ult.slice(0,10).map(x=>`<div class="v11-match-mini"><small>${x.data_formatada}</small><b>${x.home_name} ${x.homeGoalCount} x ${x.awayGoalCount} ${x.away_name}</b></div>`).join(''):v111StatusBox(m,'h2h')}
+      </div>
+    </div>
+    <div class="v11-panel">
+      <h2>Estatísticas de previsão</h2>
+      <div class="v11-pred-grid">
+        ${v11Pred('Mais de 2.5 gols',v11Pct(o.o25_potential),avg.media_liga_mais_2_5_gols!==null&&avg.media_liga_mais_2_5_gols!==undefined?v11Pct(avg.media_liga_mais_2_5_gols):'—')}
+        ${v11Pred('Mais de 1.5 gols',v11Pct(o.o15_potential),avg.media_liga_mais_1_5_gols!==null&&avg.media_liga_mais_1_5_gols!==undefined?v11Pct(avg.media_liga_mais_1_5_gols):'—')}
+        ${v11Pred('Ambas marcam',v11Pct(o.btts_potential),avg.media_liga_ambas_marcam!==null&&avg.media_liga_ambas_marcam!==undefined?v11Pct(avg.media_liga_ambas_marcam):'—')}
+        ${v11Pred('Gols por jogo',v11Val(o.total_xg_prematch||o.avg_potential),avg.media_liga_gols!==null&&avg.media_liga_gols!==undefined?v11Val(avg.media_liga_gols):'—','xG/expectativa pré-jogo')}
+        ${v11Pred('Cartões por jogo',v11Val(o.cards_potential,1),avg.media_liga_cartoes!==null&&avg.media_liga_cartoes!==undefined?v11Val(avg.media_liga_cartoes):'—')}
+        ${v11Pred('Escanteios por jogo',v11Val(o.corners_potential,1),avg.media_liga_escanteios!==null&&avg.media_liga_escanteios!==undefined?v11Val(avg.media_liga_escanteios):'—')}
+      </div>
+    </div>
+  </div>`;
+}
+function v11TrendCard(title,items,m){
+  return `<div class="v11-panel"><h2>${title}</h2><div class="v11-trend-list">${(items||[]).length?(items||[]).slice(0,7).map(t=>`<div class="v11-trend ${t.tipo||'chart'}"><span class="v11-trend-icon">${v11TrendIcon(t.tipo)}</span><p>${traduzirMercado(t.texto||t)}</p></div>`).join(''):v111StatusBox(m,'trends')}</div></div>`
+}
+function insightsV103(m){
+  const o=m.odds||{};
+  const ai=v11FirstTextAI(o);
+  const trends=m.teamTrends||{};
+  const principal=v11ExtractPick(ai,`Entrada principal: ${marketName(best(m))}`);
+  const sec=o.btts_potential>=50?'Entrada secundária: Ambas marcam — Sim':'Entrada secundária: Dupla chance / proteção';
+  const alt=o.corners_potential>=8?'Alternativa: Mais de 8.5 escanteios':'Alternativa: mercado de escanteios conforme linha disponível';
+  const goalsConf=v11Num(o.o25_potential)||v11Num(o.o15_potential)||m.score;
+  return `<div class="v11-insights-shell">
+    <div class="v11-ai-card">
+      <h2>Insights da Partida</h2>
+      <div class="v11-ai-text">${v11ShortAI(ai)}</div>
+      <div class="v11-chip-row"><span class="v11-chip">${traduzirMercado(principal)}</span><span class="v11-chip">${traduzirMercado(sec)}</span><span class="v11-chip">${traduzirMercado(alt)}</span></div>
+    </div>
+    <div class="v11-trends-grid">
+      ${v11TrendCard(`Tendências — ${m.home}`,trends.home?.trends,m)}
+      ${v11TrendCard(`Tendências — ${m.away}`,trends.away?.trends,m)}
+    </div>
+    <div class="v11-panel">
+      <h2>Leituras por mercado</h2>
+      <div class="v11-market-grid">
+        ${v11Market('Gols',goalsConf>=60?'Tendência favorável para gols.':'Tendência moderada para gols.',v11Pct(goalsConf))}
+        ${v11Market('Ambas marcam',v11Num(o.btts_potential)>=50?'Ambas marcam possível.':'Ambas marcam exige cautela.',v11Pct(o.btts_potential))}
+        ${v11Market('Escanteios',v11Num(o.corners_potential)>=8?'Volume esperado acima da média.':'Sem vantagem clara em escanteios.',v11Val(o.corners_potential,1))}
+        ${v11Market('Cartões',v11Num(o.cards_potential)>=4?'Jogo com tendência disciplinar.':'Cartões moderados.',v11Val(o.cards_potential,1))}
+        ${v11Market('Resultado',`${m.home} tem leitura de mando, mas resultado seco exige filtro.`,v11Pct(typeof winnerPercentFromOdd==='function'?winnerPercentFromOdd(o.odds_ft_1):null))}
+        ${v11Market('Intervalo',v11Num(o.o05HT_potential)>=60?'Boa chance de movimento no 1º tempo.':'1º tempo pode ser mais estudado.',v11Pct(o.o05HT_potential))}
+      </div>
+    </div>
+    <div class="v11-panel">
+      <h2>Pontos de atenção</h2>
+      <div class="v11-alert-list">
+        <div class="v11-alert">Evitar entrada se escalações vierem muito diferentes do esperado.</div>
+        <div class="v11-alert">Mercados de resultado seco têm risco maior quando a diferença de odds é pequena.</div>
+        <div class="v11-alert">Linhas altas de gols, cartões ou escanteios devem ser usadas apenas quando o score e o volume sustentarem.</div>
+      </div>
+    </div>
+  </div>`;
+}
 
 </script>
 </body></html>

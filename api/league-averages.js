@@ -1,1 +1,55 @@
-const API_BASE='https://api.football-data-api.com';const cache=new Map();const TTL=3600000;async function apiGet(endpoint,params){const key=process.env.FOOTYSTATS_API_KEY;if(!key)throw new Error('FOOTYSTATS_API_KEY não configurada.');const url=new URL(`${API_BASE}/${endpoint}`);url.searchParams.set('key',key);Object.entries(params||{}).forEach(([k,v])=>{if(v!==undefined&&v!==null&&v!=='')url.searchParams.set(k,String(v));});const response=await fetch(url);const json=await response.json();if(!response.ok||!json.success)throw new Error(json.message||`Erro em ${endpoint}`);return json;}function parseStats(v){if(!v)return{};if(typeof v==='object')return v;try{return JSON.parse(v)}catch(_){return{}}}function avg(rows,key){const vals=rows.map(r=>Number(r[key])).filter(Number.isFinite);return vals.length?Math.round((vals.reduce((a,b)=>a+b,0)/vals.length)*100)/100:null}export default async function handler(req,res){try{const seasonId=req.query.season_id||req.query.competition_id;if(!seasonId)return res.status(400).json({ok:false,error:'season_id obrigatório.'});const cacheKey=`league-avg:v11:${seasonId}`;const cached=cache.get(cacheKey);if(cached&&Date.now()-cached.ts<TTL){res.setHeader('Cache-Control','s-maxage=3600, stale-while-revalidate=7200');return res.status(200).json(cached.data)}const j=await apiGet('league-teams',{season_id:seasonId,include:'stats'});const teams=Array.isArray(j.data)?j.data:[];const stats=teams.map(t=>parseStats(t.stats)).filter(s=>Object.keys(s).length);const payload={ok:true,season_id:seasonId,total_times:teams.length,media_liga_mais_2_5_gols:avg(stats,'seasonOver25Percentage_overall'),media_liga_mais_1_5_gols:avg(stats,'seasonOver15Percentage_overall'),media_liga_ambas_marcam:avg(stats,'seasonBTTSPercentage_overall'),media_liga_gols:avg(stats,'seasonAVG_overall'),media_liga_cartoes:avg(stats,'cardsAVG_overall'),media_liga_escanteios:avg(stats,'cornersTotalAVG_overall')};cache.set(cacheKey,{ts:Date.now(),data:payload});res.setHeader('Cache-Control','s-maxage=3600, stale-while-revalidate=7200');return res.status(200).json(payload)}catch(error){return res.status(500).json({ok:false,error:error.message||'Erro interno.'})}}
+const API_BASE = 'https://api.football-data-api.com';
+const cache = new Map();
+const TTL = 1000 * 60 * 60;
+
+async function apiGet(endpoint, params) {
+  const key = process.env.FOOTYSTATS_API_KEY;
+  if (!key) throw new Error('FOOTYSTATS_API_KEY não configurada.');
+  const url = new URL(`${API_BASE}/${endpoint}`);
+  url.searchParams.set('key', key);
+  Object.entries(params || {}).forEach(([k, v]) => {
+    if (v !== undefined && v !== null && v !== '') url.searchParams.set(k, String(v));
+  });
+  const response = await fetch(url);
+  const json = await response.json().catch(() => ({}));
+  if (!response.ok || json.success === false) throw new Error(json.message || `Erro em ${endpoint}: HTTP ${response.status}`);
+  return json;
+}
+function parseStats(v) { if (!v) return {}; if (typeof v === 'object') return v; try { return JSON.parse(v); } catch (_) { return {}; } }
+function avg(rows, key) { const vals = rows.map(r => Number(r[key])).filter(Number.isFinite); return vals.length ? Math.round((vals.reduce((a,b)=>a+b,0)/vals.length)*100)/100 : null; }
+
+export default async function handler(req, res) {
+  try {
+    const seasonId = req.query.season_id || req.query.competition_id || req.query.seasonID || req.query.season;
+    if (!seasonId) return res.status(400).json({ ok: false, error: 'season_id obrigatório.' });
+
+    const cacheKey = `league-avg:v11_1:${seasonId}`;
+    const cached = cache.get(cacheKey);
+    if (cached && Date.now() - cached.ts < TTL) {
+      res.setHeader('Cache-Control', 's-maxage=3600, stale-while-revalidate=7200');
+      return res.status(200).json(cached.data);
+    }
+
+    const j = await apiGet('league-teams', { season_id: seasonId, include: 'stats' });
+    const teams = Array.isArray(j.data) ? j.data : [];
+    const stats = teams.map(t => parseStats(t.stats)).filter(s => Object.keys(s).length);
+
+    const payload = {
+      ok: true,
+      season_id: Number(seasonId),
+      total_times: teams.length,
+      media_liga_mais_2_5_gols: avg(stats, 'seasonOver25Percentage_overall'),
+      media_liga_mais_1_5_gols: avg(stats, 'seasonOver15Percentage_overall'),
+      media_liga_ambas_marcam: avg(stats, 'seasonBTTSPercentage_overall'),
+      media_liga_gols: avg(stats, 'seasonAVG_overall'),
+      media_liga_cartoes: avg(stats, 'cardsAVG_overall'),
+      media_liga_escanteios: avg(stats, 'cornersTotalAVG_overall')
+    };
+
+    cache.set(cacheKey, { ts: Date.now(), data: payload });
+    res.setHeader('Cache-Control', 's-maxage=3600, stale-while-revalidate=7200');
+    return res.status(200).json(payload);
+  } catch (error) {
+    return res.status(500).json({ ok: false, error: error.message || 'Erro interno.' });
+  }
+}

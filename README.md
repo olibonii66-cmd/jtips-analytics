@@ -155,3 +155,12 @@ FOOTYSTATS_API_KEY=sua_chave
 - `match.trends` não é obrigatório; `/lastx` é a fonte principal das tendências.
 - Título/informações da partida centralizados.
 - Mantém tradução Mais de/Menos de e paleta verde/dourado.
+
+## V11.1 — Correção H2H e Trends
+- Corrige carregamento do H2H e últimos confrontos.
+- `api/h2h.js` agora extrai IDs de H2H de forma mais ampla e busca confrontos em lotes paralelos.
+- `api/lastx-trends.js` aceita `season_id`, `competition_id`, `season`, `homeID`, `awayID` e variações.
+- Front-end agora descobre IDs em `selected`, `selected.raw` e `selected.odds`.
+- Adiciona estados de carregamento: "Carregando confronto direto..." e "Carregando tendências recentes...".
+- Exibe erro técnico limpo se endpoint falhar, em vez de mostrar indisponível antes da hora.
+- Reduz visualmente o bloco grande de Insights com área rolável.
