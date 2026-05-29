@@ -138,3 +138,20 @@ FOOTYSTATS_API_KEY=sua_chave
 - Percentuais, odds, barras e cards agora seguem verde escuro + dourado premium.
 - Adiciona renderer padronizado para Resultado Final e Chance Dupla.
 - Remove azul forte remanescente dos percentuais.
+
+## V10.9 — Over/Under traduzido
+- Traduz Over para “Mais de” em todo o site.
+- Traduz Under para “Menos de” em todo o site.
+- Adiciona normalizador final para textos gerados dinamicamente por funções JS.
+- Traduz variações comuns: HT/FH/2H, BTTS, Goals, Cards e Corners.
+- Mantém termos técnicos somente nos nomes internos das variáveis/campos da API.
+
+## V11 — Resumo e Insights API
+- Nova aba Resumo com Confronto Direto, Indicadores H2H, Últimos confrontos e Estatísticas de previsão.
+- H2H usa `match.h2h.previous_matches_ids` e busca cada `/match` por ID.
+- H2H é calculado pela perspectiva da partida atual, não pelo mandante histórico da linha.
+- Estatísticas de previsão usam `/match` + médias da liga calculadas por `league-teams?include=stats`.
+- Nova aba Insights com `gpt_int.pt` / `gpt_en` e Team Trends gerado por `/lastx.stats`.
+- `match.trends` não é obrigatório; `/lastx` é a fonte principal das tendências.
+- Título/informações da partida centralizados.
+- Mantém tradução Mais de/Menos de e paleta verde/dourado.
