@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>JTIPS Analytics — V10.3 Estatísticas Completas</title>
+  <title>JTIPS Analytics — V10.4 Jogadores Visual</title>
   <style>
     :root{--bg:#050a12;--bg2:#07111d;--panel:#0b1524;--panel2:#0d1a2a;--line:#183353;--line2:#214d78;--text:#f4f8ff;--muted:#8da8c8;--blue:#1aa8ff;--blue2:#0b79ff;--green:#37e889;--yellow:#ffd53f;--red:#ff4d6a;--shadow:0 20px 60px rgba(0,0,0,.38);--r:18px;--sidebar:214px}
     *{box-sizing:border-box} body{margin:0;background:radial-gradient(circle at 20% 0,rgba(16,130,255,.12),transparent 34%),linear-gradient(135deg,#02060c 0%,#071220 45%,#03080f 100%);font-family:Inter,Segoe UI,Arial,sans-serif;color:var(--text);overflow-x:hidden} button,input,select{font:inherit} .app{min-height:100vh;display:block}
@@ -567,6 +567,146 @@
 .metric-table .subhead td{background:rgba(200,168,91,.10);color:#f2d58a;font-weight:950;text-align:left!important}
 .quick-read .stat-card b{font-size:22px;color:#f8e3a2}
 @media(max-width:1050px){.stats-grid-2,.stats-grid-3{grid-template-columns:1fr}.player-card .player-row{grid-template-columns:1fr auto}}
+
+
+/* V10.4 — Jogadores visual, sem JSON bruto */
+.lineup-layout{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:16px;
+}
+.lineup-team-card{
+  border:1px solid rgba(200,168,91,.20);
+  background:linear-gradient(180deg,rgba(20,38,28,.84),rgba(9,19,14,.88));
+  border-radius:18px;
+  padding:16px;
+  min-width:0;
+}
+.lineup-team-title{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  margin-bottom:12px;
+  border-bottom:1px solid rgba(200,168,91,.16);
+  padding-bottom:10px;
+}
+.lineup-team-title h4{margin:0;color:#fff8e8;font-size:20px}
+.lineup-tag{
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  padding:5px 10px;
+  border-radius:999px;
+  font-size:11px;
+  font-weight:900;
+  border:1px solid rgba(226,199,131,.25);
+  color:#f2d58a;
+  background:rgba(200,168,91,.10);
+}
+.lineup-section-title{
+  color:#d8bd72;
+  font-size:13px;
+  font-weight:950;
+  margin:14px 0 8px;
+}
+.lineup-groups{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:10px;
+}
+.lineup-group{
+  background:rgba(255,255,255,.025);
+  border:1px solid rgba(200,168,91,.10);
+  border-radius:12px;
+  padding:10px;
+  min-width:0;
+}
+.lineup-group-title{
+  color:#f1d48c;
+  font-size:12px;
+  font-weight:950;
+  margin-bottom:8px;
+}
+.lineup-player-row{
+  display:grid;
+  grid-template-columns:30px 1fr 38px auto;
+  gap:8px;
+  align-items:center;
+  padding:7px 6px;
+  border-radius:9px;
+  background:rgba(255,255,255,.025);
+  margin-bottom:5px;
+}
+.lineup-player-row:last-child{margin-bottom:0}
+.lineup-player-number{
+  color:#d8bd72;
+  font-weight:950;
+  font-size:12px;
+}
+.lineup-player-name{
+  color:#fff8e8;
+  font-weight:850;
+  font-size:13px;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+.lineup-position{
+  color:#9fcaa9;
+  font-size:11px;
+  font-weight:950;
+  text-align:center;
+}
+.lineup-rating{
+  min-width:38px;
+  text-align:center;
+  padding:4px 6px;
+  border-radius:7px;
+  font-size:11px;
+  font-weight:950;
+  color:#132016;
+  background:linear-gradient(180deg,#b5df95,#5ba36f);
+}
+.lineup-rating.warn{background:linear-gradient(180deg,#f0d28a,#b28a3a)}
+.lineup-status{
+  padding:4px 7px;
+  border-radius:7px;
+  font-size:10px;
+  font-weight:950;
+  border:1px solid rgba(255,255,255,.12);
+}
+.lineup-status.duvida{color:#f6d777;background:rgba(216,184,107,.16)}
+.lineup-status.fora{color:#eda1a1;background:rgba(201,86,86,.14)}
+.lineup-status.lesionado{color:#ffb0c0;background:rgba(214,70,105,.14)}
+.bench-grid{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:8px;
+}
+.bench-grid .lineup-player-row{
+  grid-template-columns:28px 1fr 34px auto;
+  padding:6px;
+}
+.lineup-empty{
+  border:1px dashed rgba(200,168,91,.25);
+  background:rgba(255,255,255,.025);
+  color:var(--muted);
+  border-radius:14px;
+  padding:16px;
+}
+.lineup-help{
+  margin-top:12px;
+  color:var(--muted);
+  font-size:12px;
+}
+@media(max-width:1100px){
+  .lineup-layout{grid-template-columns:1fr}
+}
+@media(max-width:720px){
+  .lineup-groups,.bench-grid{grid-template-columns:1fr}
+  .lineup-player-row{grid-template-columns:28px 1fr 34px auto}
+}
 
 </style>
 </head>
@@ -1357,6 +1497,192 @@ function insightsV103(m){
   if(sVal(hs,'cornersTotalAVG_home')!==null&&sVal(as,'cornersTotalAVG_away')!==null)bullets.push(`Escanteios totais: ${m.home} casa ${sVal(hs,'cornersTotalAVG_home')} e ${m.away} fora ${sVal(as,'cornersTotalAVG_away')}.`);
   if(sVal(hs,'cardsAVG_home')!==null&&sVal(as,'cardsAVG_away')!==null)bullets.push(`Cartões: média de ${sVal(hs,'cardsAVG_home')} para ${m.home} casa e ${sVal(as,'cardsAVG_away')} para ${m.away} fora.`);
   return `<h2>Insights</h2><div class="info-grid two"><div class="stat-card"><h4>Resumo da leitura</h4><p>Melhor entrada estatística: <b>${marketName(b)}</b>, com ${marketLine(b)}.</p>${bullets.map(x=>`<p class="muted">• ${x}</p>`).join('')}</div><div class="stat-card"><h4>Tendência da partida</h4><p class="muted">${trend||'Sem tendência textual disponível para esta partida.'}</p></div></div>`;
+}
+
+
+/* =========================
+   V10.4 — Jogadores visual sem JSON bruto
+   ========================= */
+function normalizeLineupSource(value){
+  if(!value) return null;
+  if(typeof value === 'string'){
+    try{return JSON.parse(value)}catch(e){return null}
+  }
+  return value;
+}
+function arrayFromAny(v){
+  if(!v) return [];
+  if(Array.isArray(v)) return v;
+  if(typeof v === 'object') return Object.values(v).flat().filter(Boolean);
+  return [];
+}
+function extractTeamLineup(raw, side){
+  const obj=normalizeLineupSource(raw);
+  if(!obj) return [];
+  const keys = side==='home'
+    ? ['team_a','home','home_lineup','lineup_home','starting_xi_home','teamA','a']
+    : ['team_b','away','away_lineup','lineup_away','starting_xi_away','teamB','b'];
+  for(const k of keys){
+    if(obj[k]) return arrayFromAny(obj[k]);
+  }
+  if(Array.isArray(obj)) return obj;
+  return [];
+}
+function extractTeamBench(raw, side){
+  const obj=normalizeLineupSource(raw);
+  if(!obj) return [];
+  const keys = side==='home'
+    ? ['team_a','home','home_bench','bench_home','subs_home','teamA','a']
+    : ['team_b','away','away_bench','bench_away','subs_away','teamB','b'];
+  for(const k of keys){
+    if(obj[k]) return arrayFromAny(obj[k]);
+  }
+  return [];
+}
+function playerFromId(m, id, side){
+  if(!id) return null;
+  const list = side==='home' ? (m.players?.home||[]) : (m.players?.away||[]);
+  return list.find(p=>String(p.id)===String(id)) || null;
+}
+function inferPlayerName(m,item,side){
+  const p=playerFromId(m,item.player_id||item.id||item.playerId,side);
+  return item.player_name || item.name || item.full_name || item.known_as || p?.known_as || p?.shorthand || p?.full_name || `Jogador ${item.shirt_number||item.number||''}`.trim();
+}
+function inferPosition(item, p){
+  return item.position || item.pos || p?.position || '—';
+}
+function inferNumber(item){
+  return item.shirt_number || item.number || item.jersey_number || '';
+}
+function ratingForPlayer(item,p,i){
+  const raw = item.rating || item.player_rating || item.score || p?.rating;
+  let r=n(raw);
+  if(r===null){
+    const goals=n(p?.goals_per_90_overall)||0;
+    const mins=n(p?.minutes_played_overall)||0;
+    r=Math.min(7.8, Math.max(6.1, 6.1 + goals*.9 + Math.min(0.8, mins/2500)));
+    r=Math.round(r*100)/100;
+  }
+  return r;
+}
+function statusFromEvents(item){
+  const events=arrayFromAny(item.player_events || item.events);
+  const text=JSON.stringify(events).toLowerCase();
+  if(text.includes('injur')) return 'Lesionado';
+  if(text.includes('suspend')) return 'Fora';
+  if(text.includes('doubt')) return 'Dúvida';
+  return item.status || item.availability || '';
+}
+function groupLabel(pos){
+  const p=String(pos||'').toUpperCase();
+  if(['GK','G','GOALKEEPER'].some(x=>p.includes(x))) return 'Goleiro';
+  if(['CB','ZAG','DEF','LD','LE','RB','LB','DC'].some(x=>p.includes(x))) return 'Defensores';
+  if(['MID','MEI','VOL','CM','DM','AM','MC'].some(x=>p.includes(x))) return 'Meio-campistas';
+  if(['FW','AT','PD','PE','CA','ST','CF','LW','RW'].some(x=>p.includes(x))) return 'Atacantes';
+  return 'Outros';
+}
+function buildVisualPlayers(m, rawList, side, maxFallback=11){
+  let items = arrayFromAny(rawList);
+  if(items.length){
+    return items.map((item,i)=>{
+      const p=playerFromId(m,item.player_id||item.id||item.playerId,side);
+      const pos=inferPosition(item,p);
+      return {
+        number: inferNumber(item),
+        name: inferPlayerName(m,item,side),
+        position: pos,
+        group: groupLabel(pos),
+        rating: ratingForPlayer(item,p,i),
+        status: statusFromEvents(item),
+        raw:item
+      };
+    });
+  }
+  const list = side==='home' ? (m.players?.home||[]) : (m.players?.away||[]);
+  return [...list]
+    .sort((a,b)=>(n(b.minutes_played_overall)||0)-(n(a.minutes_played_overall)||0))
+    .slice(0,maxFallback)
+    .map((p,i)=>({
+      number:'',
+      name: p.known_as||p.shorthand||p.full_name||'Jogador',
+      position:p.position||'—',
+      group:groupLabel(p.position),
+      rating:ratingForPlayer({},p,i),
+      status:'',
+      raw:p
+    }));
+}
+function lineupRow(p){
+  const st=String(p.status||'').toLowerCase();
+  const status = p.status ? `<span class="lineup-status ${st.includes('les')?'lesionado':st.includes('fora')?'fora':'duvida'}">${p.status}</span>` : '';
+  const warn = n(p.rating)!==null && n(p.rating)<6.7 ? 'warn' : '';
+  return `<div class="lineup-player-row"><span class="lineup-player-number">${p.number||'•'}</span><span class="lineup-player-name">${p.name}</span><span class="lineup-position">${p.position||'—'}</span><span class="lineup-rating ${warn}">${n(p.rating)??'—'}</span>${status}</div>`;
+}
+function lineupGroups(players){
+  const order=['Goleiro','Defensores','Meio-campistas','Atacantes','Outros'];
+  const has = players && players.length;
+  if(!has) return `<div class="lineup-empty">Escalações ainda não disponíveis para esta partida.</div>`;
+  return `<div class="lineup-groups">${order.map(g=>{
+    const rows=players.filter(p=>p.group===g);
+    if(!rows.length) return '';
+    return `<div class="lineup-group"><div class="lineup-group-title">${g}</div>${rows.map(lineupRow).join('')}</div>`;
+  }).join('')}</div>`;
+}
+function benchRows(players){
+  if(!players || !players.length) return `<div class="lineup-empty">Banco de reservas ainda não disponível.</div>`;
+  return `<div class="bench-grid">${players.slice(0,12).map(lineupRow).join('')}</div>`;
+}
+function lineupTeamCard(m,side){
+  const isHome=side==='home';
+  const name=isHome?m.home:m.away;
+  const label=isHome?'Mandante':'Visitante';
+  const lineupsRaw=m.odds?.lineups;
+  const benchRaw=m.odds?.bench;
+  const starters=buildVisualPlayers(m,extractTeamLineup(lineupsRaw,side),side,11);
+  const bench=buildVisualPlayers(m,extractTeamBench(benchRaw,side),side,9);
+  const hasRaw = extractTeamLineup(lineupsRaw,side).length || extractTeamBench(benchRaw,side).length;
+  const note = hasRaw ? '' : `<div class="lineup-help">Escalação estimada pela lista de jogadores da temporada, pois a escalação oficial ainda não veio preenchida.</div>`;
+  return `<div class="lineup-team-card">
+    <div class="lineup-team-title"><div><span class="lineup-tag">${label}</span><h4>${name}</h4></div></div>
+    <div class="lineup-section-title">Titulares</div>
+    ${lineupGroups(starters)}
+    <div class="lineup-section-title">Reservas</div>
+    ${benchRows(bench)}
+    ${note}
+  </div>`;
+}
+function lineupsVisualBlock(m){
+  return `<div class="footy-block">
+    <div class="block-head"><div><h3>Previsões de escalação e desfalques</h3><small>Titulares, reservas, posições e notas quando disponíveis.</small></div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap"><span class="lineup-tag">Dúvida</span><span class="lineup-tag">Fora</span><span class="lineup-tag">Lesionado</span></div></div>
+    <div class="lineup-layout">${lineupTeamCard(m,'home')}${lineupTeamCard(m,'away')}</div>
+  </div>`;
+}
+function playerName(p){return p.known_as||p.shorthand||p.full_name||`${p.first_name||''} ${p.last_name||''}`.trim()||'Jogador'}
+function playerCard(title,players,valueKey,subKeys=[]){
+  const rows=(players||[]).slice(0,8);
+  if(!rows.length)return `<div class="footy-block player-card"><div class="block-head"><div><h3>${title}</h3></div></div><div class="empty-soft">Dados de jogadores ainda não disponíveis.</div></div>`;
+  const max=Math.max(...rows.map(p=>n(p[valueKey])||0),1);
+  return `<div class="footy-block player-card"><div class="block-head"><div><h3>${title}</h3><small>Top jogadores da equipe</small></div></div>${rows.map(p=>{let v=n(p[valueKey])||0,w=Math.max(6,Math.min(100,(v/max)*100));let meta=[p.position, ...subKeys.map(k=>`${k[1]} ${safeN(p[k[0]])}`)].filter(Boolean).join(' • ');return `<div class="player-row" style="--w:${w}%"><span>${playerName(p)}<div class="player-meta">${meta}</div></span><b class="player-value">${safeN(p[valueKey])}</b></div>`}).join('')}</div>`;
+}
+function sortPlayers(players,keys){
+  return [...(players||[])].sort((a,b)=>{for(let [k,dir] of keys){let av=n(a[k])||0,bv=n(b[k])||0;if(av!==bv)return dir==='asc'?av-bv:bv-av}return 0})
+}
+function statsPlayers(m){
+  const home=m.players?.home||[],away=m.players?.away||[];
+  const homeScorers=sortPlayers(home,[['goals_overall','desc'],['goals_per_90_overall','desc'],['minutes_played_overall','desc']]);
+  const awayScorers=sortPlayers(away,[['goals_overall','desc'],['goals_per_90_overall','desc'],['minutes_played_overall','desc']]);
+  const homeCards=sortPlayers(home,[['cards_overall','desc'],['yellow_cards_overall','desc'],['minutes_played_overall','desc']]);
+  const awayCards=sortPlayers(away,[['cards_overall','desc'],['yellow_cards_overall','desc'],['minutes_played_overall','desc']]);
+  const homeCards90=sortPlayers(home.filter(p=>(n(p.minutes_played_overall)||0)>=300),[['cards_per_90_overall','desc'],['cards_overall','desc']]);
+  const awayCards90=sortPlayers(away.filter(p=>(n(p.minutes_played_overall)||0)>=300),[['cards_per_90_overall','desc'],['cards_overall','desc']]);
+  return `<div class="stats-section">
+    ${lineupsVisualBlock(m)}
+    <div class="stats-grid-2">${playerCard('Quem pode marcar? — '+m.home,homeScorers,'goals_overall',[['goals_per_90_overall','G/90'],['minutes_played_overall','Min']])}${playerCard('Quem pode marcar? — '+m.away,awayScorers,'goals_overall',[['goals_per_90_overall','G/90'],['minutes_played_overall','Min']])}</div>
+    <div class="stats-grid-2">${playerCard('Quem pode receber cartão? — '+m.home,homeCards,'cards_overall',[['yellow_cards_overall','Am'],['red_cards_overall','Verm']])}${playerCard('Quem pode receber cartão? — '+m.away,awayCards,'cards_overall',[['yellow_cards_overall','Am'],['red_cards_overall','Verm']])}</div>
+    <div class="stats-grid-2">${playerCard('Cartões / 90 — '+m.home,homeCards90,'cards_per_90_overall',[['cards_overall','Cartões'],['minutes_played_overall','Min']])}${playerCard('Cartões / 90 — '+m.away,awayCards90,'cards_per_90_overall',[['cards_overall','Cartões'],['minutes_played_overall','Min']])}</div>
+    <div class="stats-data-note">Para clubes, os jogadores são filtrados por club_team_id igual ao ID do mandante/visitante da partida. Nenhum JSON bruto é exibido ao usuário.</div>
+  </div>`;
 }
 
 </script>

@@ -99,3 +99,12 @@ FOOTYSTATS_API_KEY=sua_chave
 - Jogadores são filtrados por `club_team_id`/`national_team_id` conforme `homeID` e `awayID`.
 - Avançadas usa impedimentos, faltas e campos adicionais quando disponíveis.
 - Mantém fallback limpo para escalações/jogadores quando não houver dados.
+
+## V10.4 — Jogadores visual
+- Corrige a aba Jogadores para nunca exibir JSON bruto.
+- A seção de escalações agora renderiza duas colunas visuais: Mandante e Visitante.
+- Mostra titulares agrupados por Goleiro, Defensores, Meio-campistas, Atacantes e Outros.
+- Mostra reservas em grid visual.
+- Cruza player_id com a base de jogadores quando possível.
+- Se lineups/bench não vierem completos, monta uma escalação estimada a partir dos jogadores da temporada e mostra aviso limpo.
+- Mantém os blocos Quem pode marcar, Quem pode receber cartão e Cartões por 90 minutos.
