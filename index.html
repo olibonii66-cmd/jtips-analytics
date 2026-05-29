@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>JTIPS Analytics — V10.6 Jogadores Layout Corrigido</title>
+  <title>JTIPS Analytics — V10.7 Cores e Fontes Padronizadas</title>
   <style>
     :root{--bg:#050a12;--bg2:#07111d;--panel:#0b1524;--panel2:#0d1a2a;--line:#183353;--line2:#214d78;--text:#f4f8ff;--muted:#8da8c8;--blue:#1aa8ff;--blue2:#0b79ff;--green:#37e889;--yellow:#ffd53f;--red:#ff4d6a;--shadow:0 20px 60px rgba(0,0,0,.38);--r:18px;--sidebar:214px}
     *{box-sizing:border-box} body{margin:0;background:radial-gradient(circle at 20% 0,rgba(16,130,255,.12),transparent 34%),linear-gradient(135deg,#02060c 0%,#071220 45%,#03080f 100%);font-family:Inter,Segoe UI,Arial,sans-serif;color:var(--text);overflow-x:hidden} button,input,select{font:inherit} .app{min-height:100vh;display:block}
@@ -803,6 +803,247 @@
 @media(max-width:1100px){
   .lineup-layout{grid-template-columns:1fr!important}
 }
+
+
+/* =========================================================
+   V10.7 — Design system final: cores e fontes padronizadas
+   Paleta JTIPS: verde escuro + dourado premium
+   ========================================================= */
+:root{
+  --bg:#050b08!important;
+  --bg-2:#08130d!important;
+  --bg-3:#0d1e14!important;
+  --panel:#102419!important;
+  --panel-2:#142b1f!important;
+  --panel-soft:rgba(16,36,25,.86)!important;
+  --card:#11271b!important;
+  --card-2:#0d1c14!important;
+
+  --gold:#d8b86b!important;
+  --gold-2:#f2d58a!important;
+  --gold-3:#a9782d!important;
+
+  --green:#3f7a58!important;
+  --green-2:#75bc7d!important;
+  --green-soft:rgba(63,122,88,.18)!important;
+
+  --blue:#68a8d8!important;
+  --blue-soft:rgba(104,168,216,.15)!important;
+
+  --danger:#d56d64!important;
+  --danger-soft:rgba(213,109,100,.14)!important;
+
+  --text:#fff8e8!important;
+  --text-2:#e8dcc0!important;
+  --muted:#b9c2ad!important;
+  --muted-2:#8fa28f!important;
+
+  --border:rgba(216,184,107,.22)!important;
+  --border-strong:rgba(216,184,107,.42)!important;
+
+  --shadow:0 18px 46px rgba(0,0,0,.36)!important;
+  --radius:18px!important;
+  --radius-sm:12px!important;
+
+  --font-title:"Inter","Montserrat","Segoe UI",Arial,sans-serif!important;
+  --font-body:"Inter","Segoe UI",Roboto,Arial,sans-serif!important;
+}
+
+/* Fonte global */
+html,body,*{
+  font-family:var(--font-body)!important;
+  letter-spacing:0!important;
+}
+body{
+  background:
+    radial-gradient(circle at 18% 0%, rgba(216,184,107,.09), transparent 28%),
+    radial-gradient(circle at 88% 10%, rgba(63,122,88,.12), transparent 26%),
+    linear-gradient(180deg,var(--bg),var(--bg-2))!important;
+  color:var(--text)!important;
+}
+
+/* Títulos e textos */
+h1,h2,h3,h4,.brand-title,.section-title,.page-title,.vs,.logo-title{
+  font-family:var(--font-title)!important;
+  color:var(--text)!important;
+  font-weight:900!important;
+}
+h1{font-size:32px!important;line-height:1.08!important}
+h2{font-size:24px!important;line-height:1.16!important}
+h3{font-size:20px!important;line-height:1.2!important}
+h4{font-size:16px!important;line-height:1.25!important}
+p,span,td,th,small,label,input,select,button,a,li{
+  font-family:var(--font-body)!important;
+}
+small,.muted,.stats-data-note,.table-caption,.lineup-help,.player-meta{
+  color:var(--muted)!important;
+}
+
+/* Painéis e cards */
+.panel,.stat-card,.footy-block,.stats-title-card,.lineup-team-card,.best,.card,.filters,.results,.hero,.hero-card,.quick-summary,.sidebar-card,.player-card{
+  background:linear-gradient(180deg,rgba(20,43,31,.92),rgba(8,19,13,.94))!important;
+  border:1px solid var(--border)!important;
+  box-shadow:var(--shadow)!important;
+  border-radius:var(--radius)!important;
+  color:var(--text)!important;
+}
+.footy-block,.stats-title-card{
+  padding:18px!important;
+}
+
+/* Sidebar */
+.sidebar,.side,.nav{
+  background:linear-gradient(180deg,#07100b,#0b1811)!important;
+  border-right:1px solid var(--border)!important;
+}
+.nav-item,.menu-item{
+  color:var(--text-2)!important;
+  font-weight:850!important;
+}
+.nav-item.active,.menu-item.active,.nav-item:hover,.menu-item:hover{
+  background:linear-gradient(180deg,rgba(216,184,107,.18),rgba(216,184,107,.07))!important;
+  color:var(--text)!important;
+  border-color:var(--border-strong)!important;
+}
+
+/* Botões e tabs */
+button,.btn,.tab,.analysis-tab,.stats-subtab,.inner-tab{
+  font-family:var(--font-body)!important;
+  font-weight:900!important;
+  border-radius:999px!important;
+  border:1px solid var(--border)!important;
+  background:linear-gradient(180deg,rgba(20,43,31,.9),rgba(8,19,13,.9))!important;
+  color:var(--text-2)!important;
+  box-shadow:none!important;
+}
+button:hover,.btn:hover,.tab:hover,.analysis-tab:hover,.stats-subtab:hover,.inner-tab:hover{
+  border-color:var(--border-strong)!important;
+  color:var(--gold-2)!important;
+}
+button.active,.btn.primary,.tab.active,.analysis-tab.active,.stats-subtab.active,.inner-tab.active{
+  background:linear-gradient(180deg,var(--gold-2),var(--gold-3))!important;
+  color:#151008!important;
+  border-color:rgba(255,232,165,.62)!important;
+  box-shadow:0 10px 24px rgba(216,184,107,.22)!important;
+}
+
+/* Badges/tags/status */
+.status,.tag,.lineup-tag,.pill,.badge{
+  font-family:var(--font-body)!important;
+  font-weight:900!important;
+  border-radius:999px!important;
+  border:1px solid var(--border-strong)!important;
+  background:rgba(216,184,107,.12)!important;
+  color:var(--gold-2)!important;
+  white-space:nowrap!important;
+}
+.status{
+  min-width:118px!important;
+  height:32px!important;
+  padding:0 16px!important;
+}
+
+/* Tabelas */
+table,.stats-table,.metric-table,.mini-table{
+  color:var(--text)!important;
+}
+.stats-table th,.metric-table th,.mini-table th{
+  color:var(--gold-2)!important;
+  font-weight:900!important;
+  background:rgba(216,184,107,.08)!important;
+}
+.stats-table td,.metric-table td,.mini-table td{
+  border-bottom:1px solid rgba(216,184,107,.14)!important;
+}
+.cell-good,.good-cell{
+  background:rgba(63,122,88,.22)!important;
+  color:#b6efbd!important;
+}
+.cell-mid,.warn-cell{
+  background:rgba(216,184,107,.16)!important;
+  color:var(--gold-2)!important;
+}
+.cell-bad,.bad-cell{
+  background:rgba(213,109,100,.14)!important;
+  color:#f0aaa3!important;
+}
+
+/* Inputs/filtros */
+input,select{
+  background:rgba(8,19,13,.82)!important;
+  border:1px solid var(--border)!important;
+  color:var(--text)!important;
+  border-radius:12px!important;
+}
+input::placeholder{
+  color:var(--muted-2)!important;
+}
+
+/* Barras visuais */
+.team-bar-track,.player-row{
+  background:rgba(255,255,255,.055)!important;
+}
+.team-bar-fill{
+  background:linear-gradient(90deg,var(--green),var(--gold))!important;
+}
+.team-bar-fill.away{
+  background:linear-gradient(90deg,var(--blue),var(--gold))!important;
+}
+.player-row::before{
+  background:rgba(216,184,107,.22)!important;
+}
+.player-value{
+  color:var(--gold-2)!important;
+}
+
+/* Escalações */
+.lineup-section-title,.lineup-group-title{
+  color:var(--gold-2)!important;
+  font-weight:950!important;
+}
+.lineup-player-row{
+  background:rgba(255,255,255,.035)!important;
+  border:1px solid rgba(216,184,107,.08)!important;
+}
+.lineup-player-number{
+  color:var(--gold-2)!important;
+}
+.lineup-player-name{
+  color:var(--text)!important;
+  font-weight:850!important;
+}
+.lineup-position{
+  color:#a7dcb3!important;
+}
+.lineup-empty,.empty-soft,.lineup-warning{
+  border-color:rgba(216,184,107,.24)!important;
+  color:var(--muted)!important;
+  background:rgba(255,255,255,.025)!important;
+}
+
+/* Links e destaques */
+a,.blue{
+  color:var(--gold-2)!important;
+}
+.green{
+  color:#9de6a9!important;
+}
+.danger,.red{
+  color:#f0aaa3!important;
+}
+
+/* Remove qualquer azul forte remanescente em botões principais */
+.update-btn,.primary-btn,.action-btn{
+  background:linear-gradient(180deg,var(--gold-2),var(--gold-3))!important;
+  color:#151008!important;
+  border-color:rgba(255,232,165,.62)!important;
+}
+
+/* Scrollbar discreta */
+*::-webkit-scrollbar{width:8px;height:8px}
+*::-webkit-scrollbar-track{background:rgba(255,255,255,.04)}
+*::-webkit-scrollbar-thumb{background:rgba(216,184,107,.32);border-radius:999px}
+*::-webkit-scrollbar-thumb:hover{background:rgba(216,184,107,.55)}
 
 </style>
 </head>

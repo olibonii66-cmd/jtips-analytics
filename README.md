@@ -124,3 +124,11 @@ FOOTYSTATS_API_KEY=sua_chave
 - Corrige sobreposição visual das colunas da escalação.
 - Remove badge de nota fixa quando não há rating real.
 - Reservas vazias agora mostram mensagem limpa em vez de linhas com pontos e traços.
+
+## V10.7 — Cores e fontes padronizadas
+- Padroniza a paleta do site inteiro para verde escuro + dourado premium.
+- Remove inconsistências de azul forte, cinza claro e estilos diferentes entre cards/tabelas/botões.
+- Padroniza fonte global com fallback Inter / Segoe UI.
+- Padroniza títulos, textos, botões, abas, badges, tabelas, inputs, cards e sidebar.
+- Mantém azul apenas como detalhe secundário suave, não como cor principal.
+- Ajusta scrollbar e estados ativos/hover.
