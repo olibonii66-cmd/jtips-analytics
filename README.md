@@ -194,3 +194,9 @@ FOOTYSTATS_API_KEY=sua_chave
   - motivo
 - Mantém categorias: Apostas da IA, Apostas Seguras e Apostas de Valor.
 - Mantém aviso 18+ Jogo Responsável.
+
+## V12.3 — Apostas com jogo e remoção da aba Bilhetes na análise
+- Corrige a página lateral Apostas para exibir jogo, liga e horário em cada bilhete/seleção.
+- Remove a aba “Bilhetes” de dentro da análise da partida.
+- Mantém as categorias Apostas da IA, Apostas Seguras e Apostas de Valor.
+- Mantém bilhetes combinados, regras anti-conflito e aviso 18+ Jogo Responsável.

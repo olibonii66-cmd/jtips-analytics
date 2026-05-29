@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>JTIPS Analytics — V12.2 Bilhetes com Jogo</title>
+  <title>JTIPS Analytics — V12.3 Apostas com Jogo</title>
   <style>
     :root{--bg:#050a12;--bg2:#07111d;--panel:#0b1524;--panel2:#0d1a2a;--line:#183353;--line2:#214d78;--text:#f4f8ff;--muted:#8da8c8;--blue:#1aa8ff;--blue2:#0b79ff;--green:#37e889;--yellow:#ffd53f;--red:#ff4d6a;--shadow:0 20px 60px rgba(0,0,0,.38);--r:18px;--sidebar:214px}
     *{box-sizing:border-box} body{margin:0;background:radial-gradient(circle at 20% 0,rgba(16,130,255,.12),transparent 34%),linear-gradient(135deg,#02060c 0%,#071220 45%,#03080f 100%);font-family:Inter,Segoe UI,Arial,sans-serif;color:var(--text);overflow-x:hidden} button,input,select{font:inherit} .app{min-height:100vh;display:block}
@@ -1289,6 +1289,69 @@ input[type="date"]::-webkit-calendar-picker-indicator{filter:invert(82%) sepia(4
   color:var(--text-2)!important;
   line-height:1.45;
   margin-bottom:10px;
+}
+@media(max-width:760px){
+  .ticket-match-header{grid-template-columns:1fr}
+}
+
+
+/* =========================================================
+   V12.3 — Apostas/Bilhetes sempre com jogo + remove aba Bilhetes da análise
+   ========================================================= */
+.analysis-tabs button[data-tab="bilhetes"],
+.analysis-tab[data-tab="bilhetes"],
+button[data-analysis-tab="bilhetes"],
+button[data-tab="tickets"],
+.analysis-tabs button:has-text("Bilhetes"){
+  display:none!important;
+}
+.ticket-match-header{
+  display:grid;
+  grid-template-columns:1fr auto;
+  gap:14px;
+  align-items:start;
+  padding:14px;
+  border:1px solid rgba(216,184,107,.18);
+  border-radius:16px;
+  background:rgba(0,0,0,.14);
+  margin:12px 0 14px;
+}
+.ticket-match-title{
+  color:var(--text)!important;
+  font-size:18px;
+  font-weight:950;
+  margin:0 0 8px!important;
+}
+.ticket-match-meta{
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+}
+.ticket-match-meta span{
+  border:1px solid rgba(216,184,107,.22);
+  background:rgba(216,184,107,.08);
+  color:var(--text-2);
+  border-radius:999px;
+  padding:6px 10px;
+  font-size:12px;
+  font-weight:850;
+}
+.ticket-selection-title{
+  color:var(--text)!important;
+  font-size:16px;
+  font-weight:950;
+  margin-bottom:8px;
+}
+.ticket-selection-context{
+  color:var(--text-2)!important;
+  line-height:1.45;
+  margin-bottom:10px;
+}
+.ticket-selection-market{
+  color:var(--gold-2)!important;
+  font-weight:950;
+  display:block;
+  margin-bottom:7px;
 }
 @media(max-width:760px){
   .ticket-match-header{grid-template-columns:1fr}
@@ -2947,6 +3010,192 @@ function bilhetesV12(m){
     ${v12TicketCategory('Apostas de Valor','Bilhete com foco em odds onde a probabilidade estimada supera a probabilidade implícita.',value,'Nenhum bilhete de valor encontrado com margem suficiente.')}
   </div>`;
 }
+
+
+/* =========================
+   V12.3 — Corrige página Apostas e remove Bilhetes da análise
+   ========================= */
+function v123Pick(obj, keys){
+  for(const k of keys){
+    if(obj && obj[k] !== undefined && obj[k] !== null && obj[k] !== '' && obj[k] !== -1 && obj[k] !== '-1') return obj[k];
+  }
+  return null;
+}
+function v123Info(m){
+  const o=m?.odds||{};
+  const raw=m?.raw||{};
+  const home=m?.home || o.home_name || raw.home_name || 'Mandante';
+  const away=m?.away || o.away_name || raw.away_name || 'Visitante';
+  const league=m?.league || o.competition_name || o.league || raw.competition_name || raw.league || raw.competition || 'Liga não informada';
+  let time=m?.time || o.time || raw.time || '';
+  if(!time && typeof formatTime==='function') time = formatTime(o.date_unix || raw.date_unix);
+  if(!time) time = 'Horário não informado';
+  const date=m?.date || o.date || raw.date || '';
+  return {home,away,league,time,date,game:`${home} x ${away}`};
+}
+function v123MatchBlock(m,ticket){
+  const info=v123Info(m);
+  return `<div class="ticket-match-header">
+    <div>
+      <p class="ticket-match-title">${info.game}</p>
+      <div class="ticket-match-meta">
+        <span>Liga: ${info.league}</span>
+        <span>Horário: ${info.time}</span>
+        ${info.date?`<span>Data: ${info.date}</span>`:''}
+        ${ticket?.selections?.length?`<span>${ticket.selections.length} seleções</span>`:''}
+      </div>
+    </div>
+    ${ticket?`<div class="ticket-score"><b>${ticket.score}</b><small>Score geral</small></div>`:''}
+  </div>`;
+}
+function v123SelectionHtml(s,i,m){
+  const info=v123Info(m);
+  return `<div class="ticket-selection">
+    <div>
+      <div class="ticket-selection-title">${i+1}ª Seleção</div>
+      <div class="ticket-selection-context">
+        <strong>${info.game}</strong><br>
+        Liga: ${info.league}<br>
+        Horário: ${info.time}
+      </div>
+      <span class="ticket-selection-market">Mercado: ${s.market}</span>
+      <small>${s.reason}</small>
+      <div class="ticket-pill-row">
+        <span class="ticket-pill">Probabilidade: ${v12Pct(s.prob)}</span>
+        <span class="ticket-pill">Score: ${s.score}</span>
+        <span class="ticket-pill">${s.profile}</span>
+        ${s.value!==null?`<span class="ticket-pill">Valor: ${s.value>0?'+':''}${s.value}%</span>`:''}
+      </div>
+    </div>
+    <div class="ticket-odd">${s.odd?`Odd ${s.odd}`:'Odd —'}</div>
+  </div>`;
+}
+function v123TicketCategory(title,desc,ticket,emptyText,m){
+  return `<section class="ticket-category">
+    <div class="ticket-category-head">
+      <div><h3>${title}</h3><p>${desc}</p></div>
+      ${ticket?`<div class="ticket-score"><b>${ticket.score}</b><small>Score geral</small></div>`:''}
+    </div>
+    ${ticket?`<div class="ticket-card">
+      ${v123MatchBlock(m,ticket)}
+      <div class="ticket-pill-row">
+        <span class="ticket-pill">Bilhete combinado</span>
+        <span class="ticket-pill">Odd total estimada: ${ticket.oddTotal}</span>
+      </div>
+      <div class="ticket-selection-list">${ticket.selections.map((s,i)=>v123SelectionHtml(s,i,m)).join('')}</div>
+      <p class="ticket-explain">Bilhete montado com seleções de grupos diferentes para reduzir conflitos e evitar mercados redundantes.</p>
+      <div class="ticket-footer">18+ Jogo Responsável — O JTIPS é uma ferramenta de apoio estatístico. Não garante lucro nem resultado.</div>
+    </div>`:`<div class="ticket-empty">${emptyText}</div>`}
+  </section>`;
+}
+function v123TicketsForMatch(m){
+  const selections=v12BuildSelections(m);
+  const ia=v12BuildTicket(selections,'ia');
+  const safe=v12BuildTicket(selections,'safe');
+  const value=v12BuildTicket(selections,'value');
+  const info=v123Info(m);
+  return `<div class="tickets-shell">
+    <div class="tickets-head">
+      <h2>Apostas</h2>
+      <p class="muted">Bilhetes combinados gerados para ${info.game}, com jogo, liga e horário em todas as seleções.</p>
+      <div class="responsible-box"><span>18+ Jogo Responsável</span><small>O JTIPS não garante lucro nem resultado. Use gestão e responsabilidade.</small></div>
+    </div>
+    ${v123TicketCategory('Apostas da IA','Bilhete principal equilibrado com os melhores mercados compatíveis.',ia,'Nenhuma Aposta da IA recomendada para esta partida.',m)}
+    ${v123TicketCategory('Apostas Seguras','Bilhete conservador com seleções de menor variância e maior sustentação estatística.',safe,'Nenhuma Aposta Segura recomendada com os dados atuais.',m)}
+    ${v123TicketCategory('Apostas de Valor','Bilhete com foco em odds onde a probabilidade estimada supera a probabilidade implícita.',value,'Nenhuma Aposta de Valor encontrada com margem suficiente.',m)}
+  </div>`;
+}
+
+/* Sobrescreve a função antiga de Bilhetes/Apostas, caso exista */
+if(typeof bilhetesV12 === 'function'){
+  bilhetesV12 = function(m){ return v123TicketsForMatch(m); };
+}
+if(typeof renderTickets === 'function'){
+  const __oldRenderTickets = renderTickets;
+  renderTickets = function(m){ return v123TicketsForMatch(m || selected); };
+}
+if(typeof renderBets === 'function'){
+  const __oldRenderBets = renderBets;
+  renderBets = function(m){ return v123TicketsForMatch(m || selected); };
+}
+
+/* Remove a aba Bilhetes de dentro da análise da partida */
+function v123RemoveBilhetesTab(){
+  [...document.querySelectorAll('button,.tab,.analysis-tab')].forEach(el=>{
+    const t=(el.textContent||'').trim().toLowerCase();
+    if(t==='bilhetes') el.remove();
+  });
+  if(typeof activeAnalysisTab !== 'undefined' && activeAnalysisTab === 'bilhetes'){
+    activeAnalysisTab = 'resumo';
+  }
+}
+const __v123OldRenderAnalysis = typeof renderAnalysis==='function'?renderAnalysis:null;
+if(__v123OldRenderAnalysis){
+  renderAnalysis = function(){
+    if(typeof activeAnalysisTab !== 'undefined' && activeAnalysisTab === 'bilhetes') activeAnalysisTab='resumo';
+    __v123OldRenderAnalysis();
+    v123RemoveBilhetesTab();
+  };
+}
+
+/* Corrige a página lateral Apostas: tenta renderizar apostas para os jogos carregados */
+function v123FindMatches(){
+  const candidates=[
+    window.filteredMatches,
+    window.matches,
+    window.allMatches,
+    window.games,
+    window.jogos,
+    window.data
+  ];
+  for(const c of candidates){
+    if(Array.isArray(c) && c.length) return c;
+  }
+  return [];
+}
+function v123RenderApostasPage(){
+  const list=v123FindMatches();
+  if(!list.length){
+    return `<div class="tickets-shell"><div class="tickets-head"><h2>Apostas</h2><div class="ticket-empty">Nenhum jogo carregado para gerar apostas. Atualize os dados ou selecione outra data.</div></div></div>`;
+  }
+  const scored=list.map(m=>({m,score: Number(m.score||m.confidence||0)})).sort((a,b)=>b.score-a.score);
+  const top=scored.slice(0,3).map(x=>x.m);
+  return `<div class="tickets-shell">
+    <div class="tickets-head">
+      <h2>Apostas</h2>
+      <p class="muted">Bilhetes gerados a partir dos principais jogos carregados na data selecionada.</p>
+      <div class="responsible-box"><span>18+ Jogo Responsável</span><small>O JTIPS não garante lucro nem resultado. Use gestão e responsabilidade.</small></div>
+    </div>
+    ${top.map(m=>v123TicketsForMatch(m)).join('')}
+  </div>`;
+}
+
+/* Hook de navegação lateral Apostas */
+const __v123OldShowPage = typeof showPage==='function'?showPage:null;
+if(__v123OldShowPage){
+  showPage = function(page){
+    __v123OldShowPage(page);
+    const p=String(page||'').toLowerCase();
+    if(p==='apostas' || p==='bets' || p==='bilhetes'){
+      const content=document.getElementById('mainContent')||document.getElementById('content')||document.querySelector('main')||document.querySelector('.main-content');
+      if(content) content.innerHTML=v123RenderApostasPage();
+    }
+  };
+}
+document.addEventListener('click', function(e){
+  const el=e.target.closest('button,a,.nav-item,.sidebar-item');
+  if(!el) return;
+  const txt=(el.textContent||'').trim().toLowerCase();
+  if(txt.includes('apostas')){
+    setTimeout(()=>{
+      const content=document.getElementById('mainContent')||document.getElementById('content')||document.querySelector('main')||document.querySelector('.main-content');
+      if(content) content.innerHTML=v123RenderApostasPage();
+    },50);
+  }
+});
+
+/* Limpa visualmente qualquer botão Bilhetes que seja recriado por outro script */
+setInterval(v123RemoveBilhetesTab, 800);
 
 </script>
 </body></html>
