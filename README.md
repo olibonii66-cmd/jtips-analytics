@@ -200,3 +200,15 @@ FOOTYSTATS_API_KEY=sua_chave
 - Remove a aba “Bilhetes” de dentro da análise da partida.
 - Mantém as categorias Apostas da IA, Apostas Seguras e Apostas de Valor.
 - Mantém bilhetes combinados, regras anti-conflito e aviso 18+ Jogo Responsável.
+
+## V12.4 — Carregamento dos jogos corrigido
+- Revisado o carregamento principal de jogos.
+- Problema encontrado: o front dependia apenas do retorno de `/todays-matches`; quando esse endpoint retornava vazio, a tela zerava os jogos.
+- Corrigido `/api/jogos.js` com fallback automático:
+  1. tenta `todays-matches` com YYYY-MM-DD + timezone;
+  2. tenta `todays-matches` sem timezone;
+  3. tenta `todays-matches` com DD-MM-YYYY;
+  4. se vier vazio, busca `league-matches` das ligas selecionadas e filtra pela data em America/Sao_Paulo.
+- Adicionado diagnóstico no retorno de `/api/jogos`.
+- Front-end agora mostra a fonte do carregamento e registra o retorno no console.
+- Removida regra CSS inválida usada para esconder a aba Bilhetes.

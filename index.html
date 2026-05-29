@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>JTIPS Analytics — V12.3 Apostas com Jogo</title>
+  <title>JTIPS Analytics — V12.4 Carregamento Corrigido</title>
   <style>
     :root{--bg:#050a12;--bg2:#07111d;--panel:#0b1524;--panel2:#0d1a2a;--line:#183353;--line2:#214d78;--text:#f4f8ff;--muted:#8da8c8;--blue:#1aa8ff;--blue2:#0b79ff;--green:#37e889;--yellow:#ffd53f;--red:#ff4d6a;--shadow:0 20px 60px rgba(0,0,0,.38);--r:18px;--sidebar:214px}
     *{box-sizing:border-box} body{margin:0;background:radial-gradient(circle at 20% 0,rgba(16,130,255,.12),transparent 34%),linear-gradient(135deg,#02060c 0%,#071220 45%,#03080f 100%);font-family:Inter,Segoe UI,Arial,sans-serif;color:var(--text);overflow-x:hidden} button,input,select{font:inherit} .app{min-height:100vh;display:block}
@@ -1301,8 +1301,7 @@ input[type="date"]::-webkit-calendar-picker-indicator{filter:invert(82%) sepia(4
 .analysis-tabs button[data-tab="bilhetes"],
 .analysis-tab[data-tab="bilhetes"],
 button[data-analysis-tab="bilhetes"],
-button[data-tab="tickets"],
-.analysis-tabs button:has-text("Bilhetes"){
+button[data-tab="tickets"]{
   display:none!important;
 }
 .ticket-match-header{
@@ -3196,6 +3195,57 @@ document.addEventListener('click', function(e){
 
 /* Limpa visualmente qualquer botão Bilhetes que seja recriado por outro script */
 setInterval(v123RemoveBilhetesTab, 800);
+
+
+/* =========================
+   V12.4 — Correção definitiva do carregamento dos jogos
+   ========================= */
+if(typeof loadGames === 'function'){
+  loadGames = async function(date, force=false){
+    currentDate = date;
+    $('topDateText').textContent = brDate(date);
+    $('dataBanner').className = 'data-banner';
+    $('dataBanner').innerHTML = '<span>Carregando jogos da data selecionada...</span>';
+
+    const key = 'official:v12_4:' + date;
+
+    if(memoryCache[key] && !force){
+      setData(memoryCache[key]);
+      return;
+    }
+
+    try{
+      const url = `/api/jogos?data=${encodeURIComponent(date)}${force?'&refresh=1':''}`;
+      const r = await fetch(url);
+      const j = await r.json();
+
+      console.log('[JTIPS V12.4] /api/jogos retorno:', j);
+
+      if(!r.ok || !j.ok){
+        throw new Error(j.error || 'Erro ao carregar dados');
+      }
+
+      memoryCache[key] = j;
+      setData(j);
+
+      if(!j.dados?.length){
+        $('dataBanner').className = 'data-banner error';
+        $('dataBanner').innerHTML = `<span>Nenhum jogo retornado pela API para ${brDate(date)}.</span><span>Fonte: ${j.source || 'não informada'}</span>`;
+      }else{
+        $('dataBanner').className = 'data-banner';
+        $('dataBanner').innerHTML = `<span>● Dados atualizados</span><span>${j.dados.length} jogos • ${brDate(date)} • ${j.source || 'API'}</span>`;
+      }
+    }catch(e){
+      console.error('[JTIPS V12.4] Erro ao carregar jogos:', e);
+      showError('Não foi possível carregar os jogos. Verifique a API ou tente atualizar novamente.');
+      allMatches = [];
+      filtered = [];
+      columns = [];
+      apiMeta = { error:e.message };
+      renderAll();
+    }
+  }
+}
 
 </script>
 </body></html>
