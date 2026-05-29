@@ -165,50 +165,10 @@ FOOTYSTATS_API_KEY=sua_chave
 - Exibe erro técnico limpo se endpoint falhar, em vez de mostrar indisponível antes da hora.
 - Reduz visualmente o bloco grande de Insights com área rolável.
 
-## V12.1 — Apostas corrigido
-- Refeito a partir da V11.1 para não quebrar o carregamento dos jogos.
-- Adiciona botão “🎯 Apostas” na coluna esquerda, abaixo de “Análise”.
-- Adiciona aba “Bilhetes” dentro da análise da partida.
-- Gera bilhetes combinados: Apostas da IA, Apostas Seguras e Apostas de Valor.
-- Remove os cards “Jogos do dia / Ligas / Oportunidades” do Dashboard.
-- Ajusta calendário do input de data e botão “Atualizar dados”.
-- Mantém H2H, Insights e Trends da V11.1.
-
-## V12.2 — Bilhetes com jogo, liga e horário
-- Ajusta a aba Bilhetes/Apostas para seguir o padrão do bot JTIPS, mas sem emojis.
-- Cada bilhete mostra claramente:
-  - jogo: Time A x Time B
-  - liga
-  - horário
-  - quantidade de seleções
-  - score geral
-- Cada seleção mostra:
-  - jogo
-  - liga
-  - horário
-  - mercado
-  - probabilidade
-  - score
-  - odd
-  - perfil
-  - motivo
-- Mantém categorias: Apostas da IA, Apostas Seguras e Apostas de Valor.
-- Mantém aviso 18+ Jogo Responsável.
-
-## V12.3 — Apostas com jogo e remoção da aba Bilhetes na análise
-- Corrige a página lateral Apostas para exibir jogo, liga e horário em cada bilhete/seleção.
-- Remove a aba “Bilhetes” de dentro da análise da partida.
-- Mantém as categorias Apostas da IA, Apostas Seguras e Apostas de Valor.
-- Mantém bilhetes combinados, regras anti-conflito e aviso 18+ Jogo Responsável.
-
-## V12.4 — Carregamento dos jogos corrigido
-- Revisado o carregamento principal de jogos.
-- Problema encontrado: o front dependia apenas do retorno de `/todays-matches`; quando esse endpoint retornava vazio, a tela zerava os jogos.
-- Corrigido `/api/jogos.js` com fallback automático:
-  1. tenta `todays-matches` com YYYY-MM-DD + timezone;
-  2. tenta `todays-matches` sem timezone;
-  3. tenta `todays-matches` com DD-MM-YYYY;
-  4. se vier vazio, busca `league-matches` das ligas selecionadas e filtra pela data em America/Sao_Paulo.
-- Adicionado diagnóstico no retorno de `/api/jogos`.
-- Front-end agora mostra a fonte do carregamento e registra o retorno no console.
-- Removida regra CSS inválida usada para esconder a aba Bilhetes.
+## V12.5 — Base V11.1 com carregamento preservado
+- Esta versão foi reconstruída diretamente em cima da V11.1, que era a base funcional de carregamento.
+- Não altera `api/jogos.js` nem `loadGames()`.
+- Adiciona apenas a página lateral Apostas, sem criar aba Bilhetes dentro da análise.
+- Apostas mostram jogo, liga, horário, mercado, probabilidade, score, odd, perfil e motivo.
+- Remove visualmente os cards do Dashboard: Jogos do dia, Ligas e Oportunidades.
+- Mantém H2H, Insights e Team Trends da V11.1.
