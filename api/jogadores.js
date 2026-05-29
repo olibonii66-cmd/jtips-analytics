@@ -11,10 +11,13 @@ function pickFields(p) {
   return {
     id: p.id,
     full_name: p.full_name,
+    first_name: p.first_name,
+    last_name: p.last_name,
     known_as: p.known_as,
     shorthand: p.shorthand,
     position: p.position,
     club_team_id: p.club_team_id,
+    club_team_2_id: p.club_team_2_id,
     national_team_id: p.national_team_id,
     minutes_played_overall: toNumber(p.minutes_played_overall),
     appearances_overall: toNumber(p.appearances_overall),
@@ -35,11 +38,14 @@ async function fetchPlayersPage(key, seasonId, page = 1) {
   url.searchParams.set('key', key);
   url.searchParams.set('season_id', seasonId);
   url.searchParams.set('page', String(page));
+
   const response = await fetch(url);
   const json = await response.json();
+
   if (!response.ok || !json.success) {
     throw new Error(json.message || 'Erro ao consultar jogadores.');
   }
+
   return json;
 }
 
@@ -54,36 +60,55 @@ export default async function handler(req, res) {
 
     if (!seasonId) return res.status(400).json({ ok: false, error: 'season_id obrigatório.' });
 
-    const cacheKey = `jogadores:${seasonId}:${homeId}:${awayId}`;
+    const cacheKey = `jogadores:v105:${seasonId}:${homeId}:${awayId}`;
     const cached = cache.get(cacheKey);
     if (cached && Date.now() - cached.ts < TTL) {
       res.setHeader('Cache-Control', 's-maxage=3600, stale-while-revalidate=7200');
       return res.status(200).json(cached.data);
     }
 
-    const json = await fetchPlayersPage(key, seasonId, 1);
-    const rows = Array.isArray(json.data) ? json.data : (json.data ? [json.data] : []);
+    const first = await fetchPlayersPage(key, seasonId, 1);
+    const firstRows = Array.isArray(first.data) ? first.data : (first.data ? [first.data] : []);
+    const maxPageRaw = Number(first.pager?.max_page || 1);
+    const maxPage = Number.isFinite(maxPageRaw) ? Math.min(maxPageRaw, 10) : 1;
 
-    const all = rows.map(pickFields);
+    let allRaw = [...firstRows];
 
-    const homePlayers = homeId
-      ? all.filter(p => String(p.club_team_id) === homeId || String(p.national_team_id) === homeId)
-      : [];
+    for (let page = 2; page <= maxPage; page++) {
+      try {
+        const next = await fetchPlayersPage(key, seasonId, page);
+        const rows = Array.isArray(next.data) ? next.data : (next.data ? [next.data] : []);
+        allRaw.push(...rows);
+      } catch (e) {
+        break;
+      }
+    }
 
-    const awayPlayers = awayId
-      ? all.filter(p => String(p.club_team_id) === awayId || String(p.national_team_id) === awayId)
-      : [];
+    const all = allRaw.map(pickFields);
+
+    const belongsTo = (p, teamId) => {
+      if (!teamId) return false;
+      return (
+        String(p.club_team_id) === teamId ||
+        String(p.club_team_2_id) === teamId ||
+        String(p.national_team_id) === teamId
+      );
+    };
+
+    const homePlayers = homeId ? all.filter(p => belongsTo(p, homeId)) : [];
+    const awayPlayers = awayId ? all.filter(p => belongsTo(p, awayId)) : [];
 
     const payload = {
       ok: true,
       season_id: seasonId,
       home_id: homeId || null,
       away_id: awayId || null,
-      request_remaining: json.metadata?.request_remaining || null,
-      total_players_page: all.length,
+      request_remaining: first.metadata?.request_remaining || null,
+      pages_loaded: maxPage,
+      total_players_loaded: all.length,
       home_players: homePlayers,
       away_players: awayPlayers,
-      columns: rows[0] ? Object.keys(rows[0]) : []
+      columns: allRaw[0] ? Object.keys(allRaw[0]) : []
     };
 
     cache.set(cacheKey, { ts: Date.now(), data: payload });

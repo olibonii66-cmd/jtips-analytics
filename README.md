@@ -108,3 +108,11 @@ FOOTYSTATS_API_KEY=sua_chave
 - Cruza player_id com a base de jogadores quando possível.
 - Se lineups/bench não vierem completos, monta uma escalação estimada a partir dos jogadores da temporada e mostra aviso limpo.
 - Mantém os blocos Quem pode marcar, Quem pode receber cartão e Cartões por 90 minutos.
+
+## V10.5 — Jogadores corrigido
+- Corrige a tela de escalações para não mostrar somente números e traços.
+- Remove rating inventado/fixo 6.1 quando a API não fornece rating.
+- Quando a escalação vier só com camisa/ID, mostra "Camisa X" e aviso de dados parciais.
+- Quando não houver escalação mas houver jogadores, usa lista da temporada como estimativa.
+- Atualiza `api/jogadores.js` para paginar `league-players` em vez de usar apenas a primeira página.
+- Filtra jogadores por `club_team_id`, `club_team_2_id` e `national_team_id`.

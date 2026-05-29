@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>JTIPS Analytics — V10.4 Jogadores Visual</title>
+  <title>JTIPS Analytics — V10.5 Jogadores Corrigido</title>
   <style>
     :root{--bg:#050a12;--bg2:#07111d;--panel:#0b1524;--panel2:#0d1a2a;--line:#183353;--line2:#214d78;--text:#f4f8ff;--muted:#8da8c8;--blue:#1aa8ff;--blue2:#0b79ff;--green:#37e889;--yellow:#ffd53f;--red:#ff4d6a;--shadow:0 20px 60px rgba(0,0,0,.38);--r:18px;--sidebar:214px}
     *{box-sizing:border-box} body{margin:0;background:radial-gradient(circle at 20% 0,rgba(16,130,255,.12),transparent 34%),linear-gradient(135deg,#02060c 0%,#071220 45%,#03080f 100%);font-family:Inter,Segoe UI,Arial,sans-serif;color:var(--text);overflow-x:hidden} button,input,select{font:inherit} .app{min-height:100vh;display:block}
@@ -706,6 +706,42 @@
 @media(max-width:720px){
   .lineup-groups,.bench-grid{grid-template-columns:1fr}
   .lineup-player-row{grid-template-columns:28px 1fr 34px auto}
+}
+
+
+/* V10.5 — correção da aba Jogadores */
+.lineup-player-row.partial{
+  opacity:.78;
+  border:1px dashed rgba(200,168,91,.16);
+}
+.lineup-player-row.partial .lineup-player-name{
+  color:#cbbd91;
+}
+.lineup-no-rating{
+  min-width:38px;
+  text-align:center;
+  padding:4px 6px;
+  border-radius:7px;
+  font-size:11px;
+  font-weight:950;
+  color:#cbbd91;
+  background:rgba(255,255,255,.055);
+}
+.lineup-warning{
+  margin-top:12px;
+  padding:12px 14px;
+  border-radius:12px;
+  border:1px dashed rgba(216,184,107,.28);
+  background:rgba(216,184,107,.07);
+  color:#e8d39c;
+  font-size:13px;
+}
+.player-loading-note{
+  padding:14px 16px;
+  border-radius:14px;
+  background:rgba(255,255,255,.035);
+  border:1px solid rgba(200,168,91,.14);
+  color:var(--muted);
 }
 
 </style>
@@ -1683,6 +1719,128 @@ function statsPlayers(m){
     <div class="stats-grid-2">${playerCard('Cartões / 90 — '+m.home,homeCards90,'cards_per_90_overall',[['cards_overall','Cartões'],['minutes_played_overall','Min']])}${playerCard('Cartões / 90 — '+m.away,awayCards90,'cards_per_90_overall',[['cards_overall','Cartões'],['minutes_played_overall','Min']])}</div>
     <div class="stats-data-note">Para clubes, os jogadores são filtrados por club_team_id igual ao ID do mandante/visitante da partida. Nenhum JSON bruto é exibido ao usuário.</div>
   </div>`;
+}
+
+
+/* =========================
+   V10.5 — Correção Jogadores: sem nomes vazios, sem rating fake, com paginação no endpoint
+   ========================= */
+function v105PlayerDisplayName(p){
+  return p?.known_as || p?.shorthand || p?.full_name || `${p?.first_name||''} ${p?.last_name||''}`.trim() || '';
+}
+function playerFromId(m, id, side){
+  if(!id) return null;
+  const list = side==='home' ? (m.players?.home||[]) : (m.players?.away||[]);
+  return list.find(p=>String(p.id)===String(id)) || null;
+}
+function inferPlayerName(m,item,side){
+  const p=playerFromId(m,item.player_id||item.id||item.playerId,side);
+  const direct = item.player_name || item.name || item.full_name || item.known_as || '';
+  const fromPlayer = v105PlayerDisplayName(p);
+  if(direct) return direct;
+  if(fromPlayer) return fromPlayer;
+  const num = item.shirt_number || item.number || item.jersey_number || '';
+  return num ? `Camisa ${num}` : 'Jogador não informado';
+}
+function inferPosition(item, p){
+  return item.position || item.pos || p?.position || '—';
+}
+function inferNumber(item){
+  return item.shirt_number || item.number || item.jersey_number || '';
+}
+function ratingForPlayer(item,p,i){
+  const raw = item.rating || item.player_rating || item.score || p?.rating;
+  let r=n(raw);
+  return r===null ? null : r;
+}
+function buildVisualPlayers(m, rawList, side, maxFallback=11){
+  let items = arrayFromAny(rawList);
+  if(items.length){
+    return items.map((item,i)=>{
+      const p=playerFromId(m,item.player_id||item.id||item.playerId,side);
+      const pos=inferPosition(item,p);
+      const rating=ratingForPlayer(item,p,i);
+      const name=inferPlayerName(m,item,side);
+      const noResolvedName=!p && !item.player_name && !item.name && !item.full_name && !item.known_as;
+      return {
+        number: inferNumber(item),
+        name,
+        position: pos,
+        group: groupLabel(pos),
+        rating,
+        status: statusFromEvents(item),
+        partial:noResolvedName,
+        raw:item
+      };
+    });
+  }
+
+  const list = side==='home' ? (m.players?.home||[]) : (m.players?.away||[]);
+  if(!list.length) return [];
+  return [...list]
+    .sort((a,b)=>(n(b.minutes_played_overall)||0)-(n(a.minutes_played_overall)||0))
+    .slice(0,maxFallback)
+    .map((p,i)=>({
+      number:'',
+      name: v105PlayerDisplayName(p) || 'Jogador não informado',
+      position:p.position||'—',
+      group:groupLabel(p.position),
+      rating:null,
+      status:'',
+      partial:false,
+      raw:p
+    }));
+}
+function lineupRow(p){
+  const st=String(p.status||'').toLowerCase();
+  const status = p.status ? `<span class="lineup-status ${st.includes('les')?'lesionado':st.includes('fora')?'fora':'duvida'}">${p.status}</span>` : '';
+  const rating = n(p.rating)===null ? `<span class="lineup-no-rating">—</span>` : `<span class="lineup-rating ${n(p.rating)<6.7?'warn':''}">${n(p.rating)}</span>`;
+  return `<div class="lineup-player-row ${p.partial?'partial':''}"><span class="lineup-player-number">${p.number||'•'}</span><span class="lineup-player-name">${p.name}</span><span class="lineup-position">${p.position||'—'}</span>${rating}${status}</div>`;
+}
+function lineupGroups(players){
+  const order=['Goleiro','Defensores','Meio-campistas','Atacantes','Outros'];
+  const has = players && players.length;
+  if(!has) return `<div class="lineup-empty">Escalações ainda não disponíveis para esta partida.</div>`;
+  return `<div class="lineup-groups">${order.map(g=>{
+    const rows=players.filter(p=>p.group===g);
+    if(!rows.length) return '';
+    return `<div class="lineup-group"><div class="lineup-group-title">${g}</div>${rows.map(lineupRow).join('')}</div>`;
+  }).join('')}</div>`;
+}
+function lineupTeamCard(m,side){
+  const isHome=side==='home';
+  const name=isHome?m.home:m.away;
+  const label=isHome?'Mandante':'Visitante';
+  const lineupsRaw=m.odds?.lineups;
+  const benchRaw=m.odds?.bench;
+  const rawStarters=extractTeamLineup(lineupsRaw,side);
+  const rawBench=extractTeamBench(benchRaw,side);
+  const starters=buildVisualPlayers(m,rawStarters,side,11);
+  const bench=buildVisualPlayers(m,rawBench,side,9);
+  const hasRaw = rawStarters.length || rawBench.length;
+  const hasPlayers = (side==='home' ? (m.players?.home||[]) : (m.players?.away||[])).length;
+  let note = '';
+  if(hasRaw && starters.some(p=>p.partial)){
+    note = `<div class="lineup-warning">Escalação veio apenas com número/ID para alguns atletas. Assim que a base de jogadores retornar o nome correspondente, o site substitui automaticamente.</div>`;
+  } else if(!hasRaw && hasPlayers){
+    note = `<div class="lineup-help">Escalação estimada pela lista de jogadores da temporada, pois a escalação oficial ainda não veio preenchida.</div>`;
+  } else if(!hasRaw && !hasPlayers){
+    note = `<div class="lineup-warning">Escalações e jogadores ainda não disponíveis para esta partida.</div>`;
+  }
+  return `<div class="lineup-team-card">
+    <div class="lineup-team-title"><div><span class="lineup-tag">${label}</span><h4>${name}</h4></div></div>
+    <div class="lineup-section-title">Titulares</div>
+    ${lineupGroups(starters)}
+    <div class="lineup-section-title">Reservas</div>
+    ${benchRows(bench)}
+    ${note}
+  </div>`;
+}
+function playerCard(title,players,valueKey,subKeys=[]){
+  const rows=(players||[]).slice(0,8);
+  if(!rows.length)return `<div class="footy-block player-card"><div class="block-head"><div><h3>${title}</h3></div></div><div class="empty-soft">Dados de jogadores ainda não disponíveis.</div></div>`;
+  const max=Math.max(...rows.map(p=>n(p[valueKey])||0),1);
+  return `<div class="footy-block player-card"><div class="block-head"><div><h3>${title}</h3><small>Top jogadores da equipe</small></div></div>${rows.map(p=>{let v=n(p[valueKey])||0,w=Math.max(6,Math.min(100,(v/max)*100));let meta=[p.position, ...subKeys.map(k=>`${k[1]} ${safeN(p[k[0]])}`)].filter(Boolean).join(' • ');return `<div class="player-row" style="--w:${w}%"><span>${v105PlayerDisplayName(p)}<div class="player-meta">${meta}</div></span><b class="player-value">${safeN(p[valueKey])}</b></div>`}).join('')}</div>`;
 }
 
 </script>
