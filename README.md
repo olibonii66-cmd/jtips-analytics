@@ -172,3 +172,17 @@ FOOTYSTATS_API_KEY=sua_chave
 - Apostas mostram jogo, liga, horário, mercado, probabilidade, score, odd, perfil e motivo.
 - Remove visualmente os cards do Dashboard: Jogos do dia, Ligas e Oportunidades.
 - Mantém H2H, Insights e Team Trends da V11.1.
+
+## V12.6 — Apostas compactas
+- Página Apostas redesenhada em formato compacto, conforme mockup aprovado.
+- Remove emoji do botão Apostas na coluna esquerda.
+- No máximo 2 seleções por bilhete.
+- Anti-redundância mais rígida:
+  - evita BTTS + Mais de 1.5 gols;
+  - evita Mais de 1.5 + Dupla Chance sem utilidade;
+  - escolhe apenas a melhor seleção por grupo/família;
+  - evita resultado seco + dupla chance;
+  - evita múltiplas linhas de escanteios/gols no mesmo bilhete.
+- Cabeçalho do bilhete mostra jogo, liga, horário, score, seleções e odd total.
+- Seleções resumidas mostram mercado, odd, probabilidade, score e motivo curto.
+- Mantém carregamento original da V11.1/V12.5.

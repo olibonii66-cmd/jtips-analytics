@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>JTIPS Analytics — V12.5 Base V11 Carregamento OK</title>
+  <title>JTIPS Analytics — V12.6 Apostas Compactas</title>
   <style>
     :root{--bg:#050a12;--bg2:#07111d;--panel:#0b1524;--panel2:#0d1a2a;--line:#183353;--line2:#214d78;--text:#f4f8ff;--muted:#8da8c8;--blue:#1aa8ff;--blue2:#0b79ff;--green:#37e889;--yellow:#ffd53f;--red:#ff4d6a;--shadow:0 20px 60px rgba(0,0,0,.38);--r:18px;--sidebar:214px}
     *{box-sizing:border-box} body{margin:0;background:radial-gradient(circle at 20% 0,rgba(16,130,255,.12),transparent 34%),linear-gradient(135deg,#02060c 0%,#071220 45%,#03080f 100%);font-family:Inter,Segoe UI,Arial,sans-serif;color:var(--text);overflow-x:hidden} button,input,select{font:inherit} .app{min-height:100vh;display:block}
@@ -1325,6 +1325,153 @@ input[type="date"]::-webkit-calendar-picker-indicator{
   .ticket-odd{text-align:left}
 }
 
+
+/* =========================================================
+   V12.6 — Apostas compactas e anti-redundância rígida
+   ========================================================= */
+.ticket-shell{display:flex;flex-direction:column;gap:14px}
+.ticket-head,.ticket-block{
+  background:linear-gradient(180deg,rgba(20,43,31,.92),rgba(8,19,13,.96));
+  border:1px solid var(--border);
+  border-radius:var(--radius);
+  box-shadow:var(--shadow);
+  padding:16px;
+}
+.ticket-head h2{font-size:28px!important;margin:0 0 4px!important}
+.ticket-block h3{font-size:20px!important;margin:0!important;color:var(--gold-2)!important}
+.ticket-responsible{
+  margin-top:10px;
+  padding:10px 12px;
+  border:1px solid rgba(216,184,107,.26);
+  background:rgba(216,184,107,.06);
+  color:var(--gold-2);
+  border-radius:12px;
+  font-weight:850;
+  font-size:13px;
+}
+.ticket-compact-wrap{
+  border:1px solid rgba(216,184,107,.18);
+  border-radius:16px;
+  background:rgba(0,0,0,.12);
+  padding:14px;
+  margin-top:12px;
+}
+.ticket-compact-head{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto;
+  gap:12px;
+  align-items:start;
+  margin-bottom:12px;
+}
+.ticket-match-title{
+  font-size:18px;
+  font-weight:950;
+  color:var(--text);
+  margin:0 0 5px!important;
+}
+.ticket-match-sub{
+  color:var(--text-2);
+  font-size:13px;
+  line-height:1.35;
+}
+.ticket-compact-pills{
+  display:flex;
+  flex-wrap:wrap;
+  justify-content:flex-end;
+  gap:8px;
+}
+.ticket-pill{
+  border:1px solid rgba(216,184,107,.24);
+  background:rgba(216,184,107,.10);
+  color:var(--gold-2);
+  border-radius:999px;
+  padding:6px 10px;
+  font-size:12px;
+  font-weight:900;
+  white-space:nowrap;
+}
+.ticket-compact-selections{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:10px;
+}
+.ticket-compact-selection{
+  display:grid;
+  grid-template-columns:34px minmax(0,1fr) auto;
+  gap:12px;
+  align-items:center;
+  border:1px solid rgba(216,184,107,.20);
+  border-radius:14px;
+  background:rgba(255,255,255,.025);
+  padding:12px;
+  min-height:92px;
+}
+.ticket-number{
+  width:28px;
+  height:28px;
+  border-radius:50%;
+  display:grid;
+  place-items:center;
+  border:1px solid rgba(216,184,107,.55);
+  color:var(--gold-2);
+  font-weight:950;
+}
+.ticket-market-title{
+  color:var(--text)!important;
+  font-weight:950;
+  margin:0 0 3px!important;
+}
+.ticket-reason{
+  color:var(--muted)!important;
+  font-size:13px;
+  line-height:1.35;
+  margin:0!important;
+}
+.ticket-mini-metrics{
+  display:grid;
+  grid-template-columns:repeat(3,auto);
+  gap:12px;
+  align-items:center;
+  text-align:center;
+}
+.ticket-mini-metrics span{
+  color:var(--muted);
+  font-size:11px;
+  display:block;
+  margin-bottom:2px;
+}
+.ticket-mini-metrics b{
+  color:var(--text);
+  font-size:16px;
+}
+.ticket-mini-metrics b.score-good{color:#8be28f}
+.ticket-mini-metrics b.score-mid{color:var(--gold-2)}
+.ticket-compact-footer{
+  text-align:center;
+  margin-top:10px;
+  padding-top:10px;
+  border-top:1px solid rgba(216,184,107,.12);
+  color:var(--muted);
+  font-size:12px;
+}
+.ticket-empty{
+  border:1px dashed rgba(216,184,107,.28);
+  background:rgba(216,184,107,.05);
+  color:var(--muted);
+  border-radius:14px;
+  padding:14px;
+  margin-top:12px;
+}
+@media(max-width:1100px){
+  .ticket-compact-selections{grid-template-columns:1fr}
+}
+@media(max-width:760px){
+  .ticket-compact-head{grid-template-columns:1fr}
+  .ticket-compact-pills{justify-content:flex-start}
+  .ticket-compact-selection{grid-template-columns:28px 1fr}
+  .ticket-mini-metrics{grid-column:2;justify-content:start}
+}
+
 </style>
 </head>
 <body>
@@ -1332,7 +1479,7 @@ input[type="date"]::-webkit-calendar-picker-indicator{
   <aside class="sidebar">
     <div class="brand"><img src="assets/jtips-logo.png" alt="JTIPS"><div><strong>JTIPS<br>Analytics</strong><small>Football Intelligence</small></div></div>
     <nav class="nav">
-      <div class="nav-item" data-page="dashboard">⌂ Dashboard</div><div class="nav-item active" data-page="games">▦ Jogos</div><div class="nav-item" data-page="analysis">▣ Análise</div><div class="nav-item" data-page="bets">🎯 Apostas</div><div class="nav-item" data-page="scanner">⌕ Scanner</div><div class="nav-item" data-page="plans">♕ Planos</div><div class="nav-item" data-page="admin">⚙ Admin</div>
+      <div class="nav-item" data-page="dashboard">⌂ Dashboard</div><div class="nav-item active" data-page="games">▦ Jogos</div><div class="nav-item" data-page="analysis">▣ Análise</div><div class="nav-item" data-page="bets">Apostas</div><div class="nav-item" data-page="scanner">⌕ Scanner</div><div class="nav-item" data-page="plans">♕ Planos</div><div class="nav-item" data-page="admin">⚙ Admin</div>
     </nav>
     <div class="side-bottom"><div class="mini-card"><small>Créditos</small><b>1.250</b><small>Plano Premium</small></div><div class="mini-card"><small>Jonathan</small><b>Premium</b></div></div>
   </aside>
@@ -2953,6 +3100,169 @@ const __oldRenderAllV125=renderAll;
 renderAll=function(){__oldRenderAllV125(); if($('bets')?.classList.contains('active'))renderBetsPage();}
 const __oldRenderDashboardV125=renderDashboard;
 renderDashboard=function(){let top=[...allMatches].sort((a,b)=>b.score-a.score).slice(0,6);$('dashboardSummary').innerHTML='';$('featuredCartões').innerHTML=top.map(card).join('');}
+
+
+/* =========================
+   V12.6 — Apostas compactas / máximo 2 seleções / sem emoji no menu
+   ========================= */
+document.addEventListener('DOMContentLoaded',()=> {
+  document.querySelectorAll('.nav-item,.sidebar-item,button,a').forEach(el=>{
+    if((el.textContent||'').includes('Apostas')) el.textContent = (el.textContent||'').replace('🎯','').trim();
+  });
+});
+
+function v126Num(v){const x=Number(v);return Number.isFinite(x)?x:null}
+function v126Pct(v){const x=v126Num(v);return x===null?'—':Math.round(x)+'%'}
+function v126Odd(v){const x=v126Num(v);return x&&x>0?x:null}
+function v126Impl(odd){const o=v126Odd(odd);return o?100/o:null}
+function v126Info(m){
+  const o=m?.odds||{}, raw=m?.raw||{};
+  const home=m?.home||o.home_name||raw.home_name||'Mandante';
+  const away=m?.away||o.away_name||raw.away_name||'Visitante';
+  const league=m?.league||o.__league_name||o.competition_name||raw.__league_name||raw.competition_name||'Liga não informada';
+  const time=m?.time||'Horário não informado';
+  return {home,away,league,time,game:`${home} x ${away}`};
+}
+function v126Sel({market,group,family,prob,odd,profile,reason,risk=0}){
+  const o=v126Odd(odd);
+  const impl=v126Impl(o);
+  const value=o&&prob?Math.round((prob-impl)*10)/10:null;
+  const score=Math.round(Math.max(0,Math.min(100,(Number(prob)||0)*0.70 + (value?value*0.7:0) + (o>=1.2&&o<=1.8?8:3) - risk)));
+  return {market,group,family:family||group,prob:v126Num(prob),odd:o,profile,reason,value,score};
+}
+function v126Selections(m){
+  const o=m.odds||{}, out=[];
+  const over15=v126Num(m.over15)||v126Num(o.o15_potential);
+  const over25=v126Num(m.over25)||v126Num(o.o25_potential);
+  const btts=v126Num(m.btts)||v126Num(o.btts_potential);
+  const corners85=v126Num(m.corners85)||Math.min(84,(v126Num(o.corners_potential)||0)*8.4);
+  const corners95=v126Num(m.corners95)||Math.min(76,(v126Num(o.corners_potential)||0)*7.2);
+  const p1x=typeof prob==='function'?prob(o.odds_doublechance_1x):null;
+  const px2=typeof prob==='function'?prob(o.odds_doublechance_x2):null;
+  const pHome=typeof prob==='function'?prob(o.odds_ft_1):null;
+  const pAway=typeof prob==='function'?prob(o.odds_ft_2):null;
+
+  if(over15>=70) out.push(v126Sel({market:'Mais de 1.5 gols',group:'gols',family:'gols-baixo',prob:over15,odd:o.odds_ft_over15,profile:'Conservador',reason:'Boa base para gols, mas só entra se não houver opção melhor de gols.'}));
+  if(over25>=52) out.push(v126Sel({market:'Mais de 2.5 gols',group:'gols',family:'gols-alto',prob:over25,odd:o.odds_ft_over25,profile:'Moderado',risk:6,reason:'Linha compatível com expectativa ofensiva e odd útil.'}));
+  const under35Prob=o.odds_ft_under35?Math.max(55,100-(v126Num(o.o35_potential)||35)):null;
+  if(under35Prob>=62) out.push(v126Sel({market:'Menos de 3.5 gols',group:'gols',family:'gols-controle',prob:under35Prob,odd:o.odds_ft_under35,profile:'Conservador',reason:'Proteção em jogo com tendência de controle de placar.'}));
+  if(btts>=54) out.push(v126Sel({market:'Ambas marcam — Sim',group:'btts',family:'gols-btts',prob:btts,odd:o.odds_btts_yes,profile:'Moderado',risk:4,reason:'Boa sustentação estatística e baixa sobreposição com a outra seleção.'}));
+  if(corners85>=56) out.push(v126Sel({market:'Mais de 8.5 escanteios',group:'escanteios',family:'escanteios',prob:corners85,odd:o.odds_corners_over_85,profile:'Moderado',reason:'Volume ofensivo elevado e média de escanteios acima da linha projetada.'}));
+  if(corners95>=57) out.push(v126Sel({market:'Mais de 9.5 escanteios',group:'escanteios',family:'escanteios',prob:corners95,odd:o.odds_corners_over_95,profile:'Agressivo',risk:8,reason:'Linha de valor quando o volume projetado de escanteios é alto.'}));
+  if(p1x>=66) out.push(v126Sel({market:`Dupla chance ${m.home} ou Empate`,group:'resultado',family:'proteção',prob:p1x,odd:o.odds_doublechance_1x,profile:'Conservador',reason:'Proteção de resultado com base no mando e na odd.'}));
+  if(px2>=66) out.push(v126Sel({market:`Dupla chance Empate ou ${m.away}`,group:'resultado',family:'proteção',prob:px2,odd:o.odds_doublechance_x2,profile:'Conservador',reason:'Proteção de resultado para visitante quando a odd indica equilíbrio.'}));
+  if(pHome>=60) out.push(v126Sel({market:`${m.home} vence`,group:'resultado-seco',family:'resultado-agressivo',prob:pHome,odd:o.odds_ft_1,profile:'Agressivo',risk:12,reason:'Resultado seco só entra quando há margem estatística suficiente.'}));
+  if(pAway>=60) out.push(v126Sel({market:`${m.away} vence`,group:'resultado-seco',family:'resultado-agressivo',prob:pAway,odd:o.odds_ft_2,profile:'Agressivo',risk:12,reason:'Resultado seco só entra quando há margem estatística suficiente.'}));
+
+  return out
+    .filter(s=>s.prob!==null && s.score>=52 && s.odd && s.odd>=1.20)
+    .sort((a,b)=>b.score-a.score);
+}
+function v126TooCorrelated(a,b){
+  if(a.group===b.group) return true;
+  const A=a.market.toLowerCase(), B=b.market.toLowerCase();
+
+  // BTTS + Over 1.5 é muito correlacionado e costuma inflar bilhete
+  if((a.group==='btts' && b.family==='gols-baixo') || (b.group==='btts' && a.family==='gols-baixo')) return true;
+
+  // Proteção + over 1.5 com odd total muito baixa tem pouca utilidade
+  if((a.group==='resultado' && b.family==='gols-baixo') || (b.group==='resultado' && a.family==='gols-baixo')) return true;
+
+  if(A.includes('dupla chance') && B.includes('vence')) return true;
+  if(B.includes('dupla chance') && A.includes('vence')) return true;
+
+  return false;
+}
+function v126Ticket(sels,mode){
+  let c=[...sels];
+
+  // escolhe a melhor opção por família antes de combinar
+  const bestByFamily={};
+  for(const s of c){
+    if(!bestByFamily[s.family] || s.score > bestByFamily[s.family].score) bestByFamily[s.family]=s;
+  }
+  c=Object.values(bestByFamily).sort((a,b)=>b.score-a.score);
+
+  if(mode==='ia') c=c.filter(s=>s.score>=60 && s.profile!=='Agressivo');
+  if(mode==='safe') c=c.filter(s=>s.profile==='Conservador' && s.score>=62);
+  if(mode==='value') c=c.filter(s=>s.value!==null && s.value>0 && s.score>=58);
+
+  const picked=[];
+  for(const s of c){
+    if(picked.length>=2) break;
+    if(picked.every(p=>!v126TooCorrelated(p,s))) picked.push(s);
+  }
+
+  // Se valor tiver só 1 seleção boa, mostra entrada simples
+  if(picked.length<1) return null;
+  if(picked.length===1 && mode!=='value') return null;
+
+  const oddTotal=Math.round(picked.reduce((a,b)=>a*(b.odd||1),1)*100)/100;
+  const score=Math.round(picked.reduce((a,b)=>a+b.score,0)/picked.length);
+
+  // evita combinada conservadora sem utilidade
+  if(mode!=='value' && picked.length>=2 && oddTotal<1.40) return null;
+
+  return {selections:picked,score,oddTotal};
+}
+function v126SelectionHtml(s,i){
+  return `<div class="ticket-compact-selection">
+    <div class="ticket-number">${i+1}</div>
+    <div>
+      <p class="ticket-market-title">${s.market}</p>
+      <p class="ticket-reason">${s.reason}</p>
+    </div>
+    <div class="ticket-mini-metrics">
+      <div><span>Odd</span><b>${s.odd||'—'}</b></div>
+      <div><span>Prob.</span><b>${v126Pct(s.prob)}</b></div>
+      <div><span>Score</span><b class="${s.score>=76?'score-good':'score-mid'}">${s.score}</b></div>
+    </div>
+  </div>`;
+}
+function v126Block(label,title,desc,ticket,m,empty){
+  const info=v126Info(m);
+  return `<section class="ticket-block">
+    <h3>${label}. ${title}</h3>
+    ${ticket?`<div class="ticket-compact-wrap">
+      <div class="ticket-compact-head">
+        <div>
+          <p class="ticket-match-title">${info.game}</p>
+          <div class="ticket-match-sub">Liga: ${info.league} &nbsp;•&nbsp; Horário: ${info.time}</div>
+        </div>
+        <div class="ticket-compact-pills">
+          <span class="ticket-pill">${ticket.selections.length} ${ticket.selections.length===1?'seleção':'seleções'}</span>
+          <span class="ticket-pill">Score ${ticket.score}</span>
+          <span class="ticket-pill">Odd total ${ticket.oddTotal}</span>
+        </div>
+      </div>
+      <div class="ticket-compact-selections">${ticket.selections.map(v126SelectionHtml).join('')}</div>
+      <div class="ticket-compact-footer">18+ Jogo Responsável — O JTIPS é uma ferramenta de apoio estatístico. Não garante lucro nem resultado.</div>
+    </div>`:`<div class="ticket-empty">${empty}</div>`}
+  </section>`;
+}
+function v126BetsForMatch(m,idx=0){
+  const sels=v126Selections(m);
+  const ia=v126Ticket(sels,'ia');
+  const safe=v126Ticket(sels,'safe');
+  const value=v126Ticket(sels,'value');
+  return `${v126Block(1,'Apostas da IA','Bilhete equilibrado com mercados compatíveis.',ia,m,'Nenhuma Aposta da IA recomendada para esta partida.')}
+          ${v126Block(2,'Apostas Seguras','Bilhete conservador de menor variância.',safe,m,'Nenhuma Aposta Segura recomendada com os dados atuais.')}
+          ${v126Block(3,'Apostas de Valor','Seleções com possível margem estatística sobre a odd.',value,m,'Nenhuma Aposta de Valor encontrada com margem suficiente.')}`;
+}
+function renderBetsPage(){
+  const list=(filtered&&filtered.length?filtered:allMatches)||[];
+  const top=[...list].sort((a,b)=>b.score-a.score).slice(0,3);
+  $('betsContent').innerHTML = `<div class="ticket-shell">
+    <div class="ticket-head">
+      <h2>Apostas</h2>
+      <p class="muted">Bilhetes compactos com mercados compatíveis e leitura objetiva.</p>
+      <div class="ticket-responsible">18+ Jogo Responsável — O JTIPS não garante lucro nem resultado. Use gestão e responsabilidade.</div>
+    </div>
+    ${top.length ? top.map(v126BetsForMatch).join('') : `<div class="ticket-empty">Nenhum jogo carregado para gerar apostas. Atualize os dados ou selecione outra data.</div>`}
+  </div>`;
+}
+const __oldRenderAllV126=renderAll;
+renderAll=function(){__oldRenderAllV126(); if($('bets')?.classList.contains('active'))renderBetsPage();}
 
 </script>
 </body></html>
