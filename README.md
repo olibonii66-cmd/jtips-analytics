@@ -164,3 +164,10 @@ FOOTYSTATS_API_KEY=sua_chave
 - Adiciona estados de carregamento: "Carregando confronto direto..." e "Carregando tendências recentes...".
 - Exibe erro técnico limpo se endpoint falhar, em vez de mostrar indisponível antes da hora.
 - Reduz visualmente o bloco grande de Insights com área rolável.
+
+## V12 — Bilhetes + ajustes
+- Remove cards “Jogos do dia”, “Ligas” e “Oportunidades” do Dashboard.
+- Ajusta calendário e botão “Atualizar dados”.
+- Limpa Admin e coloca colunas técnicas em área expansível.
+- Adiciona aba Bilhetes com Apostas da IA, Apostas Seguras e Apostas de Valor.
+- Bilhetes combinados com regras anti-conflito e aviso 🔞 18+ Jogo Responsável.
