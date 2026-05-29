@@ -76,3 +76,14 @@ FOOTYSTATS_API_KEY=sua_chave
 - Avançadas passa a exibir Impedimentos e Faltas reais quando disponíveis.
 - Ajusta visual do status “Em andamento” para não quebrar linha.
 - Compacta abas e oculta barra branca de rolagem.
+
+## V10.2 — Abas redesenhadas
+- Barra principal da análise reduzida para: Resumo, Vencedores, Estatísticas e Insights.
+- A aba Estatísticas agora tem subabas internas: Gols, Escanteios, Cartões, Intervalo, Jogadores e Avançadas.
+- Cria estrutura visual inicial inspirada nas referências do FootyStats.
+- Gols contém blocos de Gols Marcados, Gols Sofridos, Projeções de Gols/BTTS e Quem Marca Primeiro.
+- Escanteios contém Leitura rápida, Número de Escanteios e Escanteios por Time.
+- Cartões contém Leitura rápida, Número de Cartões, Cartões por Time e espaço para jogadores advertidos.
+- Intervalo contém Resultado 1º/2º Tempo e Cartões por tempo.
+- Jogadores contém estrutura para escalação, artilheiros, cartões recebidos e cartões por 90.
+- Avançadas fica dentro de Estatísticas.

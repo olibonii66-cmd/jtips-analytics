@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>JTIPS Analytics — V10.1 Estatísticas Reais</title>
+  <title>JTIPS Analytics — V10.2 Abas Redesenhadas</title>
   <style>
     :root{--bg:#050a12;--bg2:#07111d;--panel:#0b1524;--panel2:#0d1a2a;--line:#183353;--line2:#214d78;--text:#f4f8ff;--muted:#8da8c8;--blue:#1aa8ff;--blue2:#0b79ff;--green:#37e889;--yellow:#ffd53f;--red:#ff4d6a;--shadow:0 20px 60px rgba(0,0,0,.38);--r:18px;--sidebar:214px}
     *{box-sizing:border-box} body{margin:0;background:radial-gradient(circle at 20% 0,rgba(16,130,255,.12),transparent 34%),linear-gradient(135deg,#02060c 0%,#071220 45%,#03080f 100%);font-family:Inter,Segoe UI,Arial,sans-serif;color:var(--text);overflow-x:hidden} button,input,select{font:inherit} .app{min-height:100vh;display:block}
@@ -457,6 +457,102 @@
 .subsection-title{margin:22px 0 10px;color:#fff8e8}
 @media(max-width:900px){.team-compare-grid{grid-template-columns:1fr}.metric-table{font-size:13px}.metric-table th,.metric-table td{padding:8px 7px}}
 
+
+/* V10.2 — estrutura redesenhada das abas */
+.stats-shell{display:grid;gap:16px}
+.stats-subtabs{
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+  padding:10px;
+  border:1px solid rgba(200,168,91,.18);
+  background:rgba(12,22,17,.55);
+  border-radius:18px;
+}
+.stats-subtab{
+  height:38px;
+  padding:0 15px;
+  border-radius:999px;
+  border:1px solid rgba(200,168,91,.22);
+  background:rgba(20,36,27,.75);
+  color:#ead7a8;
+  font-weight:900;
+  cursor:pointer;
+}
+.stats-subtab.active{
+  background:linear-gradient(180deg,#e2c783,#b48a3d)!important;
+  color:#17130a!important;
+  border-color:rgba(255,230,160,.46);
+}
+.stats-section{display:grid;gap:16px}
+.stats-title-card{
+  background:linear-gradient(180deg,rgba(24,40,31,.92),rgba(12,22,17,.92));
+  border:1px solid rgba(200,168,91,.20);
+  border-radius:18px;
+  padding:18px;
+  box-shadow:0 14px 38px rgba(0,0,0,.22);
+}
+.stats-title-row{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap}
+.stats-title-row h2{margin:0;color:#fff8e8}
+.stats-title-row p{margin:4px 0 0;color:var(--muted)}
+.quick-read{
+  display:grid;
+  grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:12px;
+}
+.quick-read .stat-card h4{margin-bottom:8px}
+.footy-block{
+  background:linear-gradient(180deg,rgba(24,40,31,.92),rgba(12,22,17,.92));
+  border:1px solid rgba(200,168,91,.20);
+  border-radius:18px;
+  padding:18px;
+  box-shadow:0 14px 38px rgba(0,0,0,.22);
+}
+.block-head{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:14px}
+.block-head h3{margin:0;color:#fff8e8;font-size:20px}
+.block-head small{color:var(--muted)}
+.compare-bars{display:grid;gap:10px;margin:14px 0}
+.team-bar-row{display:grid;grid-template-columns:150px 1fr 85px;gap:10px;align-items:center}
+.team-bar-row strong{color:#fff4d6}
+.team-bar-track{height:14px;border-radius:999px;background:rgba(255,255,255,.08);overflow:hidden}
+.team-bar-fill{height:100%;border-radius:999px;background:linear-gradient(90deg,#3f7a58,#d8b86b)}
+.team-bar-fill.away{background:linear-gradient(90deg,#d8b86b,#b66b55)}
+.inner-tabs{display:flex;gap:8px;margin:14px 0;flex-wrap:wrap}
+.inner-tab{
+  border:1px solid rgba(200,168,91,.20);
+  background:rgba(12,22,17,.72);
+  color:#e6d2a2;
+  border-radius:12px;
+  padding:10px 14px;
+  font-weight:850;
+}
+.inner-tab.active{background:rgba(200,168,91,.20);border-color:rgba(226,199,131,.42)}
+.stats-table{width:100%;border-collapse:collapse;font-size:14px}
+.stats-table th,.stats-table td{padding:10px 12px;border-bottom:1px solid rgba(200,168,91,.14)}
+.stats-table th{color:#d8bd72;text-align:left}
+.stats-table td:not(:first-child){text-align:center;font-weight:900}
+.cell-good{background:rgba(63,122,88,.20);color:#9ce0ae}
+.cell-mid{background:rgba(216,184,107,.15);color:#f1d48c}
+.cell-bad{background:rgba(201,86,86,.13);color:#eea2a2}
+.player-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.player-row{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;margin:8px 0;padding:9px 10px;border-radius:10px;background:rgba(255,255,255,.035);position:relative;overflow:hidden}
+.player-row::before{content:'';position:absolute;left:0;top:0;bottom:0;width:var(--w,30%);background:rgba(99,178,218,.22)}
+.player-row span,.player-row b{position:relative}
+.lineup-columns{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media(max-width:900px){
+  .quick-read{grid-template-columns:1fr 1fr}
+  .team-bar-row{grid-template-columns:1fr;gap:6px}
+  .player-grid,.lineup-columns{grid-template-columns:1fr}
+}
+@media(max-width:600px){
+  .quick-read{grid-template-columns:1fr}
+  .stats-subtabs{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}
+  .stats-subtabs::-webkit-scrollbar{display:none}
+  .stats-subtab{white-space:nowrap}
+  .stats-table{font-size:12px}
+  .stats-table th,.stats-table td{padding:8px 6px}
+}
+
 </style>
 </head>
 <body>
@@ -484,8 +580,8 @@
 </div>
 
 <script>
-const TABS=[['summary','Resumo'],['winners','Vencedores'],['goals','Gols'],['btts','Ambas Marcam'],['corners','Escanteios'],['cards','Cartões'],['finishes','Finalizações'],['halves','1º / 2º Tempo'],['xg','xG / Força'],['advanced','Avançadas'],['insights','Insights IA']];
-let allMatches=[],filtered=[],selected=null,activeTab='winners',currentDate='',columns=[],apiMeta={},memoryCache={},page=1,perPage=8;
+const TABS=[['summary','Resumo'],['winners','Vencedores'],['stats','Estatísticas'],['insights','Insights']];
+let allMatches=[],filtered=[],selected=null,activeTab='summary',statsSubTab='goals',currentDate='',columns=[],apiMeta={},memoryCache={},page=1,perPage=8;
 function $(id){return document.getElementById(id)}
 function n(v){if(v===null||v===undefined)return null; if(typeof v==='string'&&v.trim()==='')return null; let x=Number(String(v).replace(',','.')); return Number.isFinite(x)&&x!==-1?x:null}
 function clamp(v){return Math.max(0,Math.min(100,Math.round(v)))}
@@ -657,6 +753,246 @@ function xgV101(m){const hs=m.teamStats?.homeStats||{},as=m.teamStats?.awayStats
 function halvesV101(m){let o=m.odds;return marketTable('1º / 2º Tempo',[['Mais de 0.5 gol 1ºT',valOrProb(o.o05HT_potential,o.odds_1st_half_over05),o.odds_1st_half_over05],['Mais de 1.5 gols 1ºT',valOrProb(o.o15HT_potential,o.odds_1st_half_over15),o.odds_1st_half_over15],['Mais de 0.5 gol 2ºT',valOrProb(o.o05_2H_potential,o.odds_2nd_half_over05),o.odds_2nd_half_over05],['Mais de 1.5 gols 2ºT',valOrProb(o.o15_2H_potential,o.odds_2nd_half_over15),o.odds_2nd_half_over15]])}
 function advancedV101(m){const hs=m.teamStats?.homeStats||{},as=m.teamStats?.awayStats||{};if(!teamStatsReady(m))return `<h2>Avançadas</h2><div class="info-note">Carregando estatísticas avançadas dos times...</div>`;return contextTable('Avançadas — Impedimentos',m,[metricRow('Média total de impedimentos',hs,as,'offsidesAVG_overall','offsidesAVG_home','offsidesAVG_overall','offsidesAVG_away'),metricRow('Impedimentos do time',hs,as,'offsidesTeamAVG_overall','offsidesTeamAVG_home','offsidesTeamAVG_overall','offsidesTeamAVG_away'),metricRow('Mais de 2.5 impedimentos',hs,as,'over25OffsidesPercentage_overall','over25OffsidesPercentage_home','over25OffsidesPercentage_overall','over25OffsidesPercentage_away','pct'),metricRow('Mais de 3.5 impedimentos',hs,as,'over35OffsidesPercentage_overall','over35OffsidesPercentage_home','over35OffsidesPercentage_overall','over35OffsidesPercentage_away','pct')])+`<h2 class="subsection-title">Faltas</h2>`+contextTable('Disciplina / Faltas',m,[metricRow('Faltas por jogo',hs,as,'foulsAVG_overall','foulsAVG_home','foulsAVG_overall','foulsAVG_away')])+`<div class="info-note">Tiros livres, laterais e tiros de meta ficam ocultos quando não vierem preenchidos na base.</div>`}
 function insightsV101(m){let b=best(m),tr=m.odds.trends,trend='';try{let arr=Array.isArray(tr?.home)?tr.home:[];trend=arr[0]?.[1]||''}catch(e){}const hs=m.teamStats?.homeStats||{},as=m.teamStats?.awayStats||{};let bullets=[];if(statsVal(hs,'seasonPPG_home')!==null&&statsVal(as,'seasonPPG_away')!==null)bullets.push(`${m.home} tem ${statsVal(hs,'seasonPPG_home')} PPG em casa, enquanto ${m.away} tem ${statsVal(as,'seasonPPG_away')} PPG fora.`);if(statsVal(hs,'seasonBTTSPercentage_home')!==null&&statsVal(as,'seasonBTTSPercentage_away')!==null)bullets.push(`BTTS: ${m.home} casa ${statsVal(hs,'seasonBTTSPercentage_home')}% e ${m.away} fora ${statsVal(as,'seasonBTTSPercentage_away')}%.`);if(statsVal(hs,'shotsAVG_home')!==null&&statsVal(as,'shotsAVG_away')!==null)bullets.push(`Finalizações no contexto: ${m.home} casa ${statsVal(hs,'shotsAVG_home')} e ${m.away} fora ${statsVal(as,'shotsAVG_away')} por jogo.`);return `<h2>Insights</h2><div class="info-grid two"><div class="stat-card"><h4>Resumo da leitura</h4><p>Melhor entrada estatística: <b>${marketName(b)}</b>, com ${marketLine(b)}.</p>${bullets.map(x=>`<p class="muted">• ${x}</p>`).join('')}</div><div class="stat-card"><h4>Tendência da partida</h4><p class="muted">${trend||'Sem tendência textual disponível para esta partida.'}</p></div></div>`}
+
+
+/* =========================
+   V10.2 — Abas redesenhadas: Resumo, Vencedores, Estatísticas e Insights
+   ========================= */
+function setStatsSub(tab){
+  statsSubTab=tab;
+  renderTab();
+}
+function cellPct(v){
+  let x=n(v);
+  if(x===null) return '<td>—</td>';
+  let cls=x>=65?'cell-good':x>=40?'cell-mid':'cell-bad';
+  return `<td class="${cls}">${x}%</td>`;
+}
+function cellNum(v){
+  let x=n(v);
+  if(x===null) return '<td>—</td>';
+  let cls=x>=2.5?'cell-good':x>=1.2?'cell-mid':'cell-bad';
+  return `<td class="${cls}">${x}</td>`;
+}
+function avg2(a,b){
+  a=n(a);b=n(b);
+  if(a===null&&b===null)return null;
+  if(a===null)return b;
+  if(b===null)return a;
+  return Math.round(((a+b)/2)*100)/100;
+}
+function pctAvg(a,b){
+  a=n(a);b=n(b);
+  if(a===null&&b===null)return null;
+  if(a===null)return b;
+  if(b===null)return a;
+  return Math.round((a+b)/2);
+}
+function sVal(stats,key){let v=stats?.[key];return(v===undefined||v===null||v===''||v===-1||v==='-1')?null:v}
+function rowPct(label,hs,as,homeKey,awayKey){
+  let hv=sVal(hs,homeKey), av=sVal(as,awayKey);
+  return `<tr><td>${label}</td>${cellPct(hv)}${cellPct(av)}${cellPct(pctAvg(hv,av))}</tr>`;
+}
+function rowNum(label,hs,as,homeKey,awayKey){
+  let hv=sVal(hs,homeKey), av=sVal(as,awayKey);
+  return `<tr><td>${label}</td>${cellNum(hv)}${cellNum(av)}${cellNum(avg2(hv,av))}</tr>`;
+}
+function simpleStatsTable(title,home,away,rows){
+  return `<div class="footy-block table-wrap"><div class="block-head"><div><h3>${title}</h3><small>Comparativo entre casa e visitante</small></div></div><table class="stats-table"><thead><tr><th>Métrica</th><th>${home}</th><th>${away}</th><th>Média</th></tr></thead><tbody>${rows.join('')}</tbody></table></div>`;
+}
+function quickCards(title,items){
+  return `<div class="stats-title-card"><div class="stats-title-row"><div><h2>${title}</h2><p>Leitura rápida da partida.</p></div></div><div class="quick-read" style="margin-top:14px">${items.map(i=>`<div class="stat-card"><h4>${i[0]}</h4><b>${i[1]}</b><p class="muted">${i[2]||''}</p></div>`).join('')}</div></div>`;
+}
+function teamStatBundle(m){
+  return {hs:m.teamStats?.homeStats||{},as:m.teamStats?.awayStats||{}}
+}
+function statsMain(m){
+  let tabs=[['goals','Gols'],['corners','Escanteios'],['cards','Cartões'],['halftime','Intervalo'],['players','Jogadores'],['advanced','Avançadas']];
+  let content = statsSubTab==='goals'?statsGoals(m):statsSubTab==='corners'?statsCorners(m):statsSubTab==='cards'?statsCards(m):statsSubTab==='halftime'?statsHalftime(m):statsSubTab==='players'?statsPlayers(m):statsAdvanced(m);
+  return `<div class="stats-shell"><div class="stats-subtabs">${tabs.map(t=>`<button class="stats-subtab ${statsSubTab===t[0]?'active':''}" onclick="setStatsSub('${t[0]}')">${t[1]}</button>`).join('')}</div>${content}</div>`;
+}
+function statsGoals(m){
+  const {hs,as}=teamStatBundle(m), o=m.odds||{};
+  if(!teamStatsReady(m)) return `<div class="info-note">Carregando estrutura de Gols. Os dados serão preenchidos conforme a base da partida.</div>`;
+  const hSc=sVal(hs,'seasonScoredAVG_home'), aSc=sVal(as,'seasonScoredAVG_away');
+  const hCon=sVal(hs,'seasonConcededAVG_home'), aCon=sVal(as,'seasonConcededAVG_away');
+  return `<div class="stats-section">
+    ${quickCards('Gols',[
+      ['Melhor linha', marketName(best(m,'goals')), marketLine(best(m,'goals'))],
+      ['Gols esperados', n(o.total_xg_prematch)??'—', 'xG pré-jogo total'],
+      ['Média casa', hSc??'—', `${m.home} marcados em casa`],
+      ['Média visitante', aSc??'—', `${m.away} marcados fora`]
+    ])}
+    <div class="footy-block">
+      <div class="block-head"><div><h3>Gols Marcados</h3><small>Quem tem mais força ofensiva?</small></div></div>
+      <div class="compare-bars">
+        ${teamBar(m.home,`${hSc??'—'} gols / jogo`,hSc,3)}
+        ${teamBar(m.away,`${aSc??'—'} gols / jogo`,aSc,3,'away')}
+      </div>
+      <div class="inner-tabs"><span class="inner-tab active">Tempo Integral</span><span class="inner-tab">1º Tempo / 2º Tempo</span></div>
+    </div>
+    ${simpleStatsTable('Marcados por jogo',m.home,m.away,[
+      rowPct('Mais de 0.5',hs,as,'over05ScoredPercentage_home','over05ScoredPercentage_away'),
+      rowPct('Mais de 1.5',hs,as,'over15ScoredPercentage_home','over15ScoredPercentage_away'),
+      rowPct('Mais de 2.5',hs,as,'over25ScoredPercentage_home','over25ScoredPercentage_away'),
+      rowPct('Mais de 3.5',hs,as,'over35ScoredPercentage_home','over35ScoredPercentage_away'),
+      rowPct('Não marcou',hs,as,'seasonFTSPercentage_home','seasonFTSPercentage_away')
+    ])}
+    <div class="footy-block">
+      <div class="block-head"><div><h3>Gols Sofridos</h3><small>Quem tende a sofrer mais gols?</small></div></div>
+      <div class="compare-bars">
+        ${teamBar(m.home,`${hCon??'—'} sofridos / jogo`,hCon,3)}
+        ${teamBar(m.away,`${aCon??'—'} sofridos / jogo`,aCon,3,'away')}
+      </div>
+    </div>
+    ${simpleStatsTable('Sofridos por jogo',m.home,m.away,[
+      rowPct('Sofreu mais de 0.5',hs,as,'over05ConcededPercentage_home','over05ConcededPercentage_away'),
+      rowPct('Sofreu mais de 1.5',hs,as,'over15ConcededPercentage_home','over15ConcededPercentage_away'),
+      rowPct('Sofreu mais de 2.5',hs,as,'over25ConcededPercentage_home','over25ConcededPercentage_away'),
+      rowPct('Sofreu mais de 3.5',hs,as,'over35ConcededPercentage_home','over35ConcededPercentage_away'),
+      rowPct('Clean Sheets',hs,as,'seasonCSPercentage_home','seasonCSPercentage_away')
+    ])}
+    ${simpleStatsTable('Projeções de Gols e Ambas Marcam',m.home,m.away,[
+      `<tr><td>Mais de 0.5</td>${cellPct(valOrProb(o.o05_potential,o.odds_ft_over05))}${cellPct(valOrProb(o.o05_potential,o.odds_ft_over05))}${cellPct(valOrProb(o.o05_potential,o.odds_ft_over05))}</tr>`,
+      `<tr><td>Mais de 1.5</td>${cellPct(m.over15)}${cellPct(m.over15)}${cellPct(m.over15)}</tr>`,
+      `<tr><td>Mais de 2.5</td>${cellPct(m.over25)}${cellPct(m.over25)}${cellPct(m.over25)}</tr>`,
+      `<tr><td>Mais de 3.5</td>${cellPct(valOrProb(o.o35_potential,o.odds_ft_over35))}${cellPct(valOrProb(o.o35_potential,o.odds_ft_over35))}${cellPct(valOrProb(o.o35_potential,o.odds_ft_over35))}</tr>`,
+      `<tr><td>Ambas marcam</td>${cellPct(m.btts)}${cellPct(m.btts)}${cellPct(m.btts)}</tr>`,
+      `<tr><td>Menos de 2.5</td>${cellPct(valOrProb(o.u25_potential,o.odds_ft_under25))}${cellPct(valOrProb(o.u25_potential,o.odds_ft_under25))}${cellPct(valOrProb(o.u25_potential,o.odds_ft_under25))}</tr>`
+    ])}
+    <div class="footy-block"><div class="block-head"><div><h3>Quem Marca Primeiro?</h3><small>Prévia visual para a próxima integração.</small></div></div><div class="compare-bars">${teamBar(m.home,'50% marcou primeiro',50,100)}${teamBar(m.away,'50% marcou primeiro',50,100,'away')}</div></div>
+  </div>`;
+}
+function teamBar(team,label,value,max=100,type='home'){
+  let v=n(value); let w=v===null?30:Math.max(4,Math.min(100,(v/max)*100));
+  return `<div class="team-bar-row"><strong>${team}</strong><div class="team-bar-track"><div class="team-bar-fill ${type}" style="width:${w}%"></div></div><span>${label}</span></div>`;
+}
+function statsCorners(m){
+  const {hs,as}=teamStatBundle(m);
+  if(!teamStatsReady(m)) return `<div class="info-note">Carregando estrutura de Escanteios.</div>`;
+  const bestCorner=best(m,'corners'), probv=n(bestCorner[1]);
+  const perfil=probv>=75?'Favorável':probv>=65?'Moderado':'Evitar';
+  return `<div class="stats-section">
+    ${quickCards('Leitura rápida — Escanteios',[
+      ['Melhor linha',marketName(bestCorner),marketLine(bestCorner)],
+      ['Probabilidade',fmt(probv),'Estimativa da partida'],
+      ['Perfil',perfil,'Critério conservador'],
+      ['Tendência',probv>=65?'Volume médio/alto de cantos':'Volume sem vantagem clara','']
+    ])}
+    ${simpleStatsTable('Número de Escanteios — Totais',m.home,m.away,[
+      rowPct('Over 6',hs,as,'over65CornersPercentage_home','over65CornersPercentage_away'),
+      rowPct('Over 7',hs,as,'over75CornersPercentage_home','over75CornersPercentage_away'),
+      rowPct('Over 8',hs,as,'over85CornersPercentage_home','over85CornersPercentage_away'),
+      rowPct('Over 9',hs,as,'over95CornersPercentage_home','over95CornersPercentage_away'),
+      rowPct('Over 10',hs,as,'over105CornersPercentage_home','over105CornersPercentage_away'),
+      rowPct('Over 11',hs,as,'over115CornersPercentage_home','over115CornersPercentage_away'),
+      rowPct('Over 12',hs,as,'over125CornersPercentage_home','over125CornersPercentage_away')
+    ])}
+    ${simpleStatsTable('Escanteios por Time',m.home,m.away,[
+      rowNum('Escanteios a favor / jogo',hs,as,'cornersAVG_home','cornersAVG_away'),
+      rowNum('Escanteios contra / jogo',hs,as,'cornersAgainstAVG_home','cornersAgainstAVG_away'),
+      rowPct('Over 2.5 a favor',hs,as,'over25CornersForPercentage_home','over25CornersForPercentage_away'),
+      rowPct('Over 3.5 a favor',hs,as,'over35CornersForPercentage_home','over35CornersForPercentage_away'),
+      rowPct('Over 4.5 a favor',hs,as,'over45CornersForPercentage_home','over45CornersForPercentage_away'),
+      rowPct('Over 2.5 contra',hs,as,'over25CornersAgainstPercentage_home','over25CornersAgainstPercentage_away'),
+      rowPct('Over 3.5 contra',hs,as,'over35CornersAgainstPercentage_home','over35CornersAgainstPercentage_away')
+    ])}
+  </div>`;
+}
+function statsCards(m){
+  const {hs,as}=teamStatBundle(m);
+  if(!teamStatsReady(m)) return `<div class="info-note">Carregando estrutura de Cartões.</div>`;
+  const avg=avg2(sVal(hs,'cardsAVG_home'),sVal(as,'cardsAVG_away'));
+  return `<div class="stats-section">
+    ${quickCards('Leitura rápida — Cartões',[
+      ['Melhor linha','Mais de 3.5 cartões','Linha de referência'],
+      ['Média estimada',avg??'—','Cartões / partida'],
+      ['Perfil',avg>=4?'Favorável':avg>=3?'Moderado':'Evitar','Leitura disciplinar'],
+      ['Árbitro','Ainda não informado','Leitura baseada nos times']
+    ])}
+    ${simpleStatsTable('Número de Cartões — Total',m.home,m.away,[
+      rowPct('Over 2.5',hs,as,'over25CardsPercentage_home','over25CardsPercentage_away'),
+      rowPct('Over 3.5',hs,as,'over35CardsPercentage_home','over35CardsPercentage_away'),
+      rowPct('Over 4.5',hs,as,'over45CardsPercentage_home','over45CardsPercentage_away'),
+      rowPct('Over 5.5',hs,as,'over55CardsPercentage_home','over55CardsPercentage_away'),
+      rowPct('Over 6.5',hs,as,'over65CardsPercentage_home','over65CardsPercentage_away')
+    ])}
+    ${simpleStatsTable('Cartões por Time',m.home,m.away,[
+      rowNum('Cartões recebidos / jogo',hs,as,'cardsAVG_home','cardsAVG_away'),
+      rowPct('Over 0.5 a favor',hs,as,'over05CardsForPercentage_home','over05CardsForPercentage_away'),
+      rowPct('Over 1.5 a favor',hs,as,'over15CardsForPercentage_home','over15CardsForPercentage_away'),
+      rowPct('Over 2.5 a favor',hs,as,'over25CardsForPercentage_home','over25CardsForPercentage_away'),
+      rowPct('Over 0.5 contra',hs,as,'over05CardsAgainstPercentage_home','over05CardsAgainstPercentage_away'),
+      rowPct('Over 1.5 contra',hs,as,'over15CardsAgainstPercentage_home','over15CardsAgainstPercentage_away')
+    ])}
+    <div class="footy-block"><div class="block-head"><div><h3>Jogadores mais advertidos</h3><small>Será preenchido com dados individuais quando conectarmos jogadores.</small></div></div><div class="empty">Dados de jogadores ainda não disponíveis.</div></div>
+  </div>`;
+}
+function statsHalftime(m){
+  const {hs,as}=teamStatBundle(m);
+  if(!teamStatsReady(m)) return `<div class="info-note">Carregando estrutura de Intervalo.</div>`;
+  return `<div class="stats-section">
+    ${quickCards('Leitura rápida — Intervalo',[
+      ['Melhor leitura','Mais de 0.5 gol no 1º tempo','Prévia visual'],
+      ['Perfil','Moderado','Depende dos dados HT'],
+      ['Tendência','Movimento no primeiro tempo',''],
+      ['Cartões HT','Monitorar linha 0.5','']
+    ])}
+    ${simpleStatsTable('Resultado 1º / 2º Tempo',m.home,m.away,[
+      rowPct('Vitória no 1º tempo',hs,as,'winHTPercentage_home','winHTPercentage_away'),
+      rowPct('Vitória no 2º tempo',hs,as,'win2HGPercentage_home','win2HGPercentage_away'),
+      rowPct('Empate no 1º tempo',hs,as,'drawHTPercentage_home','drawHTPercentage_away'),
+      rowPct('Empate no 2º tempo',hs,as,'draw2HGPercentage_home','draw2HGPercentage_away'),
+      rowPct('Derrota no 1º tempo',hs,as,'lossHTPercentage_home','lossHTPercentage_away'),
+      rowPct('Derrota no 2º tempo',hs,as,'loss2HGPercentage_home','loss2HGPercentage_away')
+    ])}
+    ${simpleStatsTable('Cartões 1º / 2º Tempo',m.home,m.away,[
+      rowNum('Cartões a favor 1ºT',hs,as,'cards_fh_avg_home','cards_fh_avg_away'),
+      rowNum('Cartões a favor 2ºT',hs,as,'cards_2h_avg_home','cards_2h_avg_away'),
+      rowPct('Mais de 0.5 cartões 1ºT',hs,as,'over05CardsFHPercentage_home','over05CardsFHPercentage_away'),
+      rowPct('Mais de 0.5 cartões 2ºT',hs,as,'over05Cards2HPercentage_home','over05Cards2HPercentage_away')
+    ])}
+  </div>`;
+}
+function statsPlayers(m){
+  let lineup=m.odds?.lineups, bench=m.odds?.bench;
+  return `<div class="stats-section">
+    <div class="footy-block"><div class="block-head"><div><h3>Previsões de escalação e desfalques</h3><small>Titulares, reservas, posições e notas quando disponíveis.</small></div></div>${lineup?`<pre style="white-space:pre-wrap;color:var(--muted)">${JSON.stringify(lineup,null,2).slice(0,2500)}</pre>`:`<div class="empty">Escalações ainda não disponíveis para esta partida.</div>`}</div>
+    <div class="player-grid">
+      ${playerPlaceholder('Quem pode marcar?','Artilheiros — '+m.home)}
+      ${playerPlaceholder('Quem pode marcar?','Artilheiros — '+m.away)}
+      ${playerPlaceholder('Quem pode receber cartão?','Cartões recebidos — '+m.home)}
+      ${playerPlaceholder('Quem pode receber cartão?','Cartões recebidos — '+m.away)}
+      ${playerPlaceholder('Cartões por 90 minutos','Cartões / 90 — '+m.home)}
+      ${playerPlaceholder('Cartões por 90 minutos','Cartões / 90 — '+m.away)}
+    </div>
+  </div>`;
+}
+function playerPlaceholder(title,subtitle){
+  const names=['Jogador 1','Jogador 2','Jogador 3','Jogador 4','Jogador 5'];
+  return `<div class="footy-block"><div class="block-head"><div><h3>${subtitle}</h3><small>${title}</small></div></div>${names.map((n,i)=>`<div class="player-row" style="--w:${80-i*12}%"><span>${n}</span><b>${i?5-i:'—'}</b></div>`).join('')}<p class="muted">Dados de jogadores ainda não disponíveis.</p></div>`;
+}
+function statsAdvanced(m){
+  const {hs,as}=teamStatBundle(m);
+  if(!teamStatsReady(m)) return `<div class="info-note">Carregando estrutura de Avançadas.</div>`;
+  return `<div class="stats-section">
+    ${simpleStatsTable('Impedimentos',m.home,m.away,[
+      rowNum('Média total de impedimentos',hs,as,'offsidesAVG_home','offsidesAVG_away'),
+      rowNum('Impedimentos do time',hs,as,'offsidesTeamAVG_home','offsidesTeamAVG_away'),
+      rowPct('Mais de 2.5 impedimentos',hs,as,'over25OffsidesPercentage_home','over25OffsidesPercentage_away'),
+      rowPct('Mais de 3.5 impedimentos',hs,as,'over35OffsidesPercentage_home','over35OffsidesPercentage_away')
+    ])}
+    ${simpleStatsTable('Faltas',m.home,m.away,[rowNum('Faltas por jogo',hs,as,'foulsAVG_home','foulsAVG_away')])}
+  </div>`;
+}
+function renderTab(){
+  let m=selected;if(!m)return;let c='';
+  if(activeTab==='summary')c=summaryV101?summaryV101(m):summary(m);
+  else if(activeTab==='winners')c=winners(m);
+  else if(activeTab==='stats')c=statsMain(m);
+  else c=insightsV101?insightsV101(m):insights(m);
+  $('analysisContent').innerHTML=c;
+}
 
 </script>
 </body></html>
