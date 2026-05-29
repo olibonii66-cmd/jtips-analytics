@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>JTIPS Analytics — V10.7 Cores e Fontes Padronizadas</title>
+  <title>JTIPS Analytics — V10.8 Vencedores Padronizado</title>
   <style>
     :root{--bg:#050a12;--bg2:#07111d;--panel:#0b1524;--panel2:#0d1a2a;--line:#183353;--line2:#214d78;--text:#f4f8ff;--muted:#8da8c8;--blue:#1aa8ff;--blue2:#0b79ff;--green:#37e889;--yellow:#ffd53f;--red:#ff4d6a;--shadow:0 20px 60px rgba(0,0,0,.38);--r:18px;--sidebar:214px}
     *{box-sizing:border-box} body{margin:0;background:radial-gradient(circle at 20% 0,rgba(16,130,255,.12),transparent 34%),linear-gradient(135deg,#02060c 0%,#071220 45%,#03080f 100%);font-family:Inter,Segoe UI,Arial,sans-serif;color:var(--text);overflow-x:hidden} button,input,select{font:inherit} .app{min-height:100vh;display:block}
@@ -1044,6 +1044,144 @@ a,.blue{
 *::-webkit-scrollbar-track{background:rgba(255,255,255,.04)}
 *::-webkit-scrollbar-thumb{background:rgba(216,184,107,.32);border-radius:999px}
 *::-webkit-scrollbar-thumb:hover{background:rgba(216,184,107,.55)}
+
+
+/* =========================================================
+   V10.8 — Vencedores padronizado na paleta JTIPS
+   ========================================================= */
+#winners, .winners, .winner-grid, .dc-grid, .odds-grid{
+  color:var(--text)!important;
+}
+#winners .stat-card,
+.winner-card,
+.odds-card,
+.dc-card,
+.result-card,
+.market-card,
+.prob-card,
+.analysisContent .winner-card,
+.analysisContent .odds-card{
+  background:linear-gradient(180deg,rgba(20,43,31,.92),rgba(8,19,13,.96))!important;
+  border:1px solid var(--border)!important;
+  border-radius:18px!important;
+  box-shadow:var(--shadow)!important;
+  color:var(--text)!important;
+}
+.winner-card h3,
+.odds-card h3,
+.dc-card h3,
+.result-card h3,
+.market-card h3,
+.prob-card h3,
+.winner-card b,
+.odds-card b,
+.dc-card b{
+  color:var(--text)!important;
+}
+.winner-card .pct,
+.odds-card .pct,
+.dc-card .pct,
+.result-card .pct,
+.market-card .pct,
+.prob-card .pct,
+.winner-card .prob,
+.odds-card .prob,
+.dc-card .prob,
+.result-card .prob{
+  color:var(--gold-2)!important;
+  text-shadow:none!important;
+}
+.winner-card .odd,
+.odds-card .odd,
+.dc-card .odd,
+.result-card .odd,
+.market-card .odd,
+.prob-card .odd,
+.odd-pill{
+  background:rgba(216,184,107,.14)!important;
+  color:var(--gold-2)!important;
+  border:1px solid rgba(216,184,107,.28)!important;
+  border-radius:999px!important;
+}
+.progress,.bar,.chance-bar,.odds-bar,.winner-bar{
+  background:rgba(255,255,255,.06)!important;
+  border-radius:999px!important;
+  overflow:hidden!important;
+}
+.progress > *,
+.bar > *,
+.chance-bar > *,
+.odds-bar > *,
+.winner-bar > *,
+.segment,
+.segment-home,
+.segment-draw,
+.segment-away{
+  background:linear-gradient(90deg,var(--gold-3),var(--gold-2))!important;
+}
+.segment-draw{
+  background:linear-gradient(90deg,rgba(216,184,107,.38),rgba(242,213,138,.52))!important;
+}
+.segment-away{
+  background:linear-gradient(90deg,var(--green),var(--gold))!important;
+}
+.winners h2,
+.winners h3,
+#winners h2,
+#winners h3,
+.analysisContent h2,
+.analysisContent h3{
+  color:var(--text)!important;
+}
+.winners p,
+#winners p{
+  color:var(--text-2)!important;
+}
+.winners .blue,
+#winners .blue,
+.winner-card .blue,
+.odds-card .blue,
+.dc-card .blue{
+  color:var(--gold-2)!important;
+}
+
+/* classes comuns do arquivo atual */
+.final-card,
+.double-card,
+.result-option,
+.dc-option{
+  background:linear-gradient(180deg,rgba(20,43,31,.92),rgba(8,19,13,.96))!important;
+  border:1px solid var(--border)!important;
+  color:var(--text)!important;
+  box-shadow:var(--shadow)!important;
+}
+.final-card strong,
+.double-card strong,
+.result-option strong,
+.dc-option strong{
+  color:var(--text)!important;
+}
+.final-card b,
+.double-card b,
+.result-option b,
+.dc-option b{
+  color:var(--gold-2)!important;
+}
+.final-card small,
+.double-card small,
+.result-option small,
+.dc-option small{
+  color:var(--gold-2)!important;
+  background:rgba(216,184,107,.14)!important;
+  border:1px solid rgba(216,184,107,.28)!important;
+  border-radius:999px!important;
+  padding:6px 10px!important;
+}
+
+/* remove azul remanescente de percentuais e cards na aba Vencedores */
+[style*="#24a8ff"],[style*="#38b6ff"],[style*="rgb(36, 168, 255)"],[style*="rgb(56, 182, 255)"]{
+  color:var(--gold-2)!important;
+}
 
 </style>
 </head>
@@ -2268,6 +2406,61 @@ function lineupsVisualBlock(m){
     <div class="block-head"><div><h3>Previsões de escalação e desfalques</h3><small>Titulares, reservas e posições quando disponíveis.</small></div>
     <div style="display:flex;gap:8px;flex-wrap:wrap"><span class="lineup-tag">Dúvida</span><span class="lineup-tag">Fora</span><span class="lineup-tag">Lesionado</span></div></div>
     <div class="lineup-layout">${lineupTeamCard(m,'home')}${lineupTeamCard(m,'away')}</div>
+  </div>`;
+}
+
+
+/* =========================
+   V10.8 — renderer padronizado para Vencedores
+   ========================= */
+function winnerPercentFromOdd(odd){
+  const x=n(odd);
+  if(x===null || x<=0) return null;
+  return Math.round((1/x)*100);
+}
+function winnerCard(label, prob, odd){
+  const p=n(prob);
+  const o=n(odd);
+  return `<div class="winner-card stat-card" style="text-align:center;min-height:160px;display:flex;flex-direction:column;justify-content:center;gap:12px">
+    <h3 style="margin:0">${label}</h3>
+    <b class="pct" style="font-size:42px;line-height:1">${p===null?'—':p+'%'}</b>
+    <span class="odd-pill">${o===null?'Odd —':'Odd '+o}</span>
+  </div>`;
+}
+function winnerBar(p1,px,p2){
+  const a=Math.max(0,n(p1)||0), b=Math.max(0,n(px)||0), c=Math.max(0,n(p2)||0);
+  const total=Math.max(1,a+b+c);
+  return `<div class="winner-bar" style="height:12px;display:flex;margin:16px 0 22px">
+    <div class="segment-home" style="width:${a/total*100}%"></div>
+    <div class="segment-draw" style="width:${b/total*100}%"></div>
+    <div class="segment-away" style="width:${c/total*100}%"></div>
+  </div>`;
+}
+function winners(m){
+  const o=m.odds||{};
+  const p1=winnerPercentFromOdd(o.odds_ft_1)||n(o.home_win_probability)||n(o.prob_home_win)||null;
+  const px=winnerPercentFromOdd(o.odds_ft_x)||n(o.draw_probability)||n(o.prob_draw)||null;
+  const p2=winnerPercentFromOdd(o.odds_ft_2)||n(o.away_win_probability)||n(o.prob_away_win)||null;
+
+  const dc1x=winnerPercentFromOdd(o.odds_doublechance_1x)||pctAvg(p1,px);
+  const dc12=winnerPercentFromOdd(o.odds_doublechance_12)||pctAvg(p1,p2);
+  const dcx2=winnerPercentFromOdd(o.odds_doublechance_x2)||pctAvg(px,p2);
+
+  return `<div class="winners">
+    <h2>Vencedores</h2>
+    <p class="muted">Probabilidades de resultado final</p>
+    <div class="stats-grid-3">
+      ${winnerCard(`${m.home} vence`,p1,o.odds_ft_1)}
+      ${winnerCard('Empate',px,o.odds_ft_x)}
+      ${winnerCard(`${m.away} vence`,p2,o.odds_ft_2)}
+    </div>
+    ${winnerBar(p1,px,p2)}
+    <h2>Chance dupla</h2>
+    <div class="stats-grid-3">
+      ${winnerCard(`${m.home} ou Empate`,dc1x,o.odds_doublechance_1x)}
+      ${winnerCard(`${m.home} ou ${m.away}`,dc12,o.odds_doublechance_12)}
+      ${winnerCard(`Empate ou ${m.away}`,dcx2,o.odds_doublechance_x2)}
+    </div>
   </div>`;
 }
 

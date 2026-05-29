@@ -132,3 +132,9 @@ FOOTYSTATS_API_KEY=sua_chave
 - Padroniza títulos, textos, botões, abas, badges, tabelas, inputs, cards e sidebar.
 - Mantém azul apenas como detalhe secundário suave, não como cor principal.
 - Ajusta scrollbar e estados ativos/hover.
+
+## V10.8 — Vencedores padronizado
+- Corrige a aba Vencedores que ainda estava com azul forte e cards fora da paleta.
+- Percentuais, odds, barras e cards agora seguem verde escuro + dourado premium.
+- Adiciona renderer padronizado para Resultado Final e Chance Dupla.
+- Remove azul forte remanescente dos percentuais.
