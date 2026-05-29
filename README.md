@@ -87,3 +87,15 @@ FOOTYSTATS_API_KEY=sua_chave
 - Intervalo contém Resultado 1º/2º Tempo e Cartões por tempo.
 - Jogadores contém estrutura para escalação, artilheiros, cartões recebidos e cartões por 90.
 - Avançadas fica dentro de Estatísticas.
+
+## V10.3 — Estatísticas completas conectadas
+- Mantém a estrutura: Resumo, Vencedores, Estatísticas e Insights.
+- Em Estatísticas: Gols, Escanteios, Cartões, Intervalo, Jogadores e Avançadas.
+- Conecta Gols com campos reais de `team.stats` e `/match`.
+- Conecta Escanteios com totais, por tempo e por time.
+- Conecta Cartões com total, por time e por tempo quando disponível.
+- Conecta Intervalo com HT/2H: resultado, gols e cartões por etapa.
+- Conecta Jogadores via novo endpoint `api/jogadores.js` usando `league-players`.
+- Jogadores são filtrados por `club_team_id`/`national_team_id` conforme `homeID` e `awayID`.
+- Avançadas usa impedimentos, faltas e campos adicionais quando disponíveis.
+- Mantém fallback limpo para escalações/jogadores quando não houver dados.
