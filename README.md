@@ -165,9 +165,11 @@ FOOTYSTATS_API_KEY=sua_chave
 - Exibe erro técnico limpo se endpoint falhar, em vez de mostrar indisponível antes da hora.
 - Reduz visualmente o bloco grande de Insights com área rolável.
 
-## V12 — Bilhetes + ajustes
-- Remove cards “Jogos do dia”, “Ligas” e “Oportunidades” do Dashboard.
-- Ajusta calendário e botão “Atualizar dados”.
-- Limpa Admin e coloca colunas técnicas em área expansível.
-- Adiciona aba Bilhetes com Apostas da IA, Apostas Seguras e Apostas de Valor.
-- Bilhetes combinados com regras anti-conflito e aviso 🔞 18+ Jogo Responsável.
+## V12.1 — Apostas corrigido
+- Refeito a partir da V11.1 para não quebrar o carregamento dos jogos.
+- Adiciona botão “🎯 Apostas” na coluna esquerda, abaixo de “Análise”.
+- Adiciona aba “Bilhetes” dentro da análise da partida.
+- Gera bilhetes combinados: Apostas da IA, Apostas Seguras e Apostas de Valor.
+- Remove os cards “Jogos do dia / Ligas / Oportunidades” do Dashboard.
+- Ajusta calendário do input de data e botão “Atualizar dados”.
+- Mantém H2H, Insights e Trends da V11.1.
