@@ -116,3 +116,11 @@ FOOTYSTATS_API_KEY=sua_chave
 - Quando não houver escalação mas houver jogadores, usa lista da temporada como estimativa.
 - Atualiza `api/jogadores.js` para paginar `league-players` em vez de usar apenas a primeira página.
 - Filtra jogadores por `club_team_id`, `club_team_2_id` e `national_team_id`.
+
+## V10.6 — Jogadores layout corrigido
+- Corrige a escalação para não mostrar nomes como Goalkeeper/Defender/Forward no lugar de atleta.
+- Quando a API de lineup vem apenas com ID/camisa, o item é ocultado até ter nome resolvido.
+- Usa lista de jogadores da temporada como estimativa quando a escalação oficial não tem nomes.
+- Corrige sobreposição visual das colunas da escalação.
+- Remove badge de nota fixa quando não há rating real.
+- Reservas vazias agora mostram mensagem limpa em vez de linhas com pontos e traços.

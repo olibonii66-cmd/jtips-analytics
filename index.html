@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>JTIPS Analytics — V10.5 Jogadores Corrigido</title>
+  <title>JTIPS Analytics — V10.6 Jogadores Layout Corrigido</title>
   <style>
     :root{--bg:#050a12;--bg2:#07111d;--panel:#0b1524;--panel2:#0d1a2a;--line:#183353;--line2:#214d78;--text:#f4f8ff;--muted:#8da8c8;--blue:#1aa8ff;--blue2:#0b79ff;--green:#37e889;--yellow:#ffd53f;--red:#ff4d6a;--shadow:0 20px 60px rgba(0,0,0,.38);--r:18px;--sidebar:214px}
     *{box-sizing:border-box} body{margin:0;background:radial-gradient(circle at 20% 0,rgba(16,130,255,.12),transparent 34%),linear-gradient(135deg,#02060c 0%,#071220 45%,#03080f 100%);font-family:Inter,Segoe UI,Arial,sans-serif;color:var(--text);overflow-x:hidden} button,input,select{font:inherit} .app{min-height:100vh;display:block}
@@ -742,6 +742,66 @@
   background:rgba(255,255,255,.035);
   border:1px solid rgba(200,168,91,.14);
   color:var(--muted);
+}
+
+
+/* V10.6 — correção visual definitiva da escalação */
+.lineup-layout{
+  display:grid!important;
+  grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important;
+  gap:16px!important;
+}
+.lineup-team-card{
+  overflow:hidden!important;
+}
+.lineup-groups{
+  display:grid!important;
+  grid-template-columns:1fr!important;
+  gap:10px!important;
+}
+.lineup-group{
+  overflow:hidden!important;
+}
+.lineup-group-title{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+}
+.lineup-player-row{
+  display:grid!important;
+  grid-template-columns:34px minmax(0,1fr) 54px!important;
+  gap:10px!important;
+  align-items:center!important;
+  min-height:38px!important;
+}
+.lineup-player-name{
+  min-width:0!important;
+  overflow:hidden!important;
+  text-overflow:ellipsis!important;
+  white-space:nowrap!important;
+}
+.lineup-position{
+  text-align:right!important;
+  color:#9fcaa9!important;
+}
+.lineup-rating,.lineup-no-rating,.lineup-status{
+  display:none!important;
+}
+.bench-grid{
+  display:grid!important;
+  grid-template-columns:1fr!important;
+}
+.bench-grid .lineup-player-row{
+  grid-template-columns:34px minmax(0,1fr) 54px!important;
+}
+.lineup-warning,.lineup-help{
+  line-height:1.45!important;
+}
+.lineup-empty{
+  min-height:54px;
+}
+@media(max-width:1100px){
+  .lineup-layout{grid-template-columns:1fr!important}
 }
 
 </style>
@@ -1841,6 +1901,133 @@ function playerCard(title,players,valueKey,subKeys=[]){
   if(!rows.length)return `<div class="footy-block player-card"><div class="block-head"><div><h3>${title}</h3></div></div><div class="empty-soft">Dados de jogadores ainda não disponíveis.</div></div>`;
   const max=Math.max(...rows.map(p=>n(p[valueKey])||0),1);
   return `<div class="footy-block player-card"><div class="block-head"><div><h3>${title}</h3><small>Top jogadores da equipe</small></div></div>${rows.map(p=>{let v=n(p[valueKey])||0,w=Math.max(6,Math.min(100,(v/max)*100));let meta=[p.position, ...subKeys.map(k=>`${k[1]} ${safeN(p[k[0]])}`)].filter(Boolean).join(' • ');return `<div class="player-row" style="--w:${w}%"><span>${v105PlayerDisplayName(p)}<div class="player-meta">${meta}</div></span><b class="player-value">${safeN(p[valueKey])}</b></div>`}).join('')}</div>`;
+}
+
+
+/* =========================
+   V10.6 — Jogadores: usar lineups só quando houver nome resolvido
+   ========================= */
+function v106Name(p){
+  return p?.known_as || p?.shorthand || p?.full_name || `${p?.first_name||''} ${p?.last_name||''}`.trim() || '';
+}
+function v106PositionPT(pos){
+  const p=String(pos||'').toUpperCase();
+  if(['GK','G','GOALKEEPER'].some(x=>p.includes(x))) return 'GOL';
+  if(['CB','ZAG','DEF','LD','LE','RB','LB','DC','DEFENDER'].some(x=>p.includes(x))) return 'DEF';
+  if(['MID','MEI','VOL','CM','DM','AM','MC','MIDFIELDER'].some(x=>p.includes(x))) return 'MEI';
+  if(['FW','AT','PD','PE','CA','ST','CF','LW','RW','FORWARD'].some(x=>p.includes(x))) return 'ATA';
+  return pos || '—';
+}
+function v106Group(pos){
+  const p=String(pos||'').toUpperCase();
+  if(['GK','G','GOALKEEPER'].some(x=>p.includes(x))) return 'Goleiro';
+  if(['CB','ZAG','DEF','LD','LE','RB','LB','DC','DEFENDER'].some(x=>p.includes(x))) return 'Defensores';
+  if(['MID','MEI','VOL','CM','DM','AM','MC','MIDFIELDER'].some(x=>p.includes(x))) return 'Meio-campistas';
+  if(['FW','AT','PD','PE','CA','ST','CF','LW','RW','FORWARD'].some(x=>p.includes(x))) return 'Atacantes';
+  return 'Outros';
+}
+function v106PlayerFromId(m,id,side){
+  if(!id)return null;
+  const list=side==='home'?(m.players?.home||[]):(m.players?.away||[]);
+  return list.find(p=>String(p.id)===String(id))||null;
+}
+function v106ExtractResolvedLineup(m, rawList, side){
+  const items=arrayFromAny(rawList);
+  const out=[];
+  for(const item of items){
+    const p=v106PlayerFromId(m,item.player_id||item.id||item.playerId,side);
+    const direct=item.player_name||item.name||item.full_name||item.known_as||'';
+    const name=direct||v106Name(p);
+    if(!name) continue;
+    const pos=item.position||item.pos||p?.position||'—';
+    out.push({
+      number:item.shirt_number||item.number||item.jersey_number||'',
+      name,
+      position:v106PositionPT(pos),
+      group:v106Group(pos),
+      status:statusFromEvents(item)
+    });
+  }
+  return out;
+}
+function v106PlayersFallback(m,side,limit=11){
+  const list=side==='home'?(m.players?.home||[]):(m.players?.away||[]);
+  return [...list]
+    .filter(p=>v106Name(p))
+    .sort((a,b)=>{
+      const ma=n(b.minutes_played_overall)||0, mb=n(a.minutes_played_overall)||0;
+      if(ma!==mb)return ma-mb;
+      return (n(b.appearances_overall)||0)-(n(a.appearances_overall)||0);
+    })
+    .slice(0,limit)
+    .map(p=>({
+      number:'',
+      name:v106Name(p),
+      position:v106PositionPT(p.position),
+      group:v106Group(p.position),
+      status:''
+    }));
+}
+function v106LineupRow(p){
+  const st=String(p.status||'').toLowerCase();
+  const status = p.status ? `<span class="lineup-status ${st.includes('les')?'lesionado':st.includes('fora')?'fora':'duvida'}">${p.status}</span>` : '';
+  return `<div class="lineup-player-row"><span class="lineup-player-number">${p.number||'•'}</span><span class="lineup-player-name" title="${p.name}">${p.name}</span><span class="lineup-position">${p.position||'—'}</span>${status}</div>`;
+}
+function v106LineupGroups(players){
+  if(!players||!players.length)return `<div class="lineup-empty">Escalações ainda não disponíveis para esta partida.</div>`;
+  const order=['Goleiro','Defensores','Meio-campistas','Atacantes','Outros'];
+  return `<div class="lineup-groups">${order.map(g=>{
+    const rows=players.filter(p=>p.group===g);
+    if(!rows.length)return '';
+    return `<div class="lineup-group"><div class="lineup-group-title">${g}</div>${rows.map(v106LineupRow).join('')}</div>`;
+  }).join('')}</div>`;
+}
+function v106BenchRows(players){
+  if(!players||!players.length)return `<div class="lineup-empty">Reservas ainda não disponíveis para esta partida.</div>`;
+  return `<div class="bench-grid">${players.slice(0,9).map(v106LineupRow).join('')}</div>`;
+}
+function lineupTeamCard(m,side){
+  const isHome=side==='home';
+  const name=isHome?m.home:m.away;
+  const label=isHome?'Mandante':'Visitante';
+  const rawStarters=extractTeamLineup(m.odds?.lineups,side);
+  const rawBench=extractTeamBench(m.odds?.bench,side);
+
+  let starters=v106ExtractResolvedLineup(m,rawStarters,side);
+  let bench=v106ExtractResolvedLineup(m,rawBench,side);
+  let note='';
+
+  if(!starters.length){
+    starters=v106PlayersFallback(m,side,11);
+    if(starters.length){
+      note=`<div class="lineup-help">Escalação oficial ainda não disponível. Lista estimada pelos jogadores da temporada.</div>`;
+    }else{
+      note=`<div class="lineup-warning">Escalações e jogadores ainda não disponíveis para esta partida.</div>`;
+    }
+  }else if(rawStarters.length>starters.length){
+    note=`<div class="lineup-warning">Alguns atletas vieram apenas com ID/camisa e foram ocultados até a base retornar o nome.</div>`;
+  }
+
+  if(!bench.length){
+    const used=new Set(starters.map(p=>p.name));
+    bench=v106PlayersFallback(m,side,20).filter(p=>!used.has(p.name)).slice(0,9);
+  }
+
+  return `<div class="lineup-team-card">
+    <div class="lineup-team-title"><div><span class="lineup-tag">${label}</span><h4>${name}</h4></div></div>
+    <div class="lineup-section-title">Titulares</div>
+    ${v106LineupGroups(starters)}
+    <div class="lineup-section-title">Reservas</div>
+    ${v106BenchRows(bench)}
+    ${note}
+  </div>`;
+}
+function lineupsVisualBlock(m){
+  return `<div class="footy-block">
+    <div class="block-head"><div><h3>Previsões de escalação e desfalques</h3><small>Titulares, reservas e posições quando disponíveis.</small></div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap"><span class="lineup-tag">Dúvida</span><span class="lineup-tag">Fora</span><span class="lineup-tag">Lesionado</span></div></div>
+    <div class="lineup-layout">${lineupTeamCard(m,'home')}${lineupTeamCard(m,'away')}</div>
+  </div>`;
 }
 
 </script>
