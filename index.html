@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>JTIPS Analytics — V12.1 Apostas Corrigido</title>
+  <title>JTIPS Analytics — V12.2 Bilhetes com Jogo</title>
   <style>
     :root{--bg:#050a12;--bg2:#07111d;--panel:#0b1524;--panel2:#0d1a2a;--line:#183353;--line2:#214d78;--text:#f4f8ff;--muted:#8da8c8;--blue:#1aa8ff;--blue2:#0b79ff;--green:#37e889;--yellow:#ffd53f;--red:#ff4d6a;--shadow:0 20px 60px rgba(0,0,0,.38);--r:18px;--sidebar:214px}
     *{box-sizing:border-box} body{margin:0;background:radial-gradient(circle at 20% 0,rgba(16,130,255,.12),transparent 34%),linear-gradient(135deg,#02060c 0%,#071220 45%,#03080f 100%);font-family:Inter,Segoe UI,Arial,sans-serif;color:var(--text);overflow-x:hidden} button,input,select{font:inherit} .app{min-height:100vh;display:block}
@@ -1234,6 +1234,65 @@ input[type="date"]{color-scheme:dark!important;color:var(--text)!important}
 input[type="date"]::-webkit-calendar-picker-indicator{filter:invert(82%) sepia(43%) saturate(569%) hue-rotate(359deg) brightness(101%) contrast(91%)!important;opacity:1!important;cursor:pointer!important}
 .filter-grid>.btn{min-width:168px!important;height:44px!important;display:inline-flex!important;align-items:center!important;justify-content:center!important;white-space:nowrap!important;line-height:1.1!important;padding:0 18px!important}
 #bets .tickets-shell,#analysis .tickets-shell{display:flex;flex-direction:column;gap:18px}.tickets-head,.ticket-category{background:linear-gradient(180deg,rgba(20,43,31,.92),rgba(8,19,13,.96));border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);padding:18px}.tickets-head h2,.ticket-category h3{margin:0 0 8px!important}.responsible-box{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px;padding:12px 14px;border:1px solid rgba(216,184,107,.32);background:rgba(216,184,107,.08);color:var(--gold-2);border-radius:14px;font-weight:900}.responsible-box small{color:var(--text-2)!important;font-weight:700}.ticket-category-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:14px}.ticket-score{min-width:92px;text-align:center;border-radius:14px;padding:10px 12px;border:1px solid rgba(216,184,107,.28);background:rgba(216,184,107,.10)}.ticket-score b{display:block;color:var(--gold-2);font-size:24px;line-height:1}.ticket-card{border:1px solid rgba(216,184,107,.18);border-radius:18px;background:rgba(255,255,255,.035);padding:16px}.ticket-selection-list{display:grid;gap:12px;margin:14px 0}.ticket-selection{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:center;padding:12px;border:1px solid rgba(216,184,107,.12);border-radius:14px;background:rgba(0,0,0,.12)}.ticket-selection strong{display:block;color:var(--text)!important;margin-bottom:6px}.ticket-selection small{color:var(--muted)!important}.ticket-pill-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}.ticket-pill{display:inline-flex;align-items:center;border:1px solid rgba(216,184,107,.26);background:rgba(216,184,107,.10);color:var(--gold-2);border-radius:999px;padding:6px 10px;font-size:12px;font-weight:900}.ticket-odd{text-align:right;color:var(--gold-2);font-weight:950;white-space:nowrap}.ticket-empty{border:1px dashed rgba(216,184,107,.28);background:rgba(216,184,107,.05);color:var(--muted);border-radius:16px;padding:18px}.ticket-footer{margin-top:14px;padding-top:12px;border-top:1px solid rgba(216,184,107,.14);color:var(--muted)!important;font-size:13px}.admin-clean-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin:16px 0}.admin-clean-card{background:linear-gradient(180deg,rgba(20,43,31,.92),rgba(8,19,13,.96));border:1px solid var(--border);border-radius:16px;padding:16px;box-shadow:var(--shadow)}.admin-clean-card b{display:block;color:var(--gold-2);font-size:28px;margin-bottom:4px}.admin-details{margin-top:18px;border:1px solid var(--border);border-radius:16px;overflow:hidden;background:rgba(255,255,255,.025)}.admin-details summary{cursor:pointer;padding:14px 16px;color:var(--gold-2);font-weight:900}.admin-details-content{padding:14px 16px;color:var(--muted);border-top:1px solid var(--border);max-height:260px;overflow:auto}@media(max-width:760px){.ticket-category-head,.ticket-selection{grid-template-columns:1fr}.ticket-odd{text-align:left}.admin-clean-grid{grid-template-columns:1fr}}
+
+
+/* =========================================================
+   V12.2 — Bilhetes com jogo, liga e horário
+   ========================================================= */
+.ticket-match-header{
+  display:grid;
+  grid-template-columns:1fr auto;
+  gap:14px;
+  align-items:start;
+  padding:14px;
+  border:1px solid rgba(216,184,107,.18);
+  border-radius:16px;
+  background:rgba(0,0,0,.14);
+  margin:12px 0 14px;
+}
+.ticket-match-title{
+  color:var(--text)!important;
+  font-size:18px;
+  font-weight:950;
+  margin:0 0 8px!important;
+}
+.ticket-match-meta{
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+}
+.ticket-match-meta span{
+  border:1px solid rgba(216,184,107,.22);
+  background:rgba(216,184,107,.08);
+  color:var(--text-2);
+  border-radius:999px;
+  padding:6px 10px;
+  font-size:12px;
+  font-weight:850;
+}
+.ticket-selection{
+  grid-template-columns:1fr auto!important;
+}
+.ticket-selection-title{
+  color:var(--text)!important;
+  font-size:16px;
+  font-weight:950;
+  margin-bottom:8px;
+}
+.ticket-selection-market{
+  color:var(--gold-2)!important;
+  font-weight:950;
+  display:block;
+  margin-bottom:7px;
+}
+.ticket-selection-context{
+  color:var(--text-2)!important;
+  line-height:1.45;
+  margin-bottom:10px;
+}
+@media(max-width:760px){
+  .ticket-match-header{grid-template-columns:1fr}
+}
 
 </style>
 </head>
@@ -2801,6 +2860,93 @@ const __v121OldGoPage=goPage;goPage=function(p){__v121OldGoPage(p);if(p==='bets'
 const __v121OldRenderDashboard=renderDashboard;renderDashboard=function(){let top=[...allMatches].sort((a,b)=>b.score-a.score).slice(0,6);document.getElementById('dashboardSummary').innerHTML='';document.getElementById('featuredCartões').innerHTML=top.map(card).join('')}
 const __v121OldRenderAdmin=renderAdmin;renderAdmin=function(){try{const jogos=allMatches.length,ligas=new Set(allMatches.map(m=>m.league)).size,comOdds=allMatches.filter(m=>m.odds&&(m.odds.odds_ft_1||m.odds.odds_ft_over25||m.odds.odds_btts_yes)).length;const cols=columns||[];document.getElementById('admin').innerHTML=`<div class="admin-clean-grid"><div class="admin-clean-card"><b>FootyStats</b><span>Fonte ativa</span></div><div class="admin-clean-card"><b>${jogos}</b><span>Jogos carregados</span></div><div class="admin-clean-card"><b>${ligas}</b><span>Ligas com jogos</span></div><div class="admin-clean-card"><b>${comOdds}</b><span>Jogos com odds</span></div></div><div class="admin-details"><summary>Ver colunas recebidas</summary><div class="admin-details-content">${cols.length?cols.join(', '):'Nenhuma coluna carregada ainda.'}</div></div>`}catch(e){__v121OldRenderAdmin()}}
 const __v121OldOpenAnalysis=openAnalysis;openAnalysis=async function(id){await __v121OldOpenAnalysis(id);renderBets()}
+
+
+/* =========================
+   V12.2 — Bilhetes: exibir jogo/liga/horário sem emojis
+   ========================= */
+function v122GetGameInfo(m){
+  const o=m?.odds||{};
+  const raw=m?.raw||{};
+  const home=m?.home || o.home_name || raw.home_name || 'Mandante';
+  const away=m?.away || o.away_name || raw.away_name || 'Visitante';
+  const league=m?.league || o.competition_name || o.league || raw.competition_name || raw.league || raw.competition || 'Liga não informada';
+  const time=m?.time || o.time || raw.time || (typeof formatTime==='function' ? formatTime(o.date_unix || raw.date_unix) : '') || 'Horário não informado';
+  const date=m?.date || o.date || raw.date || '';
+  return {home,away,league,time,date,game:`${home} x ${away}`};
+}
+function v122MatchHeader(m,ticket){
+  const info=v122GetGameInfo(m);
+  return `<div class="ticket-match-header">
+    <div>
+      <p class="ticket-match-title">${info.game}</p>
+      <div class="ticket-match-meta">
+        <span>Liga: ${info.league}</span>
+        <span>Horário: ${info.time}</span>
+        ${info.date?`<span>Data: ${info.date}</span>`:''}
+        <span>${ticket.selections.length} seleções</span>
+      </div>
+    </div>
+    <div class="ticket-score"><b>${ticket.score}</b><small>Score geral</small></div>
+  </div>`;
+}
+function v12SelectionHtml(s,i){
+  const info=v122GetGameInfo(selected);
+  return `<div class="ticket-selection">
+    <div>
+      <div class="ticket-selection-title">${i+1}ª Seleção</div>
+      <div class="ticket-selection-context">
+        <strong>${info.game}</strong><br>
+        Liga: ${info.league}<br>
+        Horário: ${info.time}
+      </div>
+      <span class="ticket-selection-market">Mercado: ${s.market}</span>
+      <small>${s.reason}</small>
+      <div class="ticket-pill-row">
+        <span class="ticket-pill">Probabilidade: ${v12Pct(s.prob)}</span>
+        <span class="ticket-pill">Score: ${s.score}</span>
+        <span class="ticket-pill">${s.profile}</span>
+        ${s.value!==null?`<span class="ticket-pill">Valor: ${s.value>0?'+':''}${s.value}%</span>`:''}
+      </div>
+    </div>
+    <div class="ticket-odd">${s.odd?`Odd ${s.odd}`:'Odd —'}</div>
+  </div>`;
+}
+function v12TicketCategory(title,desc,ticket,emptyText){
+  return `<section class="ticket-category">
+    <div class="ticket-category-head">
+      <div><h3>${title}</h3><p>${desc}</p></div>
+      ${ticket?`<div class="ticket-score"><b>${ticket.score}</b><small>Score geral</small></div>`:''}
+    </div>
+    ${ticket?`<div class="ticket-card">
+      ${v122MatchHeader(selected,ticket)}
+      <div class="ticket-pill-row">
+        <span class="ticket-pill">Bilhete combinado</span>
+        <span class="ticket-pill">Odd total estimada: ${ticket.oddTotal}</span>
+      </div>
+      <div class="ticket-selection-list">${ticket.selections.map(v12SelectionHtml).join('')}</div>
+      <p class="ticket-explain">Bilhete montado com seleções de grupos diferentes para reduzir conflitos e evitar mercados redundantes.</p>
+      <div class="ticket-footer">18+ Jogo Responsável — O JTIPS é uma ferramenta de apoio estatístico. Não garante lucro nem resultado.</div>
+    </div>`:`<div class="ticket-empty">${emptyText}</div>`}
+  </section>`;
+}
+function bilhetesV12(m){
+  const selections=v12BuildSelections(m);
+  const ia=v12BuildTicket(selections,'ia');
+  const safe=v12BuildTicket(selections,'safe');
+  const value=v12BuildTicket(selections,'value');
+  const info=v122GetGameInfo(m);
+  return `<div class="tickets-shell">
+    <div class="tickets-head">
+      <h2>Bilhetes</h2>
+      <p class="muted">Bilhetes combinados gerados para ${info.game}, com base em odds, probabilidade, H2H, potenciais, tendências recentes e regras anti-conflito.</p>
+      <div class="responsible-box"><span>18+ Jogo Responsável</span><small>O JTIPS não garante lucro nem resultado. Use gestão e responsabilidade.</small></div>
+    </div>
+    ${v12TicketCategory('Apostas da IA','Bilhete principal equilibrado, buscando o melhor conjunto estatístico da partida.',ia,'Nenhum bilhete da IA recomendado para esta partida.')}
+    ${v12TicketCategory('Apostas Seguras','Bilhete conservador com seleções de menor variância e maior sustentação estatística.',safe,'Nenhum bilhete seguro recomendado com os dados atuais.')}
+    ${v12TicketCategory('Apostas de Valor','Bilhete com foco em odds onde a probabilidade estimada supera a probabilidade implícita.',value,'Nenhum bilhete de valor encontrado com margem suficiente.')}
+  </div>`;
+}
 
 </script>
 </body></html>

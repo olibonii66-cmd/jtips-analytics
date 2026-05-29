@@ -173,3 +173,24 @@ FOOTYSTATS_API_KEY=sua_chave
 - Remove os cards “Jogos do dia / Ligas / Oportunidades” do Dashboard.
 - Ajusta calendário do input de data e botão “Atualizar dados”.
 - Mantém H2H, Insights e Trends da V11.1.
+
+## V12.2 — Bilhetes com jogo, liga e horário
+- Ajusta a aba Bilhetes/Apostas para seguir o padrão do bot JTIPS, mas sem emojis.
+- Cada bilhete mostra claramente:
+  - jogo: Time A x Time B
+  - liga
+  - horário
+  - quantidade de seleções
+  - score geral
+- Cada seleção mostra:
+  - jogo
+  - liga
+  - horário
+  - mercado
+  - probabilidade
+  - score
+  - odd
+  - perfil
+  - motivo
+- Mantém categorias: Apostas da IA, Apostas Seguras e Apostas de Valor.
+- Mantém aviso 18+ Jogo Responsável.
