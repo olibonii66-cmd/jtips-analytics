@@ -3638,4 +3638,139 @@ window.v128ShotMetricSet=function(x){v128ShotMetric=x;renderTab()};
 })();
 
 </script>
+
+
+<style>
+.v1211-howto{max-width:980px}
+.v1211-steps{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-top:14px}
+.v1211-step{border:1px solid rgba(200,168,91,.18);background:rgba(7,24,14,.62);border-radius:18px;padding:16px}
+.v1211-step b{color:#ffe9a6;font-size:17px}.v1211-step p{margin:8px 0 0;color:var(--muted);line-height:1.45}.v1211-order{margin-top:16px;border:1px solid rgba(226,199,131,.28);background:rgba(200,168,91,.08);border-radius:16px;padding:14px;color:#fff3c8;font-weight:900}.v1211-warning{margin-top:14px;color:var(--muted);line-height:1.45}.v1211-warning strong{color:#ffe9a6}
+@media(max-width:900px){.v1211-steps{grid-template-columns:1fr}}
+</style>
+<script>
+/* =========================
+   V12.11 — Como Usar, apostas seletivas e estádio via stadium
+   ========================= */
+(function(){
+  function ready(fn){ if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',fn); else fn(); }
+
+  function getStadium(m){
+    const o=(m&&m.odds)||{}, raw=(m&&m.raw)||{};
+    return {
+      name: o.stadium || raw.stadium || m?.stadium || o.stadium_name || raw.stadium_name || m?.stadium_name || o.venue || raw.venue || o.venue_name || raw.venue_name || '',
+      loc: o.stadium_location || raw.stadium_location || m?.stadium_location || o.location || raw.location || o.venue_location || raw.venue_location || ''
+    };
+  }
+
+  const oldMerge = window.mergeMatchDetailsInto;
+  window.mergeMatchDetailsInto = function(match,data){
+    if(oldMerge) oldMerge(match,data);
+    if(!match || !data) return;
+    match.raw = Object.assign({}, match.raw || {}, data);
+    match.odds = Object.assign({}, match.odds || {}, data);
+    if(data.stadium) match.stadium = data.stadium;
+    if(data.stadium_name) match.stadium_name = data.stadium_name;
+    if(data.stadium_location) match.stadium_location = data.stadium_location;
+  };
+
+  window.v128Header = function(m){
+    const st=getStadium(m);
+    const stadiumHtml = (st.name || st.loc)
+      ? `<div class="v128-stadium"><span>🏟️ ${[st.name,st.loc].filter(Boolean).join(' • ')}</span></div>`
+      : `<div class="v128-stadium"><span>🏟️ Estádio não informado</span></div>`;
+    return `<div class="hero-teams"><div class="hero-team">${logoEl(m.logoHome,m.home)}<span>${m.home}</span></div><div><div class="muted">${m.league}</div><div class="vs">VS</div><div class="hero-meta"><span>${m.date}</span><span>•</span><span>${m.time}</span></div>${stadiumHtml}<span class="status">${m.status}</span></div><div class="hero-team">${logoEl(m.logoAway,m.away)}<span>${m.away}</span></div></div>`;
+  };
+
+  function marketHasValidOdd(m){
+    const odd=Number(m&&m.odd);
+    return Number.isFinite(odd) && odd > 1;
+  }
+  function marketIsReady(m){
+    return marketHasValidOdd(m) && Number(m.probabilidade) > 70 && Number(m.score) > 70;
+  }
+  const oldMarkets = window.v128Markets;
+  if(oldMarkets){
+    window.v128Markets = function(m){
+      return oldMarkets(m).filter(marketIsReady);
+    };
+  }
+  const oldSplit = window.v128SplitOdds;
+  window.v128SplitOdds = function(markets){
+    const comOdd=(markets||[]).filter(marketIsReady);
+    return {comOdd, semOdd:[]};
+  };
+
+  window.v128BetsTab = function(m){
+    const split=v128SplitOdds(v128Markets(m));
+    const cards=[];
+    if(split.comOdd[0]) cards.push(v128Ticket('Entrada simples',[split.comOdd[0]]));
+    let comb=v128Select(split.comOdd,2,70);
+    if(comb.length>=2) cards.push(v128Ticket('Combinada compacta',comb));
+    const cardsHtml = cards.length ? cards.map(c=>`<div class="v128-bet-card"><div class="v128-bet-head"><div><h3>${c.nome}</h3><p class="muted">${m.home} x ${m.away}</p></div><div class="v128-bet-pills"><span>${c.qtd} ${c.qtd===1?'seleção':'seleções'}</span><span>Score ${c.score}</span><span>Odd total ${c.oddTotal}</span><span>${c.unidade}</span></div></div>${c.selecoes.map(s=>`<div class="v128-bet-selection"><div>🎯</div><div><b>${s.nome}</b><div class="v128-mini">${s.motivo}</div></div><span class="v128-tag ${s.risco==='baixo'?'favoravel':'moderado'}">Odd ${v128MoneyOdd(s.odd)} • ${s.probabilidade}%</span></div>`).join('')}<div class="v128-note">18+ Jogo Responsável — O JTIPS é ferramenta de apoio estatístico. Não garante lucro nem resultado.</div></div>`).join('') : `<div class="v128-empty">Nenhuma aposta pronta acima de 70% com odd disponível.</div>`;
+    return `<div class="analysis-v127"><div class="v128-card"><h2>Apostas Prontas</h2><p class="muted">Apenas mercados com odd disponível, probabilidade acima de 70% e score acima de 70 entram como apostas prontas.</p>${cardsHtml}</div></div>`;
+  };
+
+  window.renderBetsPage = function(){
+    const list=(filtered&&filtered.length?filtered:allMatches)||[];
+    const eligible=[...list].map(m=>({m,markets:v128Markets(m)})).filter(x=>x.markets.length>0).sort((a,b)=>(b.markets[0]?.score||0)-(a.markets[0]?.score||0)).slice(0,3).map(x=>x.m);
+    $('betsContent').innerHTML=`<div class="ticket-shell"><div class="ticket-head"><h2>Apostas Prontas do Dia</h2><p class="muted">Sugestões seletivas dos jogos carregados. Só aparecem mercados com odd disponível e probabilidade acima de 70%.</p><div class="ticket-responsible">18+ Jogo Responsável — O JTIPS não garante lucro nem resultado.</div></div>${eligible.length?eligible.map(m=>v128BetsTab(m)).join(''):'<div class="ticket-empty">Nenhuma aposta pronta acima de 70% com odd disponível para os jogos carregados.</div>'}</div>`;
+  };
+
+  function renderHowToPage(){
+    const el=$('howtoContent');
+    if(!el) return;
+    el.innerHTML=`<div class="panel v1211-howto"><h2>Como Usar</h2><p class="muted">Siga este passo a passo para usar o JTIPS Analytics de forma simples.</p><div class="v1211-steps">
+      <div class="v1211-step"><b>1. Escolha um jogo</b><p>Entre em <b>Jogos</b> e clique em <b>Ver análise</b> na partida que deseja analisar.</p></div>
+      <div class="v1211-step"><b>2. Veja as Probabilidades</b><p>Confira Vencedores, Gols, Escanteios e Cartões. Dê atenção aos percentuais altos e dados consistentes.</p></div>
+      <div class="v1211-step"><b>3. Leia o Prognóstico</b><p>Veja o lado favorável, melhor mercado e nível de cautela da partida.</p></div>
+      <div class="v1211-step"><b>4. Confira o Sensor do Jogo</b><p>Use o Sensor para identificar alertas de equilíbrio, gols, escanteios, cartões e risco.</p></div>
+      <div class="v1211-step"><b>5. Veja os Insights da IA</b><p>O sistema resume os principais mercados em cards simples, com sugestão e explicação curta.</p></div>
+      <div class="v1211-step"><b>6. Confirme nas Estatísticas</b><p>Use Estatísticas Profundas, Gráfico de Chutes e Partidas para confirmar se a tendência faz sentido.</p></div>
+      <div class="v1211-step"><b>7. Acesse Apostas Prontas</b><p>Veja sugestões do dia. Só entram mercados com odd disponível, probabilidade acima de 70% e dados suficientes.</p></div>
+    </div><div class="v1211-order">Ordem recomendada: Jogos → Probabilidades → Prognóstico → Sensor do Jogo → Insights da IA → Estatísticas → Apostas Prontas</div><div class="v1211-warning"><strong>Aviso:</strong> O JTIPS Analytics é uma ferramenta de apoio estatístico. Nenhuma análise garante resultado.<br><br><strong>🔞 18+ Jogo Responsável</strong></div></div>`;
+  }
+
+  const oldGoPage=window.goPage;
+  window.goPage=function(p){
+    if(p==='scanner') p='games';
+    if(oldGoPage) oldGoPage(p);
+    if(p==='howto'){
+      document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));
+      $('howto')?.classList.add('active');
+      document.querySelectorAll('.nav-item').forEach(x=>x.classList.toggle('active',x.dataset.page==='howto'));
+      $('pageTitle').textContent='Como Usar';
+      $('pageSubtitle').textContent='Passo a passo rápido para analisar jogos no JTIPS Analytics.';
+      renderHowToPage();
+      window.scrollTo(0,0);
+    }
+    if(p==='bets'){
+      $('pageTitle').textContent='Apostas Prontas';
+      $('pageSubtitle').textContent='Apostas prontas dos jogos do dia com odds disponíveis.';
+    }
+  };
+
+  ready(()=>{
+    const nav=document.querySelector('.nav');
+    if(nav && !nav.querySelector('[data-page="howto"]')){
+      const plans=nav.querySelector('[data-page="plans"]');
+      const item=document.createElement('div');
+      item.className='nav-item'; item.dataset.page='howto'; item.textContent='Como Usar';
+      if(plans) nav.insertBefore(item, plans); else nav.appendChild(item);
+      item.addEventListener('click',()=>goPage('howto'));
+    }
+    const main=document.querySelector('main.main');
+    if(main && !document.getElementById('howto')){
+      const section=document.createElement('section');
+      section.id='howto'; section.className='page'; section.innerHTML='<div id="howtoContent"></div>';
+      const plans=document.getElementById('plans');
+      if(plans) main.insertBefore(section, plans); else main.appendChild(section);
+    }
+    document.querySelectorAll('.nav-item').forEach(el=>{
+      if(el.dataset.page==='scanner') el.remove();
+      if(el.dataset.page==='bets') el.textContent='Apostas Prontas';
+    });
+  });
+})();
+</script>
+
 </body></html>
