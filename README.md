@@ -16,3 +16,20 @@
 - Mercados sem odd ficam fora do bilhete oficial.
 - Sensor do Jogo substitui RedFlags.
 - Partidas, H2H e subabas seguem a estrutura da V12.9.
+
+## V12.14 — Login e Proteção de Rotas
+
+Adicionado fluxo de login no frontend para proteger visualmente o acesso ao sistema.
+
+### Login de demonstração
+- Usuário comum: qualquer e-mail válido + senha com 4+ caracteres.
+- Admin: `admin@jtips.com` / `admin123`.
+
+### Regras adicionadas
+- Sem login, o sistema interno fica oculto e a tela de login é exibida.
+- Após login, o usuário acessa Dashboard, Jogos, Análise, Apostas Prontas, Como Usar e Planos.
+- O item Admin só aparece para perfil admin.
+- Botão Sair adicionado à sidebar.
+
+### Observação importante
+Esse login é local/frontend, indicado para protótipo e testes. Para venda real, substituir por autenticação segura com Supabase, Firebase Auth, Auth0 ou backend próprio.
