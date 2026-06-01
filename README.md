@@ -197,3 +197,16 @@ FOOTYSTATS_API_KEY=sua_chave
 - Gráfico de Chutes adiciona toggle Casa/Visitante, seletor de métrica, médias e gráfico dos jogos recentes.
 - Partidas adiciona visual Mandante/H2H/Visitante com chips de placar, HT, escanteios, cartões e V/E/D.
 - Mantém a página Apostas compactas e a regra de anti-redundância da V12.6.
+
+
+## V12.8 — API Funcional e Análise Completa
+- Cabeçalho da partida atualizado com estádio e localização quando a API retorna `stadium_name` e `stadium_location`.
+- Removidos os blocos superiores/laterais confusos de Melhores mercados, Probabilidade, Melhor mercado, Risco, Insights, RedFlags e Partidas/H2H.
+- RedFlags renomeado para Sensor do Jogo.
+- Aba Partidas corrigida com Mandante, H2H e Visitante usando fontes separadas: league-matches para jogos recentes e match.h2h para confrontos diretos.
+- Probabilidades agora usam campos reais da API: odds, potenciais de gols, escanteios, cartões, PPG e xG pré-jogo.
+- Estatísticas Profundas usam recorte contextual: mandante em casa e visitante fora. Campos inexistentes ou `-1` são ocultados.
+- Gráfico de Chutes funcional com métricas disponíveis: total de chutes, chutes no alvo e chutes fora do alvo.
+- Insights da IA gerados com base nos dados disponíveis, com tags claras como Casa ou Visitante (12).
+- Apostas oficiais exigem odd válida. Mercados sem odd entram apenas em Leituras estatísticas sem odd.
+- Mantida a identidade V12.6/V12.7: verde escuro/preto com dourado premium.

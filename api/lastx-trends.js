@@ -31,9 +31,9 @@ function n(v, d = 0) {
 
 function choose(rows) {
   if (!Array.isArray(rows) || !rows.length) return { stats: {}, n: null };
-  const row = rows.find(r => String(r.last_x_match_num) === '5') ||
+  const row = rows.find(r => String(r.last_x_match_num) === '10') ||
               rows.find(r => String(r.last_x_match_num) === '6') ||
-              rows.find(r => String(r.last_x_match_num) === '10') ||
+              rows.find(r => String(r.last_x_match_num) === '5') ||
               rows[0];
   return { stats: parseStats(row.stats), n: row.last_x_match_num || 5 };
 }
@@ -86,6 +86,7 @@ async function getTeam(teamId, seasonId, name) {
     team_id: Number(teamId),
     nome: name,
     last_x_match_num: chosen.n,
+    stats: chosen.stats,
     trends: trends(chosen.stats, name),
     stats_keys: Object.keys(chosen.stats).length,
     rows_loaded: rows.length
