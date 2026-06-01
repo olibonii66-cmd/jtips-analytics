@@ -210,3 +210,15 @@ FOOTYSTATS_API_KEY=sua_chave
 - Insights da IA gerados com base nos dados disponíveis, com tags claras como Casa ou Visitante (12).
 - Apostas oficiais exigem odd válida. Mercados sem odd entram apenas em Leituras estatísticas sem odd.
 - Mantida a identidade V12.6/V12.7: verde escuro/preto com dourado premium.
+
+## V12.9 — Ajustes de interface e subabas
+
+Correções aplicadas nesta versão:
+- Alinhamento das tabelas de Probabilidades e Estatísticas Profundas.
+- Remoção do seletor "Jogo Inteiro" nas Probabilidades quando não há dados de 1º/2º tempo.
+- Prognóstico enriquecido com leitura por mercado e resumo operacional.
+- Gráfico de Chutes com nomenclatura mais clara: total, no alvo e fora do alvo.
+- Correção de navegação das subabas internas.
+- Partidas com logos dos times junto ao placar.
+- Exibição de 1º tempo quando o dado existir; caso contrário, mostra "1ºT —".
+- H2H/Mandante/Visitante mantendo logos e estrutura padronizada.
