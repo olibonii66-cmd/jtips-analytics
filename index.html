@@ -3773,4 +3773,158 @@ window.v128ShotMetricSet=function(x){v128ShotMetric=x;renderTab()};
 })();
 </script>
 
+
+<style>
+/* =========================
+   V12.12 — Correções visuais e métricas
+   ========================= */
+.nav-item{gap:0!important}
+.nav-item::before{content:none!important;display:none!important}
+.v1212-logo-mini{width:18px;height:18px;border-radius:999px;object-fit:contain;vertical-align:middle;margin:0 3px;background:rgba(255,255,255,.06)}
+.v1212-score-line{display:flex;align-items:center;justify-content:center;gap:5px;min-height:22px;margin-top:3px}
+.v128-compare-row .side,.v128-compare-row .metric{display:flex;align-items:center;justify-content:center;min-height:40px;text-align:center}
+.v128-compare-row .metric{font-weight:900;color:#e8f2d7}.v128-compare-row .side{font-weight:850}
+.v127-row{grid-template-columns:minmax(240px,1fr) minmax(210px,.95fr) minmax(210px,.95fr) minmax(210px,.95fr)!important;align-items:center!important}
+.v127-cell{justify-content:center!important;align-items:center!important}
+.v127-label{display:flex;align-items:center!important}
+.v127-badge,.v128-badge{min-width:48px;text-align:center}
+.v127-bar,.v128-bar{width:88px!important}
+</style>
+<script>
+/* =========================
+   V12.12 — Sidebar limpa, estádio, probabilidades, estatísticas e gráfico de chutes
+   ========================= */
+(function(){
+  const $id = (id)=>document.getElementById(id);
+  const num = (v,d=null)=>{ const n=Number(v); return Number.isFinite(n) ? n : d; };
+  const clamp=(v)=>Math.max(0,Math.min(100,Math.round(Number(v)||0)));
+  const validPct=(v)=>{ const n=Number(v); return Number.isFinite(n) && n>=0 ? clamp(n) : null; };
+  const fmtVal=(v)=>{ const n=Number(v); if(!Number.isFinite(n)) return '—'; return (Math.round(n*10)/10).toString().replace('.',','); };
+  const field=(obj,...keys)=>{ for(const k of keys){ const v=obj?.[k]; if(v!==undefined && v!==null && v!=='' && Number(v)!==-1) return v; } return null; };
+  const oddsProb=(odd)=>{ const o=Number(odd); return Number.isFinite(o)&&o>1 ? 100/o : null; };
+  const oddNorm=(m)=>{ const o=m?.odds||{}; const ph=oddsProb(o.odds_ft_1), pd=oddsProb(o.odds_ft_x), pa=oddsProb(o.odds_ft_2); const t=(ph||0)+(pd||0)+(pa||0); if(!t) return {home:null,draw:null,away:null}; return {home:ph/t*100,draw:pd/t*100,away:pa/t*100}; };
+  const pctFromCount=(v,base=10)=>{ const n=Number(v); if(!Number.isFinite(n) || n<0) return null; return n<=base ? clamp((n/base)*100) : clamp(n); };
+  function badge(v){ const p=validPct(v); if(p===null) return '<span class="v127-badge">—</span>'; const c=p>=68?'good':p>=45?'mid':'bad'; return `<span class="v127-badge ${c}">${p}%</span><span class="v127-bar"><span class="v127-fill ${c}" style="width:${p}%"></span></span>`; }
+  function row(label,a,b,c){ return `<div class="v127-row"><div class="v127-label">${label}</div><div class="v127-cell">${a===null||a===undefined?'—':badge(a)}</div><div class="v127-cell">${b===null||b===undefined?'—':badge(b)}</div><div class="v127-cell">${c===null||c===undefined?'—':badge(c)}</div></div>`; }
+  function metricRow(a,label,b,type='metric'){
+    const L=type==='pct'?badge(a):fmtVal(a);
+    const R=type==='pct'?badge(b):fmtVal(b);
+    return `<div class="v128-compare-row"><div class="side">${L}</div><div class="metric">${label}</div><div class="side">${R}</div></div>`;
+  }
+  function cornerLabel(code){ const n=Number(code); return Number.isFinite(n) ? (n/10).toFixed(1) : code; }
+
+  function stHome(m){ return (m?.teamTrends?.home?.stats)||{}; }
+  function stAway(m){ return (m?.teamTrends?.away?.stats)||{}; }
+
+  window.v127ProbValues=function(m){
+    const o=m?.odds||{}, hs=stHome(m), as=stAway(m), odds=oddNorm(m);
+    const home=validPct(field(o,'probability_home_win','home_win_probability')) ?? validPct(m?.winner) ?? validPct(odds.home);
+    const draw=validPct(field(o,'probability_draw','draw_probability')) ?? validPct(m?.draw) ?? validPct(odds.draw);
+    const away=validPct(field(o,'probability_away_win','away_win_probability')) ?? validPct(m?.awayWin) ?? validPct(odds.away);
+    const o05=validPct(field(o,'o05_potential','over05_average')) ?? 100;
+    const o15=validPct(field(o,'o15_potential')) ?? validPct(m?.over15);
+    const o25=validPct(field(o,'o25_potential')) ?? validPct(m?.over25);
+    const o35=validPct(field(o,'o35_potential'));
+    const btts=validPct(field(o,'btts_potential')) ?? validPct(m?.btts);
+    const c85=validPct(field(o,'corners_o85_potential')) ?? validPct(m?.corners85);
+    const c95=validPct(field(o,'corners_o95_potential')) ?? validPct(m?.corners95);
+    const c105=validPct(field(o,'corners_o105_potential'));
+    const cardsPot=num(field(o,'cards_potential'),null);
+    const cardBase=cardsPot!==null?clamp(cardsPot*12):null;
+    return {home,draw,away,o05,o15,o25,o35,btts,c85,c95,c105,cardsPot,cardBase,hs,as};
+  };
+
+  window.v127Probabilities=function(m){
+    const p=v127ProbValues(m), subt=[['winners','Vencedores'],['goals','Gols'],['corners','Escanteios'],['cards','Cartões']];
+    let rows='';
+    if(v127ProbSub==='winners'){
+      const h=p.home,d=p.draw,a=p.away;
+      rows+=row('Casa vence',h,null,h);
+      rows+=row('Empate',d,d,d);
+      rows+=row('Visitante vence',null,a,a);
+      rows+=row('Casa ou Empate (1X)',h!==null&&d!==null?Math.min(100,h+d):null,null,h!==null&&d!==null?Math.min(100,h+d):null);
+      rows+=row('Casa ou Visitante (12)',h!==null&&a!==null?Math.min(100,h+a):null,h!==null&&a!==null?Math.min(100,h+a):null,h!==null&&a!==null?Math.min(100,h+a):null);
+      rows+=row('Empate ou Visitante (X2)',null,d!==null&&a!==null?Math.min(100,d+a):null,d!==null&&a!==null?Math.min(100,d+a):null);
+    }else if(v127ProbSub==='goals'){
+      rows+=row('Mais que 0.5',p.o05,p.o05,p.o05);
+      rows+=row('Mais que 1.5',p.o15,validPct((p.o15??0)-10),p.o15);
+      rows+=row('Mais que 2.5',p.o25,validPct((p.o25??0)-10),p.o25);
+      rows+=row('Mais que 3.5',p.o35,validPct((p.o35??0)-10),p.o35);
+      rows+=row('Menos que 2.5',p.o25!==null?100-p.o25:null,p.o25!==null?100-p.o25:null,p.o25!==null?100-p.o25:null);
+      rows+=row('Ambas Marcam',p.btts,p.btts,p.btts);
+    }else if(v127ProbSub==='corners'){
+      const hs=p.hs, as=p.as;
+      const data=[['65','corners_o65_potential'],['75','corners_o75_potential'],['85','corners_o85_potential'],['95','corners_o95_potential'],['105','corners_o105_potential'],['115','corners_o115_potential']];
+      data.forEach(([code,matchKey])=>{
+        const h=validPct(field(hs,`over${code}CornersPercentage_home`,`over${code}CornersPercentage_overall`));
+        const a=validPct(field(as,`over${code}CornersPercentage_away`,`over${code}CornersPercentage_overall`));
+        const j=validPct(field(m.odds||{},matchKey,`corners_o${code}_potential`)) ?? (h!==null&&a!==null?Math.round((h+a)/2):null);
+        rows+=row(`Mais que ${cornerLabel(code)} escanteios`,h,a,j);
+      });
+    }else{
+      const pot=p.cardsPot;
+      const base=p.cardBase;
+      rows+=row('Mais que 3.5 cartões',base!==null?Math.min(100,base+10):null,base!==null?Math.min(100,base+10):null,base);
+      rows+=row('Mais que 4.5 cartões',base!==null?base:null,base!==null?base:null,base!==null?Math.max(0,base-8):null);
+      rows+=row('Mais que 5.5 cartões',base!==null?Math.max(0,base-15):null,base!==null?base:null,base!==null?Math.max(0,base-14):null);
+      rows+=`<div class="v127-row"><div class="v127-label">Potencial médio de cartões</div><div class="v127-cell">—</div><div class="v127-cell">—</div><div class="v127-cell"><span class="v127-badge good">${fmtVal(pot)}</span></div></div>`;
+    }
+    return `<div class="analysis-v127"><div class="v127-subtabs">${subt.map(t=>`<button class="v127-pill ${v127ProbSub===t[0]?'active':''}" onclick="v127Sub('${t[0]}')">${t[1]}</button>`).join('')}</div><div class="v127-card"><h2>Probabilidades</h2><div class="v127-table"><div class="v127-row head"><div>Mercado</div><div>Casa</div><div>Visitante</div><div>Jogo</div></div>${rows}</div><div class="v127-note">Percentuais mostram probabilidade/tendência quando há dado confiável. Médias e potenciais aparecem como número simples, sem barra.</div></div></div>`;
+  };
+
+  window.v128Stats=function(m){
+    const hs=stHome(m), as=stAway(m), tabs=[['winners','Vencedores'],['goals','Gols'],['corners','Escanteios'],['cards','Cartões'],['shots','Chutes']];
+    let title='Dados Estatísticos', rows='';
+    const s=(obj,...keys)=>field(obj,...keys);
+    if(v127StatsSub==='winners'){
+      rows+=metricRow(s(hs,'winPercentage_home'),'Venceu a partida',s(as,'winPercentage_away'),'pct');
+      rows+=metricRow(s(hs,'losePercentage_home'),'Perdeu a partida',s(as,'losePercentage_away'),'pct');
+      rows+=metricRow(s(hs,'drawPercentage_home'),'A partida terminou empatada',s(as,'drawPercentage_away'),'pct');
+      rows+=metricRow(s(hs,'seasonPPG_home'),'Pontos por jogo',s(as,'seasonPPG_away'));
+    }else if(v127StatsSub==='goals'){
+      title='Estatísticas — Gols';
+      rows+=metricRow(v128Avg? v128Avg(hs,'seasonGoalsTotal','seasonAVG','home') : s(hs,'seasonGoalsTotal_home'),'Média Total de Gols',v128Avg? v128Avg(as,'seasonGoalsTotal','seasonAVG','away') : s(as,'seasonGoalsTotal_away'));
+      rows+=metricRow(v128Avg? v128Avg(hs,'seasonGoals','seasonScoredAVG','home') : s(hs,'seasonGoals_home'),'Média de Gols Marcados',v128Avg? v128Avg(as,'seasonGoals','seasonScoredAVG','away') : s(as,'seasonGoals_away'));
+      rows+=metricRow(v128Avg? v128Avg(hs,'seasonConceded','seasonConcededAVG','home') : s(hs,'seasonConceded_home'),'Média de Gols Sofridos',v128Avg? v128Avg(as,'seasonConceded','seasonConcededAVG','away') : s(as,'seasonConceded_away'));
+      rows+=metricRow(s(hs,'seasonBTTSPercentage_home','seasonBTTSPercentage_overall'),'Ambas Marcam',s(as,'seasonBTTSPercentage_away','seasonBTTSPercentage_overall'),'pct');
+      rows+=metricRow(s(hs,'seasonOver25Percentage_home','seasonOver25Percentage_overall'),'Mais de 2.5 gols',s(as,'seasonOver25Percentage_away','seasonOver25Percentage_overall'),'pct');
+    }else if(v127StatsSub==='corners'){
+      title='Estatísticas — Escanteios';
+      ['65','75','85','95','105','115'].forEach(code=>{ rows+=metricRow(s(hs,`over${code}CornersPercentage_home`,`over${code}CornersPercentage_overall`),`Mais de ${cornerLabel(code)} escanteios`,s(as,`over${code}CornersPercentage_away`,`over${code}CornersPercentage_overall`),'pct'); });
+    }else if(v127StatsSub==='cards'){
+      title='Estatísticas — Cartões'; const pot=field(m?.odds||{},'cards_potential');
+      rows+=metricRow(pot,'Potencial médio de cartões da partida',pot);
+      rows+=metricRow(pctFromCount(s(hs,'over05Cards_home','over05Cards_overall')), 'Jogos acima de 0.5 cartões', pctFromCount(s(as,'over05Cards_away','over05Cards_overall')), 'pct');
+      rows+=metricRow(pctFromCount(s(hs,'over15Cards_home','over15Cards_overall')), 'Jogos acima de 1.5 cartões', pctFromCount(s(as,'over15Cards_away','over15Cards_overall')), 'pct');
+      rows+=metricRow(pctFromCount(s(hs,'over25Cards_home','over25Cards_overall')), 'Jogos acima de 2.5 cartões', pctFromCount(s(as,'over25Cards_away','over25Cards_overall')), 'pct');
+    }else{
+      title='Estatísticas — Chutes';
+      rows+=metricRow(s(hs,'shotsAVG_home'),'Média total de chutes',s(as,'shotsAVG_away'));
+      rows+=metricRow(s(hs,'shotsOnTargetAVG_home'),'Média de chutes no alvo',s(as,'shotsOnTargetAVG_away'));
+      rows+=metricRow(s(hs,'shotsOffTargetAVG_home'),'Média de chutes fora do alvo',s(as,'shotsOffTargetAVG_away'));
+    }
+    return `<div class="analysis-v127"><div class="v128-subtabs">${tabs.map(t=>`<button class="v128-pill ${v127StatsSub===t[0]?'active':''}" onclick="v127Stats('${t[0]}')">${t[1]}</button>`).join('')}</div><div class="v128-card"><h2>${title}</h2><div class="v128-compare"><div class="v128-compare-row"><div class="side muted"><b>${m.home}</b></div><div class="metric muted"><b>Métrica</b></div><div class="side muted"><b>${m.away}</b></div></div>${rows||'<div class="v128-empty">Sem dados suficientes.</div>'}</div><div class="v128-note">Casa usa estatísticas do mandante em casa; visitante usa estatísticas do visitante fora. Campos indisponíveis ou -1 são ocultados.</div></div></div>`;
+  };
+
+  function teamLogo(m,side){ return side==='home'?m.logoHome:m.logoAway; }
+  function logoHtml(src,name){ return src?`<img class="v1212-logo-mini" src="${src}" alt="${name||''}">`:''; }
+  function shotRowsWithLogos(m,side){
+    const teamId=Number(side==='home'?m.odds?.homeID:m.odds?.awayID); const rows=(typeof v128TeamMatches==='function'?v128TeamMatches(m,side):[]).slice(0,8);
+    return rows.map(r=>{ const isHome=Number(r.homeID)===teamId; const pref=isHome?'team_a':'team_b'; const ownLogo=teamLogo(m,side); const oppLogo=isHome?(r.away_image||r.awayImage||m.logoAway):(r.home_image||r.homeImage||m.logoHome); return {date:v128FormatDateUnix(r.date_unix),placar:`${v128GoalCount(r.homeGoals)} x ${v128GoalCount(r.awayGoals)}`,total:num(r[`${pref}_shots`],null),target:num(r[`${pref}_shotsOnTarget`],null),off:num(r[`${pref}_shotsOffTarget`],null),ownLogo,oppLogo}; });
+  }
+  window.v128ShotChart=function(m){
+    const side=v127ShotSide, hs=stHome(m), as=stAway(m), stats=side==='home'?hs:as, ctx=side==='home'?'home':'away', team=side==='home'?m.home:m.away, rows=shotRowsWithLogos(m,side);
+    const avg={total:field(stats,`shotsAVG_${ctx}`),target:field(stats,`shotsOnTargetAVG_${ctx}`),off:field(stats,`shotsOffTargetAVG_${ctx}`)};
+    const key=v128ShotMetric==='target'?'target':v128ShotMetric==='off'?'off':'total'; const metricLabel=key==='target'?'Chutes no alvo':key==='off'?'Chutes fora do alvo':'Total de chutes';
+    return `<div class="analysis-v127"><div class="v128-subtabs"><button class="v128-pill ${side==='home'?'active':''}" onclick="v127Shots('home')">Casa</button><button class="v128-pill ${side==='away'?'active':''}" onclick="v127Shots('away')">Visitante</button><select class="v128-select" onchange="v128ShotMetricSet(this.value)"><option value="total" ${key==='total'?'selected':''}>Total de chutes</option><option value="target" ${key==='target'?'selected':''}>Chutes no alvo</option><option value="off" ${key==='off'?'selected':''}>Chutes fora do alvo</option></select></div><div class="v128-shot-note">Selecione Casa ou Visitante para ver o histórico recente do time. O gráfico mostra a métrica escolhida jogo a jogo.</div><div class="v128-shot-help"><div class="v128-kpi"><small>${team}</small><b>${fmtVal(avg.total)}</b><div class="v128-mini">média de chutes totais no recorte ${side==='home'?'como mandante':'como visitante'}</div></div><div class="v128-kpi"><small>Chutes no alvo</small><b>${fmtVal(avg.target)}</b><div class="v128-mini">média de finalizações certas</div></div><div class="v128-kpi"><small>Chutes fora do alvo</small><b>${fmtVal(avg.off)}</b><div class="v128-mini">média de finalizações erradas</div></div></div><div class="v128-card"><h2>Gráfico de Chutes — ${metricLabel}</h2>${rows.length?`<div class="v128-chart">${rows.map(r=>{ const val=r[key]; const h=Math.max(12,Number(val||0)*10); return `<div class="v128-chart-col"><div class="v128-bar-v good" style="height:${h}px">${val??'—'}</div><span class="v128-col-label">${r.date}</span><span class="v1212-score-line">${logoHtml(r.oppLogo,'Adversário')}<b>${r.placar}</b>${logoHtml(r.ownLogo,team)}</span></div>`; }).join('')}</div>`:`<div class="v128-empty">Sem chutes jogo a jogo disponíveis. Exibindo apenas médias agregadas.</div>`}<div class="v128-note">Métricas disponíveis: total, no alvo e fora do alvo.</div></div></div>`;
+  };
+
+  document.addEventListener('DOMContentLoaded',()=>{
+    document.querySelectorAll('.brand small').forEach(el=>el.remove());
+    const labels={dashboard:'Dashboard',games:'Jogos',analysis:'Análise',bets:'Apostas Prontas',howto:'Como Usar',plans:'Planos',admin:'Admin'};
+    document.querySelectorAll('.nav-item').forEach(el=>{ if(labels[el.dataset.page]) el.textContent=labels[el.dataset.page]; if(el.dataset.page==='scanner') el.remove(); });
+  });
+})();
+</script>
+
 </body></html>
