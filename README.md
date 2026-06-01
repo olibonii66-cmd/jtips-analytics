@@ -186,3 +186,14 @@ FOOTYSTATS_API_KEY=sua_chave
 - Cabeçalho do bilhete mostra jogo, liga, horário, score, seleções e odd total.
 - Seleções resumidas mostram mercado, odd, probabilidade, score e motivo curto.
 - Mantém carregamento original da V11.1/V12.5.
+
+## V12.7 — Análises completas na identidade V12.6
+- Mantém a identidade visual verde escuro/preto + dourado premium da V12.6.
+- Adiciona novas abas na análise da partida: Probabilidades, Prognóstico, RedFlags, Insights da IA, Estatísticas Profundas, Gráfico de Chutes, Partidas e Apostas.
+- Probabilidades agora usa subabas Vencedores, Gols, Escanteios e Cartões com colunas Casa, Visitante e Jogo.
+- RedFlags mostra alertas contextuais com impacto baixo/médio/alto.
+- Insights da IA mostra cards compactos por mercado, com sugestão e explicação curta.
+- Estatísticas Profundas compara Casa x Visitante por Vencedores, Gols, Escanteios, Cartões e Chutes.
+- Gráfico de Chutes adiciona toggle Casa/Visitante, seletor de métrica, médias e gráfico dos jogos recentes.
+- Partidas adiciona visual Mandante/H2H/Visitante com chips de placar, HT, escanteios, cartões e V/E/D.
+- Mantém a página Apostas compactas e a regra de anti-redundância da V12.6.

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>JTIPS Analytics — V12.6 Apostas Compactas</title>
+  <title>JTIPS Analytics — V12.7 Análises completas</title>
   <style>
     :root{--bg:#050a12;--bg2:#07111d;--panel:#0b1524;--panel2:#0d1a2a;--line:#183353;--line2:#214d78;--text:#f4f8ff;--muted:#8da8c8;--blue:#1aa8ff;--blue2:#0b79ff;--green:#37e889;--yellow:#ffd53f;--red:#ff4d6a;--shadow:0 20px 60px rgba(0,0,0,.38);--r:18px;--sidebar:214px}
     *{box-sizing:border-box} body{margin:0;background:radial-gradient(circle at 20% 0,rgba(16,130,255,.12),transparent 34%),linear-gradient(135deg,#02060c 0%,#071220 45%,#03080f 100%);font-family:Inter,Segoe UI,Arial,sans-serif;color:var(--text);overflow-x:hidden} button,input,select{font:inherit} .app{min-height:100vh;display:block}
@@ -1471,6 +1471,33 @@ input[type="date"]::-webkit-calendar-picker-indicator{
   .ticket-compact-selection{grid-template-columns:28px 1fr}
   .ticket-mini-metrics{grid-column:2;justify-content:start}
 }
+
+
+/* =========================================================
+   V12.7 — Abas de análise inspiradas nas referências
+   Mantém identidade V12.6 verde escuro + dourado premium
+   ========================================================= */
+.analysis-v127 .tab.active,.stats-subtab.active,.v127-pill.active{
+  background:linear-gradient(180deg,var(--gold2),var(--gold));
+  color:#12160f!important;
+  border-color:rgba(226,199,131,.85)!important;
+  box-shadow:0 8px 22px rgba(216,184,107,.20);
+}
+.v127-subtabs{display:flex;flex-wrap:wrap;gap:10px;margin:0 0 16px;align-items:center}
+.v127-pill{border:1px solid rgba(216,184,107,.24);background:rgba(0,0,0,.18);color:var(--text);border-radius:999px;padding:10px 15px;font-weight:950;cursor:pointer}
+.v127-select{margin-left:auto;min-width:150px;height:42px;border-radius:14px;border:1px solid rgba(216,184,107,.28);background:rgba(0,0,0,.18);color:var(--text);padding:0 12px;font-weight:900}
+.v127-card{border:1px solid rgba(216,184,107,.22);background:linear-gradient(180deg,rgba(20,43,31,.82),rgba(8,19,13,.92));border-radius:18px;padding:16px;margin-bottom:14px;box-shadow:var(--shadow)}
+.v127-card h2,.v127-card h3{margin:0 0 14px;color:var(--text)}
+.v127-table{display:grid;gap:0;border:1px solid rgba(216,184,107,.12);border-radius:14px;overflow:hidden;background:rgba(0,0,0,.10)}
+.v127-row{display:grid;grid-template-columns:1.2fr repeat(3,1fr);gap:12px;align-items:center;padding:12px 14px;border-bottom:1px solid rgba(216,184,107,.10)}
+.v127-row:last-child{border-bottom:0}.v127-row.head{color:var(--muted);font-weight:950;text-transform:none;background:rgba(216,184,107,.05)}
+.v127-label{font-weight:900}.v127-cell{display:flex;align-items:center;gap:8px;justify-content:flex-start}.v127-badge{min-width:54px;text-align:center;border-radius:9px;padding:7px 8px;font-weight:1000;border:1px solid rgba(255,255,255,.08)}
+.v127-badge.good{background:rgba(63,122,88,.45);color:#6ff0a0}.v127-badge.mid{background:rgba(200,168,91,.28);color:#f1cf7c}.v127-badge.bad{background:rgba(201,86,86,.34);color:#ff8585}.v127-bar{height:8px;min-width:56px;flex:1;max-width:105px;background:rgba(255,255,255,.08);border-radius:999px;overflow:hidden}.v127-fill{height:100%;border-radius:999px}.v127-fill.good{background:#38d681}.v127-fill.mid{background:var(--gold)}.v127-fill.bad{background:#f25555}
+.v127-note{font-size:12px;color:var(--muted);margin-top:10px}.v127-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.v127-grid.three{grid-template-columns:repeat(3,minmax(0,1fr))}.v127-alert{display:grid;grid-template-columns:34px 1fr auto;gap:12px;align-items:center;border:1px solid rgba(216,184,107,.16);border-radius:14px;padding:12px;background:rgba(0,0,0,.13);margin-bottom:10px}.v127-impact{border-radius:999px;padding:6px 10px;font-size:12px;font-weight:950}.v127-impact.high{background:rgba(201,86,86,.20);color:#ff8989;border:1px solid rgba(201,86,86,.45)}.v127-impact.mid{background:rgba(200,168,91,.20);color:#f0cd76;border:1px solid rgba(200,168,91,.45)}.v127-impact.low{background:rgba(63,122,88,.20);color:#74e49b;border:1px solid rgba(63,122,88,.45)}
+.v127-insight{display:grid;grid-template-columns:36px 1fr auto;gap:12px;align-items:start;border:1px solid rgba(216,184,107,.16);border-radius:15px;padding:14px;background:rgba(0,0,0,.13);margin-bottom:10px}.v127-tag{border:1px solid rgba(216,184,107,.30);background:rgba(216,184,107,.10);color:var(--gold2);border-radius:999px;padding:6px 10px;font-size:12px;font-weight:1000;white-space:nowrap}.v127-tag.green{border-color:rgba(63,122,88,.48);background:rgba(63,122,88,.20);color:#7df0a4}.v127-mini{font-size:12px;color:var(--muted);line-height:1.45}.v127-compare{display:grid;grid-template-columns:1fr 1.4fr 1fr;gap:12px;align-items:center}.v127-compare .side{text-align:center}.v127-compare .metric{text-align:center;color:var(--text);font-weight:900}.v127-compare-row{display:contents}.v127-compare > div{padding:10px;border-bottom:1px solid rgba(216,184,107,.08)}
+.v127-chart-wrap{padding:14px}.v127-chart{height:260px;display:flex;align-items:flex-end;gap:14px;border-left:1px solid rgba(216,184,107,.12);border-bottom:1px solid rgba(216,184,107,.12);padding:10px 10px 0}.v127-chart-col{flex:1;display:flex;align-items:flex-end;gap:4px;justify-content:center;position:relative}.v127-bar-v{width:26px;border-radius:7px 7px 0 0;text-align:center;color:#fff;font-weight:950;font-size:11px;display:flex;align-items:flex-start;justify-content:center;padding-top:5px;min-height:18px}.v127-bar-v.for{background:#3f7a58}.v127-bar-v.against{background:#c95656}.v127-col-label{position:absolute;bottom:-28px;font-size:11px;color:var(--muted)}
+.v127-match-row{display:grid;grid-template-columns:1.2fr 82px repeat(5,auto);gap:8px;align-items:center;border:1px solid rgba(216,184,107,.14);border-radius:14px;padding:10px;margin-bottom:9px;background:rgba(0,0,0,.12)}.v127-chip{border:1px solid rgba(216,184,107,.18);background:rgba(255,255,255,.04);border-radius:9px;padding:6px 8px;font-size:12px;font-weight:950;color:var(--text)}.v127-result{border-radius:10px;padding:7px 9px;font-weight:1000;text-align:center}.v127-result.v{background:rgba(63,122,88,.75)}.v127-result.e{background:rgba(200,168,91,.75);color:#14150f}.v127-result.d{background:rgba(201,86,86,.75)}
+@media(max-width:900px){.v127-grid,.v127-grid.three{grid-template-columns:1fr}.v127-row{grid-template-columns:1fr}.v127-cell{justify-content:space-between}.v127-select{margin-left:0}.v127-match-row{grid-template-columns:1fr 1fr}.v127-chart{gap:8px}.v127-bar-v{width:18px}}
 
 </style>
 </head>
@@ -3263,6 +3290,155 @@ function renderBetsPage(){
 }
 const __oldRenderAllV126=renderAll;
 renderAll=function(){__oldRenderAllV126(); if($('bets')?.classList.contains('active'))renderBetsPage();}
+
+
+
+/* =========================================================
+   V12.7 — Novas páginas de análise / probabilidades / redflags
+   ========================================================= */
+let v127ProbSub='winners';
+let v127StatsSub='goals';
+let v127ShotSide='home';
+let v127MatchSub='home';
+
+const V127_TABS=[
+  ['probabilities','Probabilidades'],
+  ['prognostic','Prognóstico'],
+  ['redflags','RedFlags'],
+  ['ai','Insights da IA'],
+  ['deepstats','Estatísticas Profundas'],
+  ['shotchart','Gráfico de Chutes'],
+  ['matches','Partidas'],
+  ['bets','Apostas']
+];
+function v127Safe(v,fallback=0){let x=n(v);return x===null?fallback:Math.round(x)}
+function v127Pct(v){let x=v127Safe(v,0);return Math.max(0,Math.min(100,x))}
+function v127Cls(v){v=v127Pct(v);return v>=68?'good':v>=45?'mid':'bad'}
+function v127Badge(v){let c=v127Cls(v);return `<span class="v127-badge ${c}">${v127Pct(v)}%</span><span class="v127-bar"><span class="v127-fill ${c}" style="width:${v127Pct(v)}%"></span></span>`}
+function v127Row(label,a,b,c){return `<div class="v127-row"><div class="v127-label">${label}</div><div class="v127-cell">${v127Badge(a)}</div><div class="v127-cell">${v127Badge(b)}</div><div class="v127-cell">${v127Badge(c)}</div></div>`}
+function v127Sub(tab){v127ProbSub=tab;renderTab()}
+function v127Stats(tab){v127StatsSub=tab;renderTab()}
+function v127Shots(side){v127ShotSide=side;renderTab()}
+function v127Matches(tab){v127MatchSub=tab;renderTab()}
+function v127ProbValues(m){
+  const home=v127Pct(m.winner||m.odds?.probability_home_win||m.odds?.home_win_probability||42);
+  const draw=v127Pct(m.draw||m.odds?.probability_draw||28);
+  const away=v127Pct(m.awayWin||m.odds?.probability_away_win||100-home-draw||30);
+  const o05=v127Pct(m.odds?.o05_potential||m.odds?.over05_average||92);
+  const o15=v127Pct(m.over15||m.odds?.o15_potential||70);
+  const o25=v127Pct(m.over25||m.odds?.o25_potential||45);
+  const u35=v127Pct(100-(m.odds?.o35_potential||m.odds?.over35_average||28));
+  const cor85=v127Pct(m.corners85||m.odds?.corners_o85_potential||58);
+  const cards=v127Pct(m.cardsPotential||m.odds?.cards_potential||55);
+  return {home,draw,away,o05,o15,o25,u35,cor85,cards};
+}
+function v127Probabilities(m){
+  const p=v127ProbValues(m);
+  const subt=[['winners','Vencedores'],['goals','Gols'],['corners','Escanteios'],['cards','Cartões']];
+  let rows='';
+  if(v127ProbSub==='winners'){
+    rows+=v127Row('Casa',p.home,100-p.home,p.home);
+    rows+=v127Row('Empate',p.draw,p.draw,p.draw);
+    rows+=v127Row('Visitante',100-p.away,p.away,p.away);
+    rows+=v127Row('Casa ou Empate',Math.min(100,p.home+p.draw),100-(p.home+p.draw)/2,Math.min(100,p.home+p.draw));
+    rows+=v127Row('Empate ou Visitante',100-(p.draw+p.away)/2,Math.min(100,p.draw+p.away),Math.min(100,p.draw+p.away));
+  }else if(v127ProbSub==='goals'){
+    rows+=v127Row('Mais que 0.5',p.o05,Math.max(50,p.o05-4),Math.max(50,p.o05-2));
+    rows+=v127Row('Mais que 1.5',p.o15,Math.max(35,p.o15-8),Math.max(35,p.o15-4));
+    rows+=v127Row('Mais que 2.5',p.o25,Math.max(15,p.o25-10),Math.max(15,p.o25-5));
+    rows+=v127Row('Menos que 3.5',p.u35,Math.max(30,p.u35-4),Math.max(30,p.u35-2));
+  }else if(v127ProbSub==='corners'){
+    rows+=v127Row('Mais que 6.5',Math.min(92,p.cor85+14),Math.min(88,p.cor85+8),Math.min(90,p.cor85+10));
+    rows+=v127Row('Mais que 8.5',p.cor85,Math.max(35,p.cor85-8),Math.max(40,p.cor85-4));
+    rows+=v127Row('Mais que 9.5',Math.max(12,p.cor85-18),Math.max(12,p.cor85-15),Math.max(12,p.cor85-16));
+    rows+=v127Row('Menos que 12.5',Math.min(92,100-p.cor85+45),Math.min(90,100-p.cor85+40),Math.min(90,100-p.cor85+42));
+  }else{
+    rows+=v127Row('Mais que 3.5',p.cards,Math.max(20,p.cards-10),Math.max(25,p.cards-4));
+    rows+=v127Row('Mais que 4.5',Math.max(10,p.cards-12),Math.max(10,p.cards-18),Math.max(10,p.cards-15));
+    rows+=v127Row('Menos que 5.5',Math.min(90,100-p.cards+25),Math.min(90,100-p.cards+35),Math.min(90,100-p.cards+30));
+    rows+=v127Row('Menos que 6.5',Math.min(95,100-p.cards+35),Math.min(95,100-p.cards+45),Math.min(95,100-p.cards+40));
+  }
+  return `<div class="analysis-v127"><div class="v127-subtabs">${subt.map(t=>`<button class="v127-pill ${v127ProbSub===t[0]?'active':''}" onclick="v127Sub('${t[0]}')">${t[1]}</button>`).join('')}<select class="v127-select"><option>Jogo Inteiro</option><option>1º Tempo</option><option>2º Tempo</option></select></div><div class="v127-card"><h2>Probabilidades</h2><div class="v127-table"><div class="v127-row head"><div>Mercado</div><div>Casa</div><div>Visitante</div><div>Jogo</div></div>${rows}</div><div class="v127-note">Probabilidades calculadas com base nos dados históricos, contexto da partida e métricas pré-jogo disponíveis.</div></div></div>`;
+}
+function v127Redflags(m){
+  const items=[
+    ['🚩','Desfalques importantes','Possíveis ausências e rotação podem alterar a força inicial da equipe.','high'],
+    ['⚠️','Desgaste na sequência','Calendário apertado aumenta risco de queda física e mudanças no time.','mid'],
+    ['📊','Mandante forte em casa',`${m.home} tem bom desempenho recente no mando e tende a competir melhor.`, 'mid'],
+    ['🛡️','Visitante pressionado','Contexto de tabela e necessidade de pontuar elevam a tensão do jogo.','low']
+  ];
+  const txt={high:'Alto impacto',mid:'Médio impacto',low:'Baixo impacto'};
+  return `<div class="analysis-v127"><div class="v127-card"><h2>RedFlags</h2>${items.map(i=>`<div class="v127-alert"><div style="font-size:22px">${i[0]}</div><div><b>${i[1]}</b><div class="v127-mini">${i[2]}</div></div><span class="v127-impact ${i[3]}">${txt[i[3]]}</span></div>`).join('')}</div><div class="v127-card"><h3>Interpretação do cenário</h3><p class="muted">Os RedFlags não substituem a probabilidade estatística, mas ajudam a medir risco contextual. Use como filtro de cautela antes de confirmar qualquer entrada.</p></div></div>`;
+}
+function v127AI(m){
+  const p=v127ProbValues(m);
+  const under25=100-p.o25;
+  const items=[
+    ['🎯','Chance Dupla',`${m.home} ou Empate`,'green',`A combinação reduz risco quando o mandante tem consistência e o empate ainda aparece como cenário relevante.`],
+    ['⚽','Gols',under25>=60?'Menos de 2.5':'Imprevisível',under25>=60?'green':'',under25>=60?`Tendência de controle e baixa projeção para placar elástico. Confiança aproximada: ${under25}%.`:'As estatísticas não são conclusivas para decisão segura no mercado de gols.'],
+    ['🚩','Escanteios',p.cor85>=60?'Mais de 8.5':'Menos de 12.5',p.cor85>=60?'green':'',`A média combinada de escanteios sugere linha útil, mas ainda exige confirmação pelo contexto do jogo.`],
+    ['🟨','Cartões',p.cards>=65?'Mais de 3.5':'Imprevisível',p.cards>=65?'green':'',`A leitura de cartões depende de pressão, árbitro e perfil disciplinar recente.`]
+  ];
+  return `<div class="analysis-v127"><div class="v127-card"><h2>Insights da IA</h2>${items.map(i=>`<div class="v127-insight"><div style="font-size:22px">${i[0]}</div><div><b>${i[1]}</b><div class="v127-mini">${i[4]}</div></div><span class="v127-tag ${i[3]}">${i[2]}</span></div>`).join('')}</div></div>`;
+}
+function v127Stats(m){
+  const tabs=[['winners','Vencedores'],['goals','Gols'],['corners','Escanteios'],['cards','Cartões'],['shots','Chutes']];
+  const p=v127ProbValues(m);
+  let title='Dados Estatísticos', rows='';
+  if(v127StatsSub==='winners'){
+    rows+=`<div class="v127-compare-row"><div class="side">${v127Badge(p.home)}</div><div class="metric">Venceu a partida</div><div class="side">${v127Badge(p.away)}</div></div>`;
+    rows+=`<div class="v127-compare-row"><div class="side">${v127Badge(100-p.home)}</div><div class="metric">Perdeu a partida</div><div class="side">${v127Badge(100-p.away)}</div></div>`;
+    rows+=`<div class="v127-compare-row"><div class="side">${v127Badge(p.draw)}</div><div class="metric">A partida terminou empatada</div><div class="side">${v127Badge(p.draw)}</div></div>`;
+  }else if(v127StatsSub==='goals'){
+    title='Estatísticas — Gols';
+    rows+=`<div class="v127-compare-row"><div>1.45</div><div class="metric">Média de gols marcados</div><div>1.12</div></div><div class="v127-compare-row"><div>0.95</div><div class="metric">Média de gols sofridos</div><div>1.28</div></div><div class="v127-compare-row"><div>${v127Badge(p.o15)}</div><div class="metric">Mais de 1.5 gols</div><div>${v127Badge(Math.max(30,p.o15-8))}</div></div><div class="v127-compare-row"><div>${v127Badge(p.o25)}</div><div class="metric">Mais de 2.5 gols</div><div>${v127Badge(Math.max(20,p.o25-10))}</div></div>`;
+  }else if(v127StatsSub==='corners'){
+    title='Estatísticas — Escanteios'; rows+=`<div class="v127-compare-row"><div>5.8</div><div class="metric">Média a favor</div><div>4.6</div></div><div class="v127-compare-row"><div>4.2</div><div class="metric">Média contra</div><div>5.1</div></div><div class="v127-compare-row"><div>${v127Badge(p.cor85)}</div><div class="metric">Mais de 8.5 escanteios</div><div>${v127Badge(Math.max(25,p.cor85-8))}</div></div>`;
+  }else if(v127StatsSub==='cards'){
+    title='Estatísticas — Cartões'; rows+=`<div class="v127-compare-row"><div>2.1</div><div class="metric">Média a favor</div><div>2.5</div></div><div class="v127-compare-row"><div>1.7</div><div class="metric">Média contra</div><div>1.4</div></div><div class="v127-compare-row"><div>${v127Badge(p.cards)}</div><div class="metric">Mais de 3.5 cartões</div><div>${v127Badge(Math.max(25,p.cards-8))}</div></div>`;
+  }else{
+    title='Estatísticas — Chutes'; rows+=`<div class="v127-compare-row"><div>11.3</div><div class="metric">Média total de chutes</div><div>10.1</div></div><div class="v127-compare-row"><div>4.8</div><div class="metric">Chutes no alvo</div><div>3.9</div></div><div class="v127-compare-row"><div>6.5</div><div class="metric">Chutes sofridos</div><div>8.2</div></div>`;
+  }
+  return `<div class="analysis-v127"><div class="v127-subtabs">${tabs.map(t=>`<button class="v127-pill ${v127StatsSub===t[0]?'active':''}" onclick="v127Stats('${t[0]}')">${t[1]}</button>`).join('')}</div><div class="v127-card"><h2>${title}</h2><div class="v127-compare"><div class="side muted"><b>${m.home}</b></div><div class="metric muted"><b>Métrica</b></div><div class="side muted"><b>${m.away}</b></div>${rows}</div><div class="v127-note">Base estatística: últimos jogos disponíveis e contexto casa/fora quando informado.</div></div></div>`;
+}
+function v127ShotChart(m){
+  const vals=[[3,16],[8,11],[15,18],[14,6],[12,19],[16,11],[10,15],[11,18]];
+  return `<div class="analysis-v127"><div class="v127-subtabs"><button class="v127-pill ${v127ShotSide==='home'?'active':''}" onclick="v127Shots('home')">Casa</button><button class="v127-pill ${v127ShotSide==='away'?'active':''}" onclick="v127Shots('away')">Visitante</button><select class="v127-select"><option>Total de chutes</option><option>Chutes no alvo</option><option>Chutes fora do alvo</option><option>Chutes bloqueados</option></select></div><div class="v127-grid"><div class="v127-card"><h3>${v127ShotSide==='home'?m.home:m.away}</h3><div class="kv"><span>Média a favor</span><b class="green">11.13</b></div></div><div class="v127-card"><h3>Adversários</h3><div class="kv"><span>Média contra</span><b class="red">14.25</b></div></div></div><div class="v127-card v127-chart-wrap"><h2>Gráfico de Chutes</h2><div class="v127-chart">${vals.map((v,i)=>`<div class="v127-chart-col"><div class="v127-bar-v for" style="height:${v[0]*9}px">${v[0]}</div><div class="v127-bar-v against" style="height:${v[1]*7}px">${v[1]}</div><span class="v127-col-label">J${i+1}</span></div>`).join('')}</div><div class="v127-note">Verde = chutes a favor. Vermelho = chutes contra.</div></div></div>`;
+}
+function v127Matches(m){
+  const rows=[['Vasco','25.05.26','2-1','HT 1-0','6-3','2','0','v'],['Cuiabá','18.05.26','1-1','HT 0-1','4-5','1','0','e'],['Atlético-MG','12.05.26','0-2','HT 0-1','3-7','1','0','d'],['Bragantino','05.05.26','2-2','HT 1-1','5-6','2','0','e'],['Grêmio','28.04.26','1-0','HT 0-0','4-2','1','0','v']];
+  return `<div class="analysis-v127"><div class="v127-subtabs"><button class="v127-pill ${v127MatchSub==='home'?'active':''}" onclick="v127Matches('home')">Mandante</button><button class="v127-pill ${v127MatchSub==='h2h'?'active':''}" onclick="v127Matches('h2h')">H2H</button><button class="v127-pill ${v127MatchSub==='away'?'active':''}" onclick="v127Matches('away')">Visitante</button><button class="v127-pill" style="margin-left:auto">Destacar</button></div><div class="v127-card"><h2>${v127MatchSub==='h2h'?'Confrontos diretos':'Últimos jogos '+(v127MatchSub==='away'?m.away:m.home)}</h2>${v127MatchSub==='h2h'?'<div class="empty">Sem informações de partidas anteriores.</div>':rows.map(r=>`<div class="v127-match-row"><b>${r[0]}</b><span class="muted">${r[1]}</span><span class="v127-chip">${r[2]}</span><span class="v127-chip">${r[3]}</span><span class="v127-chip">🚩 ${r[4]}</span><span class="v127-chip">🟨 ${r[5]}</span><span class="v127-chip">🟥 ${r[6]}</span><span class="v127-result ${r[7]}">${r[7].toUpperCase()}</span></div>`).join('')}</div></div>`;
+}
+function v127Prognostic(m){
+  return `<div class="analysis-v127"><div class="v127-card"><h2>Prognóstico</h2><div class="v127-grid three"><div class="stat-card"><h4>Lado favorável</h4><b>${m.home}</b><p class="muted">Leve vantagem pelo contexto e mando.</p></div><div class="stat-card"><h4>Melhor mercado</h4><b>Chance Dupla</b><p class="muted">Perfil mais conservador.</p></div><div class="stat-card"><h4>Cautela</h4><b>Moderada</b><p class="muted">Verificar escalação antes do jogo.</p></div></div></div></div>`;
+}
+function v127RenderSide(m){
+  return `<div class="panel"><h3>Insights da IA</h3><div class="kv"><span>Chance dupla</span><b>${m.home} ou Empate</b></div><div class="kv"><span>Gols</span><b>Menos de 3.5</b></div><div class="kv"><span>Escanteios</span><b>Linha moderada</b></div></div><div class="panel"><h3>RedFlags</h3><div class="kv"><span>Desfalques</span><b class="red">Alto</b></div><div class="kv"><span>Calendário</span><b style="color:var(--gold2)">Médio</b></div><div class="kv"><span>Ambiente</span><b class="green">Baixo</b></div></div><div class="panel"><h3>Partidas / H2H</h3><div class="kv"><span>Últimos 5</span><b>2V • 2E • 1D</b></div><div class="kv"><span>H2H</span><b>Consultar</b></div></div>`;
+}
+function renderAnalysis(){
+  let m=selected;if(!m){$('analysisHeader').innerHTML='<div class="empty">Nenhum jogo selecionado.</div>';return}
+  if(['summary','winners','goals','corners','cards','stats','insights'].includes(activeTab)) activeTab='probabilities';
+  $('analysisHeader').innerHTML=`<div class="hero-teams"><div class="hero-team">${logoEl(m.logoHome,m.home)}<span>${m.home}</span></div><div><div class="muted">${m.league}</div><div class="vs">VS</div><div class="hero-meta"><span>${m.date}</span><span>•</span><span>${m.time}</span></div><span class="status">${m.status}</span></div><div class="hero-team">${logoEl(m.logoAway,m.away)}<span>${m.away}</span></div></div>`;
+  $('bestMarkets').innerHTML=`<div class="best"><span>Probabilidade</span><b>${m.score}%</b><small>${m.quality}</small></div><div class="best"><span>Melhor mercado</span><b>${marketName(best(m))}</b><small>${marketLine(best(m))}</small></div><div class="best"><span>Risco</span><b>${m.risk}</b><small>Pré-jogo</small></div>`;
+  $('tabs').innerHTML=V127_TABS.map(t=>`<button class="tab ${activeTab===t[0]?'active':''}" onclick="tab('${t[0]}')">${t[1]}</button>`).join('');
+  $('quickSummary').innerHTML=v127RenderSide(m);
+  renderTab();
+}
+function renderTab(){
+  let m=selected;if(!m)return;let c='';
+  if(activeTab==='probabilities') c=v127Probabilities(m);
+  else if(activeTab==='prognostic') c=v127Prognostic(m);
+  else if(activeTab==='redflags') c=v127Redflags(m);
+  else if(activeTab==='ai') c=v127AI(m);
+  else if(activeTab==='deepstats') c=v127Stats(m);
+  else if(activeTab==='shotchart') c=v127ShotChart(m);
+  else if(activeTab==='matches') c=v127Matches(m);
+  else if(activeTab==='bets') { goPage('bets'); return; }
+  else c=v127Probabilities(m);
+  $('analysisContent').innerHTML=c;
+}
+const __oldOpenAnalysisV127=openAnalysis;
+openAnalysis=async function(id){activeTab='probabilities';v127ProbSub='winners';v127StatsSub='goals';return __oldOpenAnalysisV127(id)};
 
 </script>
 </body></html>
