@@ -1554,11 +1554,11 @@ input[type="date"]::-webkit-calendar-picker-indicator{
 <body>
 <div class="app">
   <aside class="sidebar">
-    <div class="brand"><img src="assets/jtips-logo.png" alt="JTIPS"><div><strong>JTIPS<br>Analytics</strong><small>Football Intelligence</small></div></div>
+    <div class="brand"><img src="assets/jtips-logo.png" alt="JTIPS"><div><strong>JTIPS<br>Analytics</strong></div></div>
     <nav class="nav">
-      <div class="nav-item" data-page="dashboard">⌂ Dashboard</div><div class="nav-item active" data-page="games">▦ Jogos</div><div class="nav-item" data-page="analysis">▣ Análise</div><div class="nav-item" data-page="bets">Apostas</div><div class="nav-item" data-page="scanner">⌕ Scanner</div><div class="nav-item" data-page="plans">♕ Planos</div><div class="nav-item" data-page="admin">⚙ Admin</div>
+      <div class="nav-item" data-page="dashboard">⌂ Dashboard</div><div class="nav-item active" data-page="games">▦ Jogos</div><div class="nav-item" data-page="analysis">▣ Análise</div><div class="nav-item" data-page="bets">Apostas Prontas</div><div class="nav-item" data-page="plans">♕ Planos</div><div class="nav-item" data-page="admin">⚙ Admin</div>
     </nav>
-    <div class="side-bottom"><div class="mini-card"><small>Créditos</small><b>1.250</b><small>Plano Premium</small></div><div class="mini-card"><small>Jonathan</small><b>Premium</b></div></div>
+    <div class="side-bottom"><div class="mini-card"><small>Jonathan</small><b>Premium</b></div></div>
   </aside>
   <main class="main">
     <div class="top"><div class="title"><h1 id="pageTitle">Jogos do Dia</h1><p id="pageSubtitle">Escolha a data e veja os jogos disponíveis.</p></div><div class="top-actions"><div class="top-pill">📅 <span id="topDateText">—</span></div><div class="top-pill">🔔 <span id="bellCount">0</span></div><div class="top-pill"><div class="avatar"></div><div>Jonathan<br><small class="blue">Premium</small></div></div></div></div>
@@ -1570,7 +1570,6 @@ input[type="date"]::-webkit-calendar-picker-indicator{
     </section>
     <section id="analysis" class="page"><span class="back" onclick="goPage('games')">← Voltar para jogos</span><div class="analysis-layout v128-analysis-layout"><div><div id="analysisHeader" class="panel match-hero"></div><div id="tabs" class="tabs"></div><div id="analysisContent" class="panel analysis-content"></div><div class="info-note">ⓘ Probabilidades calculadas com base em dados históricos, odds e métricas pré-jogo disponíveis.</div></div><aside id="quickSummary" class="quick" style="display:none"></aside></div></section>
     <section id="bets" class="page"><div id="betsContent"></div></section>
-    <section id="scanner" class="page"><p class="page-subtitle">Oportunidades por mercado e probabilidade.</p><div class="panel games-card"><div id="scannerTable"></div></div></section>
     <section id="plans" class="page"><div id="plansGrid" class="cards-grid"></div></section>
     <section id="admin" class="page"><div class="advanced-grid"><div id="adminFile" class="panel stat-card"></div><div id="adminColumns" class="panel stat-card"></div><div class="panel stat-card"><h4>Colunas recebidas</h4><div id="adminAllColumns" style="display:flex;gap:6px;flex-wrap:wrap"></div></div></div></section>
   </main>
@@ -1619,7 +1618,7 @@ async function loadDates(){currentDate=todaySP();$('dateSelect').value=currentDa
 async function loadGames(date,force=false){currentDate=date;$('topDateText').textContent=brDate(date);$('dataBanner').className='data-banner';$('dataBanner').innerHTML='<span>Carregando jogos da data selecionada...</span>';let key='official:'+date;if(memoryCache[key]&&!force){setData(memoryCache[key]);return}try{let r=await fetch(`/api/jogos?data=${encodeURIComponent(date)}${force?'&refresh=1':''}`);let j=await r.json();if(!r.ok||!j.ok)throw new Error(j.error||'Erro ao carregar dados');if(!j.dados?.length)throw new Error('Nenhum jogo encontrado para esta data.');memoryCache[key]=j;setData(j)}catch(e){showError('Não foi possível carregar os jogos. Tente atualizar novamente.');allMatches=[];columns=[];apiMeta={error:e.message};renderAll()}}
 function setData(j){apiMeta=j;columns=j.columns||[];allMatches=(j.dados||[]).map(normalize).filter(m=>m.status!=='Cancelado');$('dataBanner').className='data-banner';$('dataBanner').innerHTML=`<span>● Dados atualizados</span><span>${allMatches.length} jogos • ${brDate(currentDate)}</span>`;renderAll()}
 function showError(msg){$('dataBanner').className='data-banner error';$('dataBanner').innerHTML=`<span>⚠ ${msg}</span>`}
-function renderAll(){populateLeagues();applyFilters();renderDashboard();renderScanner();renderPlans();renderAdmin();if(!selected&&allMatches[0])selected=allMatches[0];renderAnalysis();$('bellCount').textContent=allMatches.length}
+function renderAll(){populateLeagues();applyFilters();renderDashboard();if($('scannerTable'))renderScanner();renderPlans();renderAdmin();if(!selected&&allMatches[0])selected=allMatches[0];renderAnalysis();$('bellCount').textContent=allMatches.length}
 function populateLeagues(){let val=$('filterLeague').value||'all';let leagues=[...new Set(allMatches.map(m=>m.league).filter(Boolean))].sort();$('filterLeague').innerHTML='<option value="all">Todas</option>'+leagues.map(l=>`<option>${l}</option>`).join('');if(leagues.includes(val))$('filterLeague').value=val}
 function applyFilters(){let q=$('filterSearch').value.toLowerCase().trim(),l=$('filterLeague').value,s=$('filterStatus').value,market=$('filterMarket').value,min=Number($('filterScore').value);filtered=allMatches.filter(m=>{let tx=(m.home+' '+m.away+' '+m.league).toLowerCase();let st=s==='all'||(s==='pre'&&m.status==='Pré-jogo')||(s==='running'&&m.status==='Em andamento')||(s==='final'&&m.status==='Finalizado');let bm=best(m,market);return(!q||tx.includes(q))&&(l==='all'||m.league===l)&&st&&(market==='all'||bm[1]!=null)&&m.score>=min});page=1;renderGames()}
 function renderGames(){let start=(page-1)*perPage,items=filtered.slice(start,start+perPage);$('resultCount').textContent=`${filtered.length} jogos encontrados`;$('resultSub').textContent=`Data: ${brDate(currentDate)}`;$('paginationInfo').textContent=`Atualizado em ${new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}`;$('activeTags').textContent=$('filterLeague').value==='all'?`${new Set(allMatches.map(m=>m.league)).size} ligas com jogos`:$('filterLeague').value;$('gamesList').innerHTML=items.length?items.map(gameRow).join(''):'<div class="empty"><b>Nenhum jogo encontrado.</b><br>Altere os filtros ou escolha outra data.</div>';$('pageInfo').textContent=`Mostrando ${items.length} de ${filtered.length} jogos`;$('pageNumber').textContent=page}
@@ -1699,7 +1698,7 @@ function liveDetail(match,liveMatches){
 
 function renderPlans(){$('plansGrid').innerHTML=['Free','Pro','Premium'].map((p,i)=>`<div class="panel stat-card"><h2>${p}</h2><b style="font-size:30px">${i?i==1?'R$39,90':'R$79,90':'R$0'}</b><p class="muted">Plano ${p}</p></div>`).join('')}
 function renderAdmin(){$('adminFile').innerHTML=`<h4>API Oficial</h4><div class="kv"><span>Fonte</span><b>FootyStats</b></div><div class="kv"><span>Data</span><b>${currentDate}</b></div><div class="kv"><span>Jogos</span><b>${allMatches.length}</b></div><div class="kv"><span>Request restante</span><b>${apiMeta.request_remaining||'—'}</b></div>`;$('adminColumns').innerHTML=`<h4>Ligas selecionadas</h4><p class="muted">As ligas são controladas no painel FootyStats.</p><div class="kv"><span>Ligas no dia</span><b>${new Set(allMatches.map(m=>m.league)).size}</b></div>`;$('adminAllColumns').innerHTML=columns.slice(0,80).map(c=>`<span class="tag">${c}</span>`).join('')}
-function goPage(p){document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));$(p).classList.add('active');document.querySelectorAll('.nav-item').forEach(x=>x.classList.toggle('active',x.dataset.page===p));let names={dashboard:['Dashboard','Visão geral dos jogos carregados.'],games:['Jogos do Dia','Escolha a data e veja os jogos disponíveis.'],analysis:['Análise da Partida','Ficha completa do jogo selecionado.'],bets:['Apostas','Bilhetes combinados gerados pelo sistema.'],scanner:['Scanner','Mercados fortes encontrados na data.'],plans:['Planos','Estrutura comercial futura.'],admin:['Admin','Diagnóstico técnico.']};$('pageTitle').textContent=names[p][0];$('pageSubtitle').textContent=names[p][1];if(p==='bets')renderBetsPage();window.scrollTo(0,0)}
+function goPage(p){document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));$(p).classList.add('active');document.querySelectorAll('.nav-item').forEach(x=>x.classList.toggle('active',x.dataset.page===p));let names={dashboard:['Dashboard','Visão geral dos jogos carregados.'],games:['Jogos do Dia','Escolha a data e veja os jogos disponíveis.'],analysis:['Análise da Partida','Ficha completa do jogo selecionado.'],bets:['Apostas Prontas','Apostas prontas dos jogos do dia com odds disponíveis.'],plans:['Planos','Estrutura comercial futura.'],admin:['Admin','Diagnóstico técnico.']};$('pageTitle').textContent=(names[p]||names.games)[0];$('pageSubtitle').textContent=(names[p]||names.games)[1];if(p==='bets')renderBetsPage();window.scrollTo(0,0)}
 document.querySelectorAll('.nav-item').forEach(x=>x.onclick=()=>goPage(x.dataset.page));['filterSearch','filterLeague','filterStatus','filterMarket','filterScore'].forEach(id=>$(id).addEventListener('input',applyFilters));$('dateSelect').addEventListener('change',e=>loadGames(e.target.value));loadDates();
 
 /* =========================
@@ -3359,7 +3358,7 @@ const V127_TABS=[
   ['deepstats','Estatísticas Profundas'],
   ['shotchart','Gráfico de Chutes'],
   ['matches','Partidas'],
-  ['bets','Apostas']
+  ['bets','Apostas Prontas']
 ];
 function v127Safe(v,fallback=0){let x=n(v);return x===null?fallback:Math.round(x)}
 function v127Pct(v){let x=v127Safe(v,0);return Math.max(0,Math.min(100,x))}
@@ -3504,7 +3503,7 @@ const V128_TABS=[
   ['deepstats','Estatísticas Profundas'],
   ['shotchart','Gráfico de Chutes'],
   ['matches','Partidas'],
-  ['bets','Apostas']
+  ['bets','Apostas Prontas']
 ];
 function v128Num(v,d=null){let x=n(v);return x===null?d:x}
 function v128Round(v,dec=1){let x=v128Num(v,null);if(x===null)return null;let p=Math.pow(10,dec);return Math.round(x*p)/p}
@@ -3557,7 +3556,7 @@ function renderAnalysis(){let m=selected;if(!m){$('analysisHeader').innerHTML='<
 function renderTab(){let m=selected;if(!m)return;let c='';if(activeTab==='probabilities')c=v128Probabilities(m);else if(activeTab==='prognostic')c=v128Prognostic(m);else if(activeTab==='sensor')c=v128Sensor(m);else if(activeTab==='ai')c=v128AI(m);else if(activeTab==='deepstats')c=v128Stats(m);else if(activeTab==='shotchart')c=v128ShotChart(m);else if(activeTab==='matches')c=v128Matches(m);else if(activeTab==='bets')c=v128BetsTab(m);else c=v128Probabilities(m);$('analysisContent').innerHTML=c}
 const __oldOpenAnalysisV128 = typeof openAnalysis==='function' ? openAnalysis : null;
 if(__oldOpenAnalysisV128){openAnalysis=async function(id){activeTab='probabilities';v127ProbSub='winners';v127StatsSub='goals';v127ShotSide='home';v127MatchSub='home';await __oldOpenAnalysisV128(id);if(selected){await v128LoadData(selected);renderAnalysis()}}}
-function renderBetsPage(){const list=(filtered&&filtered.length?filtered:allMatches)||[];const top=[...list].sort((a,b)=>b.score-a.score).slice(0,3);$('betsContent').innerHTML=`<div class="ticket-shell"><div class="ticket-head"><h2>Apostas</h2><p class="muted">Apostas oficiais usam apenas mercados com odd disponível. Leituras estatísticas sem odd aparecem separadas.</p><div class="ticket-responsible">18+ Jogo Responsável — O JTIPS não garante lucro nem resultado.</div></div>${top.length?top.map(m=>v128BetsTab(m)).join(''):'<div class="ticket-empty">Nenhum jogo carregado para gerar apostas.</div>'}</div>`}
+function renderBetsPage(){const list=(filtered&&filtered.length?filtered:allMatches)||[];const top=[...list].sort((a,b)=>b.score-a.score).slice(0,3);$('betsContent').innerHTML=`<div class="ticket-shell"><div class="ticket-head"><h2>Apostas Prontas do Dia</h2><p class="muted">Apostas oficiais dos jogos carregados no dia. Apenas mercados com odd disponível entram nos bilhetes.</p><div class="ticket-responsible">18+ Jogo Responsável — O JTIPS não garante lucro nem resultado.</div></div>${top.length?top.map(m=>v128BetsTab(m)).join(''):'<div class="ticket-empty">Nenhum jogo carregado para gerar apostas.</div>'}</div>`}
 
 // V12.9 — garante navegação de subabas após overrides anteriores
 window.v127Sub=function(tab){v127ProbSub=tab;renderTab()};
@@ -3565,6 +3564,78 @@ window.v127Stats=function(tab){v127StatsSub=tab;renderTab()};
 window.v127Matches=function(tab){v127MatchSub=tab;renderTab()};
 window.v127Shots=function(side){v127ShotSide=side;renderTab()};
 window.v128ShotMetricSet=function(x){v128ShotMetric=x;renderTab()};
+
+
+/* =========================
+   V12.10 — ajustes sidebar, apostas prontas e estádio
+   ========================= */
+(function(){
+  function mergeMatchDetailsInto(match, data){
+    if(!match || !data) return;
+    match.raw = Object.assign({}, match.raw || {}, data);
+    match.odds = Object.assign({}, match.odds || {}, data);
+    if(data.stadium_name) match.stadium_name = data.stadium_name;
+    if(data.stadium_location) match.stadium_location = data.stadium_location;
+    if(data.home_image && !match.logoHome) match.logoHome = logo(data.home_image);
+    if(data.away_image && !match.logoAway) match.logoAway = logo(data.away_image);
+  }
+
+  const __v129LoadData = typeof v128LoadData === 'function' ? v128LoadData : null;
+  window.v128LoadData = async function(m){
+    if(__v129LoadData) await __v129LoadData(m);
+    if(!m || !m.id) return;
+    const o = m.odds || {};
+    if(o.stadium_name || o.stadium_location) return;
+    try{
+      const r = await fetch(`/api/partida?match_id=${encodeURIComponent(m.id)}&refresh=1`);
+      const j = await r.json();
+      if(r.ok && j.ok && j.data){
+        mergeMatchDetailsInto(m, j.data);
+        if(selected && String(selected.id) === String(m.id)) mergeMatchDetailsInto(selected, j.data);
+      }
+    }catch(e){}
+  };
+
+  window.v128Header = function(m){
+    const o = m?.odds || {}, raw = m?.raw || {};
+    const stadiumName = o.stadium_name || raw.stadium_name || m.stadium_name || '';
+    const stadiumLocation = o.stadium_location || raw.stadium_location || m.stadium_location || '';
+    const stadiumHtml = (stadiumName || stadiumLocation)
+      ? `<div class="v128-stadium"><span>🏟️ ${[stadiumName, stadiumLocation].filter(Boolean).join(' • ')}</span></div>`
+      : `<div class="v128-stadium"><span>🏟️ Estádio não informado</span></div>`;
+    return `<div class="hero-teams"><div class="hero-team">${logoEl(m.logoHome,m.home)}<span>${m.home}</span></div><div><div class="muted">${m.league}</div><div class="vs">VS</div><div class="hero-meta"><span>${m.date}</span><span>•</span><span>${m.time}</span></div>${stadiumHtml}<span class="status">${m.status}</span></div><div class="hero-team">${logoEl(m.logoAway,m.away)}<span>${m.away}</span></div></div>`;
+  };
+
+  const __v129GoPage = typeof goPage === 'function' ? goPage : null;
+  if(__v129GoPage){
+    window.goPage = function(p){
+      if(p === 'scanner') p = 'games';
+      __v129GoPage(p);
+      if(p === 'bets'){
+        $('pageTitle').textContent = 'Apostas Prontas';
+        $('pageSubtitle').textContent = 'Apostas prontas dos jogos do dia com odds disponíveis.';
+      }
+    };
+  }
+
+  const __v129RenderBetsPage = typeof renderBetsPage === 'function' ? renderBetsPage : null;
+  window.renderBetsPage = function(){
+    const list=(filtered&&filtered.length?filtered:allMatches)||[];
+    const top=[...list].sort((a,b)=>b.score-a.score).slice(0,8);
+    $('betsContent').innerHTML=`<div class="ticket-shell"><div class="ticket-head"><h2>Apostas Prontas do Dia</h2><p class="muted">Bilhetes dos jogos carregados na data selecionada. Só entram seleções com odd disponível; leituras sem odd ficam fora do bilhete oficial.</p><div class="ticket-responsible">18+ Jogo Responsável — O JTIPS não garante lucro nem resultado.</div></div>${top.length?top.map(m=>v128BetsTab(m)).join(''):'<div class="ticket-empty">Nenhum jogo carregado para gerar apostas prontas.</div>'}</div>`;
+  };
+
+  document.addEventListener('DOMContentLoaded',()=>{
+    document.querySelectorAll('.brand small').forEach(el=>el.remove());
+    document.querySelectorAll('.nav-item').forEach(el=>{
+      if(el.dataset.page==='scanner') el.remove();
+      if(el.dataset.page==='bets') el.textContent='Apostas Prontas';
+    });
+    document.querySelectorAll('.mini-card').forEach(el=>{
+      if((el.textContent||'').includes('Créditos')) el.remove();
+    });
+  });
+})();
 
 </script>
 </body></html>
