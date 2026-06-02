@@ -3554,7 +3554,7 @@ async function v128FetchJson(url){const r=await fetch(url);const j=await r.json(
 async function v128LoadData(m){if(!m||!m.odds)return;const o=m.odds,seasonId=v128SeasonId(m);const tasks=[];if(!m.teamTrends&&seasonId&&o.homeID&&o.awayID){const qs=new URLSearchParams({season_id:seasonId,home_id:o.homeID,away_id:o.awayID,home_name:m.home,away_name:m.away});tasks.push(v128FetchJson(`/api/lastx-trends?${qs.toString()}`).then(j=>m.teamTrends=j).catch(e=>m.teamTrends={ok:false,error:e.message}))}if(!m.v128LeagueMatches&&seasonId){tasks.push(v128FetchJson(`/api/league-matches?season_id=${encodeURIComponent(seasonId)}`).then(j=>m.v128LeagueMatches=j).catch(e=>m.v128LeagueMatches={ok:false,error:e.message,dados:[]}))}if(tasks.length)await Promise.allSettled(tasks)}
 function v128Header(m){const o=m.odds||{};let loc=[o.stadium_name,o.stadium_location].filter(Boolean).join(' • ');return `<div class="hero-teams"><div class="hero-team">${logoEl(m.logoHome,m.home)}<span>${m.home}</span></div><div><div class="muted">${m.league}</div><div class="vs">VS</div><div class="hero-meta"><span>${m.date}</span><span>•</span><span>${m.time}</span></div>${loc?`<div class="v128-stadium"><span>🏟️ ${loc}</span></div>`:''}<span class="status">${m.status}</span></div><div class="hero-team">${logoEl(m.logoAway,m.away)}<span>${m.away}</span></div></div>`}
 function v128ProbValues(m){const o=m.odds||{},hp=v128OddProbs(o)||{};return {home:hp.home??m.winner,draw:hp.draw??m.draw,away:hp.away??m.awayWin,oneX:hp.oneX,twelve:hp.twelve,xTwo:hp.xTwo,o05:o.o05_potential,o15:o.o15_potential??m.over15,o25:o.o25_potential??m.over25,o35:o.o35_potential,btts:o.btts_potential??m.btts,avg:o.avg_potential,totalxg:o.total_xg_prematch,c85:o.corners_o85_potential??m.corners85,c95:o.corners_o95_potential??m.corners95,c105:o.corners_o105_potential??m.corners105,cp:o.corners_potential,cards:o.cards_potential}}
-function v128Probabilities(m){const p=v128ProbValues(m),hs=v128StatsObj(m,'home'),as=v128StatsObj(m,'away');const subt=[['winners','Vencedores'],['goals','Gols'],['corners','Escanteios'],['cards','Cartões']];let rows='';if(v127ProbSub==='winners'){rows+=v128Row('Casa vence',p.home,null,p.home);rows+=v128Row('Empate',p.draw,p.draw,p.draw);rows+=v128Row('Visitante vence',null,p.away,p.away);rows+=v128Row('Casa ou Empate (1X)',p.oneX,null,p.oneX);rows+=v128Row('Casa ou Visitante (12)',p.twelve,p.twelve,p.twelve);rows+=v128Row('Empate ou Visitante (X2)',null,p.xTwo,p.xTwo)}else if(v127ProbSub==='goals'){rows+=v128Row('Mais que 0.5',v128S(hs,'seasonOver05Percentage_home'),v128S(as,'seasonOver05Percentage_away'),p.o05);rows+=v128Row('Mais que 1.5',v128S(hs,'seasonOver15Percentage_home'),v128S(as,'seasonOver15Percentage_away'),p.o15);rows+=v128Row('Mais que 2.5',v128S(hs,'seasonOver25Percentage_home'),v128S(as,'seasonOver25Percentage_away'),p.o25);rows+=v128Row('Mais que 3.5',v128S(hs,'seasonOver35Percentage_home'),v128S(as,'seasonOver35Percentage_away'),p.o35);rows+=v128Row('Menos que 2.5',100-v128PctVal(v128S(hs,'seasonOver25Percentage_home')),100-v128PctVal(v128S(as,'seasonOver25Percentage_away')),100-v128PctVal(p.o25));rows+=v128Row('Ambas Marcam',v128S(hs,'seasonBTTSPercentage_home'),v128S(as,'seasonBTTSPercentage_away'),p.btts)}else if(v127ProbSub==='corners'){rows+=v128Row('Mais que 6.5',v128S(hs,'over65CornersPercentage_home'),v128S(as,'over65CornersPercentage_away'),p.c85?Math.min(100,v128PctVal(p.c85)+10):null);rows+=v128Row('Mais que 8.5',v128S(hs,'over85CornersPercentage_home'),v128S(as,'over85CornersPercentage_away'),p.c85);rows+=v128Row('Mais que 9.5',v128S(hs,'over95CornersPercentage_home'),v128S(as,'over95CornersPercentage_away'),p.c95);rows+=v128Row('Mais que 10.5',v128S(hs,'over105CornersPercentage_home'),v128S(as,'over105CornersPercentage_away'),p.c105)}else{const pot=v128PctVal((v128Num(p.cards,0))*12);rows+=v128Row('Mais que 3.5 cartões',v128S(hs,'over35CardsPercentage_home'),v128S(as,'over35CardsPercentage_away'),pot);rows+=v128Row('Mais que 4.5 cartões',v128S(hs,'over45CardsPercentage_home'),v128S(as,'over45CardsPercentage_away'),pot?Math.max(0,pot-8):null);rows+=v128Row('Mais que 5.5 cartões',v128S(hs,'over55CardsPercentage_home'),v128S(as,'over55CardsPercentage_away'),pot?Math.max(0,pot-14):null);rows+=v128Row('Potencial de cartões',null,null,p.cards?Math.min(100,p.cards*12):null)}return `<div class="analysis-v127"><div class="v128-subtabs">${subt.map(t=>`<button class="v128-pill ${v127ProbSub===t[0]?'active':''}" onclick="v127Sub('${t[0]}')">${t[1]}</button>`).join('')}</div><div class="v128-card"><h2>Probabilidades</h2><div class="v128-table"><div class="v128-row head"><div>Mercado</div><div>Casa</div><div>Visitante</div><div>Jogo</div></div>${rows}</div><div class="v128-note">Percentuais calculados com odds, potenciais pré-jogo e recorte casa/fora quando disponível.</div></div></div>`}
+function v128Probabilities(m){const p=v128ProbValues(m),hs=v128StatsObj(m,'home'),as=v128StatsObj(m,'away');const subt=[['winners','Vencedores'],['goals','Gols'],['corners','Escanteios'],['cards','Cartões']];let rows='';if(v127ProbSub==='winners'){rows+=v128Row('Casa vence',p.home,null,p.home);rows+=v128Row('Empate',p.draw,p.draw,p.draw);rows+=v128Row('Visitante vence',null,p.away,p.away);rows+=v128Row('Casa ou Empate (1X)',p.oneX,null,p.oneX);rows+=v128Row('Casa ou Visitante (12)',p.twelve,p.twelve,p.twelve);rows+=v128Row('Empate ou Visitante (X2)',null,p.xTwo,p.xTwo)}else if(v127ProbSub==='goals'){rows+=v128Row('Mais que 0.5',v128S(hs,'seasonOver05Percentage_home'),v128S(as,'seasonOver05Percentage_away'),p.o05);rows+=v128Row('Mais que 1.5',v128S(hs,'seasonOver15Percentage_home'),v128S(as,'seasonOver15Percentage_away'),p.o15);rows+=v128Row('Mais que 2.5',v128S(hs,'seasonOver25Percentage_home'),v128S(as,'seasonOver25Percentage_away'),p.o25);rows+=v128Row('Mais que 3.5',v128S(hs,'seasonOver35Percentage_home'),v128S(as,'seasonOver35Percentage_away'),p.o35);rows+=v128Row('Menos que 2.5',100-v128PctVal(v128S(hs,'seasonOver25Percentage_home')),100-v128PctVal(v128S(as,'seasonOver25Percentage_away')),100-v128PctVal(p.o25));rows+=v128Row('Ambas Marcam',v128S(hs,'seasonBTTSPercentage_home'),v128S(as,'seasonBTTSPercentage_away'),p.btts)}else if(v127ProbSub==='corners'){rows+=v128Row('Mais que 6.5',v128S(hs,'over65CornersPercentage_home'),v128S(as,'over65CornersPercentage_away'),p.c85?Math.min(100,v128PctVal(p.c85)+10):null);rows+=v128Row('Mais que 8.5',v128S(hs,'over85CornersPercentage_home'),v128S(as,'over85CornersPercentage_away'),p.c85);rows+=v128Row('Mais que 9.5',v128S(hs,'over95CornersPercentage_home'),v128S(as,'over95CornersPercentage_away'),p.c95);rows+=v128Row('Mais que 10.5',v128S(hs,'over105CornersPercentage_home'),v128S(as,'over105CornersPercentage_away'),p.c105)}else{const pot=v128PctVal((v128Num(p.cards,0))*12);rows+=v128Row('Mais que 3.5 cartões',v128S(hs,'over35CardsPercentage_home'),v128S(as,'over35CardsPercentage_away'),pot);rows+=v128Row('Mais que 4.5 cartões',v128S(hs,'over45CardsPercentage_home'),v128S(as,'over45CardsPercentage_away'),pot?Math.max(0,pot-8):null);rows+=v128Row('Mais que 5.5 cartões',v128S(hs,'over55CardsPercentage_home'),v128S(as,'over55CardsPercentage_away'),pot?Math.max(0,pot-14):null);rows+=v128Row('Potencial de cartões',null,null,p.cards?Math.min(100,p.cards*12):null)}return `<div class="analysis-v127"><div class="v128-subtabs">${subt.map(t=>`<button class="v128-pill ${v127ProbSub===t[0]?'active':''}" onclick="v127Sub('${t[0]}')">${t[1]}</button>`).join('')}</div><div class="v128-card"><h2>Probabilidades</h2><div class="v128-table"><div class="v128-row head"><div>Mercado</div><div>Casa</div><div>Visitante</div><div>Jogo</div></div>${rows}</div><div class="v128-note">Casa usa estatística real do mandante em casa; Visitante usa estatística real do visitante fora; Jogo é a média dos dois recortes.</div></div></div>`}
 function v128Stats(m){const hs=v128StatsObj(m,'home'),as=v128StatsObj(m,'away');const tabs=[['winners','Vencedores'],['goals','Gols'],['corners','Escanteios'],['cards','Cartões'],['shots','Chutes']];let title='Dados Estatísticos',rows='';function cmp(a,label,b){return `<div class="v128-compare-row"><div class="side">${typeof a==='string'?a:v128Metric(a)}</div><div class="metric">${label}</div><div class="side">${typeof b==='string'?b:v128Metric(b)}</div></div>`}function cmpp(a,label,b){return `<div class="v128-compare-row"><div class="side">${v128Badge(a)}</div><div class="metric">${label}</div><div class="side">${v128Badge(b)}</div></div>`}if(v127StatsSub==='winners'){rows+=cmpp(v128S(hs,'winPercentage_home'),'Venceu a partida',v128S(as,'winPercentage_away'));rows+=cmpp(v128S(hs,'losePercentage_home'),'Perdeu a partida',v128S(as,'losePercentage_away'));rows+=cmpp(v128S(hs,'drawPercentage_home'),'A partida terminou empatada',v128S(as,'drawPercentage_away'));rows+=cmp(v128S(hs,'seasonPPG_home'),'Pontos por jogo',v128S(as,'seasonPPG_away'))}else if(v127StatsSub==='goals'){title='Estatísticas — Gols';rows+=cmp(v128Avg(hs,'seasonGoalsTotal','seasonAVG','home'),'Média Total de Gols',v128Avg(as,'seasonGoalsTotal','seasonAVG','away'));rows+=cmp(v128Avg(hs,'seasonGoals','seasonScoredAVG','home'),'Média de Gols Marcados',v128Avg(as,'seasonGoals','seasonScoredAVG','away'));rows+=cmp(v128Avg(hs,'seasonConceded','seasonConcededAVG','home'),'Média de Gols Sofridos',v128Avg(as,'seasonConceded','seasonConcededAVG','away'));rows+=cmpp(v128S(hs,'seasonBTTSPercentage_home'),'Ambas Marcam',v128S(as,'seasonBTTSPercentage_away'));rows+=cmpp(v128S(hs,'seasonOver25Percentage_home'),'Mais de 2.5 gols',v128S(as,'seasonOver25Percentage_away'))}else if(v127StatsSub==='corners'){title='Estatísticas — Escanteios';['65','75','85','95','105','115'].forEach(x=>{rows+=cmpp(v128S(hs,`over${x}CornersPercentage_home`),`Mais de ${x[0]}.${x.slice(1)} escanteios`,v128S(as,`over${x}CornersPercentage_away`))})}else if(v127StatsSub==='cards'){title='Estatísticas — Cartões';let pot=m.odds?.cards_potential;rows+=cmp(pot,'Potencial de cartões da partida',pot);rows+=cmpp(v128S(hs,'over05Cards_overall'),'Jogos acima de 0.5 cartões',v128S(as,'over05Cards_overall'));rows+=cmpp(v128S(hs,'over15Cards_overall'),'Jogos acima de 1.5 cartões',v128S(as,'over15Cards_overall'));rows+=cmpp(v128S(hs,'over25Cards_overall'),'Jogos acima de 2.5 cartões',v128S(as,'over25Cards_overall'))}else{title='Estatísticas — Chutes';rows+=cmp(v128S(hs,'shotsAVG_home'),'Média total de chutes',v128S(as,'shotsAVG_away'));rows+=cmp(v128S(hs,'shotsOnTargetAVG_home'),'Média de chutes no alvo',v128S(as,'shotsOnTargetAVG_away'));rows+=cmp(v128S(hs,'shotsOffTargetAVG_home'),'Média de chutes fora do alvo',v128S(as,'shotsOffTargetAVG_away'))}return `<div class="analysis-v127"><div class="v128-subtabs">${tabs.map(t=>`<button class="v128-pill ${v127StatsSub===t[0]?'active':''}" onclick="v127Stats('${t[0]}')">${t[1]}</button>`).join('')}</div><div class="v128-card"><h2>${title}</h2><div class="v128-compare"><div class="v128-compare-row"><div class="side muted"><b>${m.home}</b></div><div class="metric muted"><b>Métrica</b></div><div class="side muted"><b>${m.away}</b></div></div>${rows||'<div class="v128-empty">Sem dados suficientes.</div>'}</div><div class="v128-note">Casa usa estatísticas do mandante em casa; visitante usa estatísticas do visitante fora. Campos indisponíveis ou -1 são ocultados.</div></div></div>`}
 function v128BuildSensor(m){const o=m.odds||{},hs=v128StatsObj(m,'home'),as=v128StatsObj(m,'away'),alerts=[];function add(c,t,d,score,lado){let impact=score>=75?'high':score>=55?'mid':'low';alerts.push({categoria:c,titulo:t,descricao:d,score,impact,lado})}let hp=v128Num(o.pre_match_home_ppg??o.home_ppg,0),ap=v128Num(o.pre_match_away_ppg??o.away_ppg,0),hx=v128Num(o.team_a_xg_prematch,0),ax=v128Num(o.team_b_xg_prematch,0),o25=v128Num(o.o25_potential,0),btts=v128Num(o.btts_potential,0),c85=v128Num(o.corners_o85_potential,0),cards=v128Num(o.cards_potential,0);if(Math.abs(hp-ap)<=.2)add('Equilíbrio','Força pré-jogo equilibrada',`${m.home} e ${m.away} chegam com PPG próximo (${hp} x ${ap}), reduzindo segurança no mercado de vencedor.`,70,'neutro');else if(hp>ap)add('Momento',`Leve vantagem para ${m.home}`,`PPG do mandante superior ao visitante (${hp} x ${ap}).`,65,'casa');else add('Momento',`Leve vantagem para ${m.away}`,`PPG do visitante superior ao mandante (${ap} x ${hp}).`,65,'visitante');if(hx>ax+.35)add('Ataque',`${m.home} projeta mais volume ofensivo`,`xG pré-jogo favorece o mandante (${hx} x ${ax}).`,65,'casa');else if(ax>hx+.35)add('Ataque',`${m.away} projeta mais volume ofensivo`,`xG pré-jogo favorece o visitante (${ax} x ${hx}).`,65,'visitante');else add('Ataque','xG pré-jogo equilibrado',`Projeção ofensiva próxima (${hx} x ${ax}).`,50,'neutro');if(o25<=40)add('Gols','Cautela em linhas altas de gols',`Over 2.5 aparece com apenas ${o25}%, indicando menor forca para jogo muito aberto.`,75,'cautela');else if(o25>=70)add('Gols','Tendência forte para jogo com gols',`Over 2.5 aparece com potencial de ${o25}%.`,o25,'gols');if(btts&&btts<=45)add('Gols','Ambas Marcam sem forca suficiente',`BTTS aparece com ${btts}%, abaixo da zona mais segura.`,60,'cautela');if(c85>=75)add('Escanteios','Volume forte para escanteios',`Mais de 8.5 escanteios aparece com potencial de ${c85}%.`,c85,'escanteios');if(cards>=5.5)add('Cartões','Jogo com potencial alto de cartões',`O potencial pré-jogo indica média estimada de ${cards} cartões.`,Math.min(90,cards*12),'cartoes');let hl=v128S(hs,'losePercentage_home'),al=v128S(as,'losePercentage_away');if(hl>=55)add('Mando',`${m.home} tem alta taxa de derrota em casa`,`O mandante perdeu ${hl}% dos jogos no recorte como casa.`,hl,'visitante');if(al>=55)add('Visitante',`${m.away} sofre fora de casa`,`O visitante perdeu ${al}% dos jogos no recorte fora de casa.`,al,'casa');let casa=alerts.filter(a=>a.lado==='casa').reduce((s,a)=>s+a.score,0),vis=alerts.filter(a=>a.lado==='visitante').reduce((s,a)=>s+a.score,0),caut=alerts.filter(a=>a.lado==='cautela').reduce((s,a)=>s+a.score,0),top=[...alerts].sort((a,b)=>b.score-a.score)[0];let lado=casa>vis+20?'Casa':vis>casa+20?'Visitante':'Neutro',avg=alerts.length?alerts.reduce((s,a)=>s+a.score,0)/alerts.length:0;let intensidade=avg>=75?'Alta':avg>=55?'Média':'Baixa';return {resumo:{lado_favoravel:lado,intensidade,melhor_contexto:top?.titulo||'Sem sinal claro',cautela:caut>=80?'Alta':caut>=45?'Média':'Baixa',texto:`O Sensor do Jogo aponta inclinação para ${lado}, com intensidade ${intensidade}. O principal fator detectado foi: ${top?.titulo||'sem sinal claro'}.`},alertas:alerts}}
 function v128Sensor(m){const s=v128BuildSensor(m),r=s.resumo;return `<div class="analysis-v127"><div class="v128-card"><h2>Sensor do Jogo</h2><p class="muted">Fatores contextuais e estatísticos que podem influenciar a leitura da partida.</p><div class="v128-sensor-head"><div class="v128-kpi"><small>Lado favorável</small><b>${r.lado_favoravel}</b></div><div class="v128-kpi"><small>Intensidade</small><b>${r.intensidade}</b></div><div class="v128-kpi"><small>Melhor contexto</small><b>${r.melhor_contexto}</b></div><div class="v128-kpi"><small>Cautela</small><b>${r.cautela}</b></div></div><p class="muted">${r.texto}</p>${s.alertas.map(a=>`<div class="v128-alert"><div style="font-size:22px">${a.impact==='high'?'🚨':a.impact==='mid'?'⚠️':'ℹ️'}</div><div><b>${a.categoria} — ${a.titulo}</b><div class="v128-mini">${a.descricao}</div></div><span class="v128-impact ${a.impact}">${a.impact==='high'?'Alto':a.impact==='mid'?'Médio':'Baixo'} impacto</span></div>`).join('')}</div></div>`}
@@ -4734,6 +4734,191 @@ body.auth-locked .app, body.auth-unlocked .app, .app{display:grid!important}
 .v1216-corner-kpi span{display:block;color:#e2c783;font-weight:950}
 .v1216-corner-kpi small{display:block;color:#c6bfa9;margin-top:4px;font-size:11px;font-weight:750}
 @media(max-width:800px){.v1216-corner-summary{grid-template-columns:1fr}}
+</style>
+
+
+
+<script>
+/* ==========================================================
+   JTIPS V22.4 — PROBABILIDADES CORRIGIDAS COM DADOS REAIS
+   Regra: NÃO usar odds/potencial para montar tabela Casa/Visitante/Jogo.
+   Casa = estatística do mandante em casa.
+   Visitante = estatística do visitante fora.
+   Jogo = média dos dois recortes, quando ambos existem.
+   ========================================================== */
+(function(){
+  function valid(v){
+    if(v===undefined||v===null||v===''||v===-1||v==='-1') return false;
+    const s=String(v).trim().toLowerCase();
+    return !(s===''||s==='nan'||s==='none'||s==='null'||s==='[]');
+  }
+  function num(v){
+    if(!valid(v)) return null;
+    const n=Number(String(v).replace(',','.'));
+    return Number.isFinite(n) ? n : null;
+  }
+  function pct(v){
+    const n=num(v);
+    if(n===null || n<0) return null;
+    return Math.max(0, Math.min(100, Math.round(n)));
+  }
+  function avg(a,b){
+    a=pct(a); b=pct(b);
+    if(a!==null && b!==null) return Math.round((a+b)/2);
+    if(a!==null) return a;
+    if(b!==null) return b;
+    return null;
+  }
+  function get(obj, keys){
+    obj=obj||{};
+    for(const k of keys){ if(valid(obj[k])) return obj[k]; }
+    return null;
+  }
+  function homeStats(m){
+    return (m && m.__jtipsSeasonStats && m.__jtipsSeasonStats.home) ||
+           (m && m.teamTrends && m.teamTrends.home && m.teamTrends.home.stats) || {};
+  }
+  function awayStats(m){
+    return (m && m.__jtipsSeasonStats && m.__jtipsSeasonStats.away) ||
+           (m && m.teamTrends && m.teamTrends.away && m.teamTrends.away.stats) || {};
+  }
+  function statPct(stats, base, ctx){
+    return pct(get(stats, [
+      `${base}_${ctx}`,
+      `${base}_overall`,
+      base
+    ]));
+  }
+  function goalPct(stats, line, ctx){
+    const code = String(line).replace('.','');
+    return pct(get(stats, [
+      `seasonOver${code}Percentage_${ctx}`,
+      `over${code}GoalsPercentage_${ctx}`,
+      `over${code}Percentage_${ctx}`,
+      `seasonOver${code}Percentage_overall`,
+      `over${code}GoalsPercentage_overall`,
+      `over${code}Percentage_overall`
+    ]));
+  }
+  function bttsPct(stats, ctx){
+    return pct(get(stats, [
+      `seasonBTTSPercentage_${ctx}`,
+      `bttsPercentage_${ctx}`,
+      `BTTSPercentage_${ctx}`,
+      `seasonBTTSPercentage_overall`,
+      `bttsPercentage_overall`,
+      `BTTSPercentage_overall`
+    ]));
+  }
+  function cornerPct(stats, code, ctx){
+    code = String(code);
+    return pct(get(stats, [
+      `over${code}CornersPercentage_${ctx}`,
+      `over${code}EscanteiosPercentage_${ctx}`,
+      `over${code}CornersPercentage_overall`,
+      `over${code}EscanteiosPercentage_overall`,
+      `over${code}Corners_${ctx}`,
+      `over${code}Escanteios_${ctx}`,
+      `over${code}Corners_overall`,
+      `over${code}Escanteios_overall`
+    ]));
+  }
+  function cardPct(stats, code, ctx){
+    code = String(code);
+    return pct(get(stats, [
+      `over${code}CardsPercentage_${ctx}`,
+      `over${code}CartoesPercentage_${ctx}`,
+      `over${code}CardsPercentage_overall`,
+      `over${code}CartoesPercentage_overall`,
+      `over${code}Cards_${ctx}`,
+      `over${code}Cards_overall`
+    ]));
+  }
+  function cornerAvg(stats, ctx){
+    return num(get(stats, [
+      `cornersTotalAVG_${ctx}`,
+      `cornersAVG_${ctx}`,
+      `cornersTotalAVG_overall`,
+      `cornersAVG_overall`
+    ]));
+  }
+  function badge(v){
+    const p=pct(v);
+    if(p===null) return '<span class="v127-badge">—</span>';
+    const c=p>=68?'good':p>=45?'mid':'bad';
+    return `<span class="v127-badge ${c}">${p}%</span><span class="v127-bar"><span class="v127-fill ${c}" style="width:${p}%"></span></span>`;
+  }
+  function row(label,h,a,j){
+    return `<div class="v128-row"><div class="v127-label">${label}</div><div class="v127-cell">${badge(h)}</div><div class="v127-cell">${badge(a)}</div><div class="v127-cell">${badge(j)}</div></div>`;
+  }
+  function subTabs(){
+    const subt=[['winners','Vencedores'],['goals','Gols'],['corners','Escanteios'],['cards','Cartões']];
+    return `<div class="v128-subtabs">${subt.map(t=>`<button class="v128-pill ${v127ProbSub===t[0]?'active':''}" onclick="v127Sub('${t[0]}')">${t[1]}</button>`).join('')}</div>`;
+  }
+  function wrap(rows, note){
+    return `<div class="analysis-v127">${subTabs()}<div class="v128-card"><h2>Probabilidades</h2><div class="v128-table"><div class="v128-row head"><div>Mercado</div><div>Casa</div><div>Visitante</div><div>Jogo</div></div>${rows}</div><div class="v128-note">${note}</div></div></div>`;
+  }
+
+  function renderProbabilidadesReais(m){
+    const hs=homeStats(m), as=awayStats(m);
+    let rows='';
+    if(v127ProbSub==='winners'){
+      const hWin=statPct(hs,'winPercentage','home');
+      const hDraw=statPct(hs,'drawPercentage','home');
+      const hLoss=statPct(hs,'losePercentage','home');
+      const aWin=statPct(as,'winPercentage','away');
+      const aDraw=statPct(as,'drawPercentage','away');
+      const aLoss=statPct(as,'losePercentage','away');
+      rows += row('Casa vence', hWin, aLoss, avg(hWin,aLoss));
+      rows += row('Empate', hDraw, aDraw, avg(hDraw,aDraw));
+      rows += row('Visitante vence', hLoss, aWin, avg(hLoss,aWin));
+      rows += row('Casa ou Empate (1X)', avg(hWin,hDraw), avg(aLoss,aDraw), avg(avg(hWin,hDraw),avg(aLoss,aDraw)));
+      rows += row('Casa ou Visitante (12)', avg(hWin,hLoss), avg(aLoss,aWin), avg(avg(hWin,hLoss),avg(aLoss,aWin)));
+      rows += row('Empate ou Visitante (X2)', avg(hDraw,hLoss), avg(aDraw,aWin), avg(avg(hDraw,hLoss),avg(aDraw,aWin)));
+      return wrap(rows,'Casa usa desempenho do mandante em casa; Visitante usa desempenho do visitante fora. A coluna Jogo é média estatística dos recortes, sem odds.');
+    }
+    if(v127ProbSub==='goals'){
+      [['Mais que 0.5','05'],['Mais que 1.5','15'],['Mais que 2.5','25'],['Mais que 3.5','35']].forEach(([label,code])=>{
+        const h=goalPct(hs,code,'home'), a=goalPct(as,code,'away'); rows += row(label,h,a,avg(h,a));
+      });
+      [['Menos que 3.5','35'],['Menos que 2.5','25'],['Menos que 1.5','15'],['Menos que 0.5','05']].forEach(([label,code])=>{
+        const h=goalPct(hs,code,'home'), a=goalPct(as,code,'away'); rows += row(label,h===null?null:100-h,a===null?null:100-a,avg(h===null?null:100-h,a===null?null:100-a));
+      });
+      const hb=bttsPct(hs,'home'), ab=bttsPct(as,'away');
+      rows += row('Ambas marcam', hb, ab, avg(hb,ab));
+      return wrap(rows,'Percentuais de gols calculados com estatísticas reais casa/fora dos times. Under é complemento do Over da mesma linha.');
+    }
+    if(v127ProbSub==='corners'){
+      const lines=[['Mais que 6','65'],['Mais que 7','75'],['Mais que 8','85'],['Mais que 9','95'],['Mais que 10','105'],['Mais que 11','115'],['Mais que 12','125'],['Mais que 13','135']];
+      lines.forEach(([label,code])=>{ const h=cornerPct(hs,code,'home'), a=cornerPct(as,code,'away'); rows += row(label,h,a,avg(h,a)); });
+      const havg=cornerAvg(hs,'home'), aavg=cornerAvg(as,'away');
+      const avgTxt=(havg!==null&&aavg!==null)?` Média de cantos: ${m.home} ${havg.toFixed(2).replace('.',',')} / ${m.away} ${aavg.toFixed(2).replace('.',',')}.`:'';
+      return wrap(rows,'Padrão FootyStats: Over 6 a Over 13. Casa = mandante em casa, Visitante = visitante fora, Jogo = média dos dois percentuais.'+avgTxt);
+    }
+    const lines=[['Mais que 3.5 cartões','35'],['Mais que 4.5 cartões','45'],['Mais que 5.5 cartões','55'],['Mais que 6.5 cartões','65']];
+    lines.forEach(([label,code])=>{ const h=cardPct(hs,code,'home'), a=cardPct(as,code,'away'); rows += row(label,h,a,avg(h,a)); });
+    return wrap(rows,'Percentuais de cartões calculados com estatísticas reais casa/fora dos times. Se a API não retornar a linha, aparece “—”.');
+  }
+
+  window.v128Probabilities = renderProbabilidadesReais;
+  try { v128Probabilities = renderProbabilidadesReais; } catch(e) {}
+
+  // Mantém a navegação funcionando e só força recarregar estatística se já existir loader no projeto.
+  const previousOpen = window.openAnalysis;
+  if (typeof previousOpen === 'function' && !window.__jtips224OpenPatched) {
+    window.__jtips224OpenPatched = true;
+    window.openAnalysis = async function(id){
+      await previousOpen(id);
+      try { if(window.selected && typeof loadSeasonStats === 'function') await loadSeasonStats(window.selected); } catch(e) {}
+      try { if(window.selected && typeof renderAnalysis === 'function') renderAnalysis(); } catch(e) {}
+    };
+  }
+})();
+</script>
+
+<style>
+/* JTIPS V22.4 — garantia visual: remove texto antigo de odds/potenciais da tabela nova */
+.v128-card .v128-note{color:#fff2c9!important}
 </style>
 
 </body></html>
