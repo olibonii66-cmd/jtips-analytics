@@ -1715,7 +1715,7 @@ function liveDetail(match,liveMatches){
     <div class="live-top"><button class="live-back" onclick="goPage('games')">← Voltar</button><div class="live-league">${m.league}<small>${m.season||''}</small></div><div class="live-badge">AO VIVO</div></div>
     <div class="scoreboard"><div class="score-team">${logoEl(m.logoHome,m.home)}<span>${m.home}</span></div><div class="score-center"><div class="score-live">AO VIVO</div><div class="score-number">${homeGols} - ${awayGols}</div><div class="minute-pill">${liveMinute(m)}</div></div><div class="score-team">${logoEl(m.logoAway,m.away)}<span>${m.away}</span></div></div>
     <div class="live-tabs"><div class="live-tab active">Sumário</div><div class="live-tab">Estatísticas</div><div class="live-tab">Cronologia</div><div class="live-tab">Estatísticas dos Jogadores</div><div class="live-tab">Elenco</div><div class="live-tab">Tabela</div></div>
-    <div class="live-info"><div class="live-info-card"><div class="live-info-icon">🏟️</div><div><small>Estádio</small><b>${m.odds?.stadium_name||'Não informado'}</b><small>${m.odds?.stadium_location||''}</small></div></div><div class="live-info-card"><div class="live-info-icon">🧑‍⚖️</div><div><small>Árbitro</small><b>${m.odds?.referee_name||'Árbitro ainda não informado'}</b><small>${m.odds?.referee_name?'':'Leitura baseada nos dados disponíveis.'}</small></div></div></div>
+    <div class="live-info"><div class="live-info-card"><div class="live-info-icon">🏟️</div><div><small>Estádio</small><b>${m.odds?.stadium_name||'Não informado'}</b></div></div><div class="live-info-card"><div class="live-info-icon">🧑‍⚖️</div><div><small>Árbitro</small><b>${m.odds?.referee_name||'Árbitro ainda não informado'}</b><small>${m.odds?.referee_name?'':'Leitura baseada nos dados disponíveis.'}</small></div></div></div>
     <div class="live-chips"><div class="chip-group"><div class="live-chip"><b>${hEscanteios}</b><small>Escanteios</small></div><div class="live-chip"><b>${hYellow}</b><small>Amarelos</small></div><div class="live-chip"><b>${hRed}</b><small>Vermelhos</small></div></div><div class="live-sep"></div><div class="chip-group"><div class="live-chip"><b>${aEscanteios}</b><small>Escanteios</small></div><div class="live-chip"><b>${aYellow}</b><small>Amarelos</small></div><div class="live-chip"><b>${aRed}</b><small>Vermelhos</small></div></div></div>
     <div class="live-bars">${liveBar('Posse de bola',hPoss,aPoss,true)}${liveBar('Finalizações',hShots,aShots)}${liveBar('Chutes no gol',hSot,aSot)}${liveBar('xG (Gols Esperados)',hxg,axg)}${liveBar('Ataques perigosos',hDanger,aDanger)}</div>
   </div><aside class="live-side"><h3>Outros jogos ao vivo</h3>${side || '<div class="empty">Nenhum outro jogo ao vivo.</div>'}</aside></div>`;
@@ -3382,8 +3382,7 @@ const V127_TABS=[
   ['ai','Insights da IA'],
   ['deepstats','Estatísticas Profundas'],
   ['shotchart','Gráfico de Chutes'],
-  ['matches','Partidas'],
-  ['bets','Apostas Prontas']
+  ['matches','Partidas']
 ];
 function v127Safe(v,fallback=0){let x=n(v);return x===null?fallback:Math.round(x)}
 function v127Pct(v){let x=v127Safe(v,0);return Math.max(0,Math.min(100,x))}
@@ -3527,8 +3526,7 @@ const V128_TABS=[
   ['ai','Insights da IA'],
   ['deepstats','Estatísticas Profundas'],
   ['shotchart','Gráfico de Chutes'],
-  ['matches','Partidas'],
-  ['bets','Apostas Prontas']
+  ['matches','Partidas']
 ];
 function v128Num(v,d=null){let x=n(v);return x===null?d:x}
 function v128Round(v,dec=1){let x=v128Num(v,null);if(x===null)return null;let p=Math.pow(10,dec);return Math.round(x*p)/p}
@@ -3552,7 +3550,7 @@ function v128FormatDateUnix(ts){let x=v128Num(ts,null);if(!x)return'—';try{ret
 function v128TeamNameById(m,id){const o=m.odds||{};id=Number(id);if(id===Number(o.homeID))return m.home;if(id===Number(o.awayID))return m.away;return 'Time '+id}
 async function v128FetchJson(url){const r=await fetch(url);const j=await r.json().catch(()=>({}));if(!r.ok||j.ok===false)throw new Error(j.error||'Erro');return j}
 async function v128LoadData(m){if(!m||!m.odds)return;const o=m.odds,seasonId=v128SeasonId(m);const tasks=[];if(!m.teamTrends&&seasonId&&o.homeID&&o.awayID){const qs=new URLSearchParams({season_id:seasonId,home_id:o.homeID,away_id:o.awayID,home_name:m.home,away_name:m.away});tasks.push(v128FetchJson(`/api/lastx-trends?${qs.toString()}`).then(j=>m.teamTrends=j).catch(e=>m.teamTrends={ok:false,error:e.message}))}if(!m.v128LeagueMatches&&seasonId){tasks.push(v128FetchJson(`/api/league-matches?season_id=${encodeURIComponent(seasonId)}`).then(j=>m.v128LeagueMatches=j).catch(e=>m.v128LeagueMatches={ok:false,error:e.message,dados:[]}))}if(tasks.length)await Promise.allSettled(tasks)}
-function v128Header(m){const o=m.odds||{};let loc=[o.stadium_name,o.stadium_location].filter(Boolean).join(' • ');return `<div class="hero-teams"><div class="hero-team">${logoEl(m.logoHome,m.home)}<span>${m.home}</span></div><div><div class="muted">${m.league}</div><div class="vs">VS</div><div class="hero-meta"><span>${m.date}</span><span>•</span><span>${m.time}</span></div>${loc?`<div class="v128-stadium"><span>🏟️ ${loc}</span></div>`:''}<span class="status">${m.status}</span></div><div class="hero-team">${logoEl(m.logoAway,m.away)}<span>${m.away}</span></div></div>`}
+function v128Header(m){const o=m.odds||{};let loc=o.stadium_name||'';return `<div class="hero-teams"><div class="hero-team">${logoEl(m.logoHome,m.home)}<span>${m.home}</span></div><div><div class="muted">${m.league}</div><div class="vs">VS</div><div class="hero-meta"><span>${m.date}</span><span>•</span><span>${m.time}</span></div>${loc?`<div class="v128-stadium"><span>🏟️ ${loc}</span></div>`:''}<span class="status">${m.status}</span></div><div class="hero-team">${logoEl(m.logoAway,m.away)}<span>${m.away}</span></div></div>`}
 function v128ProbValues(m){const o=m.odds||{},hp=v128OddProbs(o)||{};return {home:hp.home??m.winner,draw:hp.draw??m.draw,away:hp.away??m.awayWin,oneX:hp.oneX,twelve:hp.twelve,xTwo:hp.xTwo,o05:o.o05_potential,o15:o.o15_potential??m.over15,o25:o.o25_potential??m.over25,o35:o.o35_potential,btts:o.btts_potential??m.btts,avg:o.avg_potential,totalxg:o.total_xg_prematch,c85:o.corners_o85_potential??m.corners85,c95:o.corners_o95_potential??m.corners95,c105:o.corners_o105_potential??m.corners105,cp:o.corners_potential,cards:o.cards_potential}}
 function v128Probabilities(m){const p=v128ProbValues(m),hs=v128StatsObj(m,'home'),as=v128StatsObj(m,'away');const subt=[['winners','Vencedores'],['goals','Gols'],['corners','Escanteios'],['cards','Cartões']];let rows='';if(v127ProbSub==='winners'){rows+=v128Row('Casa vence',p.home,null,p.home);rows+=v128Row('Empate',p.draw,p.draw,p.draw);rows+=v128Row('Visitante vence',null,p.away,p.away);rows+=v128Row('Casa ou Empate (1X)',p.oneX,null,p.oneX);rows+=v128Row('Casa ou Visitante (12)',p.twelve,p.twelve,p.twelve);rows+=v128Row('Empate ou Visitante (X2)',null,p.xTwo,p.xTwo)}else if(v127ProbSub==='goals'){rows+=v128Row('Mais que 0.5',v128S(hs,'seasonOver05Percentage_home'),v128S(as,'seasonOver05Percentage_away'),p.o05);rows+=v128Row('Mais que 1.5',v128S(hs,'seasonOver15Percentage_home'),v128S(as,'seasonOver15Percentage_away'),p.o15);rows+=v128Row('Mais que 2.5',v128S(hs,'seasonOver25Percentage_home'),v128S(as,'seasonOver25Percentage_away'),p.o25);rows+=v128Row('Mais que 3.5',v128S(hs,'seasonOver35Percentage_home'),v128S(as,'seasonOver35Percentage_away'),p.o35);rows+=v128Row('Menos que 2.5',100-v128PctVal(v128S(hs,'seasonOver25Percentage_home')),100-v128PctVal(v128S(as,'seasonOver25Percentage_away')),100-v128PctVal(p.o25));rows+=v128Row('Ambas Marcam',v128S(hs,'seasonBTTSPercentage_home'),v128S(as,'seasonBTTSPercentage_away'),p.btts)}else if(v127ProbSub==='corners'){rows+=v128Row('Mais que 6.5',v128S(hs,'over65CornersPercentage_home'),v128S(as,'over65CornersPercentage_away'),p.c85?Math.min(100,v128PctVal(p.c85)+10):null);rows+=v128Row('Mais que 8.5',v128S(hs,'over85CornersPercentage_home'),v128S(as,'over85CornersPercentage_away'),p.c85);rows+=v128Row('Mais que 9.5',v128S(hs,'over95CornersPercentage_home'),v128S(as,'over95CornersPercentage_away'),p.c95);rows+=v128Row('Mais que 10.5',v128S(hs,'over105CornersPercentage_home'),v128S(as,'over105CornersPercentage_away'),p.c105)}else{const pot=v128PctVal((v128Num(p.cards,0))*12);rows+=v128Row('Mais que 3.5 cartões',v128S(hs,'over35CardsPercentage_home'),v128S(as,'over35CardsPercentage_away'),pot);rows+=v128Row('Mais que 4.5 cartões',v128S(hs,'over45CardsPercentage_home'),v128S(as,'over45CardsPercentage_away'),pot?Math.max(0,pot-8):null);rows+=v128Row('Mais que 5.5 cartões',v128S(hs,'over55CardsPercentage_home'),v128S(as,'over55CardsPercentage_away'),pot?Math.max(0,pot-14):null);rows+=v128Row('Potencial de cartões',null,null,p.cards?Math.min(100,p.cards*12):null)}return `<div class="analysis-v127"><div class="v128-subtabs">${subt.map(t=>`<button class="v128-pill ${v127ProbSub===t[0]?'active':''}" onclick="v127Sub('${t[0]}')">${t[1]}</button>`).join('')}</div><div class="v128-card"><h2>Estatísticas</h2><div class="v128-table"><div class="v128-row head"><div>Mercado</div><div>Casa</div><div>Visitante</div><div>Jogo</div></div>${rows}</div><div class="v128-note">Casa usa estatística real do mandante em casa; Visitante usa estatística real do visitante fora; Jogo é a média dos dois recortes.</div></div></div>`}
 function v128Stats(m){const hs=v128StatsObj(m,'home'),as=v128StatsObj(m,'away');const tabs=[['winners','Vencedores'],['goals','Gols'],['corners','Escanteios'],['cards','Cartões'],['shots','Chutes']];let title='Dados Estatísticos',rows='';function cmp(a,label,b){return `<div class="v128-compare-row"><div class="side">${typeof a==='string'?a:v128Metric(a)}</div><div class="metric">${label}</div><div class="side">${typeof b==='string'?b:v128Metric(b)}</div></div>`}function cmpp(a,label,b){return `<div class="v128-compare-row"><div class="side">${v128Badge(a)}</div><div class="metric">${label}</div><div class="side">${v128Badge(b)}</div></div>`}if(v127StatsSub==='winners'){rows+=cmpp(v128S(hs,'winPercentage_home'),'Venceu a partida',v128S(as,'winPercentage_away'));rows+=cmpp(v128S(hs,'losePercentage_home'),'Perdeu a partida',v128S(as,'losePercentage_away'));rows+=cmpp(v128S(hs,'drawPercentage_home'),'A partida terminou empatada',v128S(as,'drawPercentage_away'));rows+=cmp(v128S(hs,'seasonPPG_home'),'Pontos por jogo',v128S(as,'seasonPPG_away'))}else if(v127StatsSub==='goals'){title='Estatísticas — Gols';rows+=cmp(v128Avg(hs,'seasonGoalsTotal','seasonAVG','home'),'Média Total de Gols',v128Avg(as,'seasonGoalsTotal','seasonAVG','away'));rows+=cmp(v128Avg(hs,'seasonGoals','seasonScoredAVG','home'),'Média de Gols Marcados',v128Avg(as,'seasonGoals','seasonScoredAVG','away'));rows+=cmp(v128Avg(hs,'seasonConceded','seasonConcededAVG','home'),'Média de Gols Sofridos',v128Avg(as,'seasonConceded','seasonConcededAVG','away'));rows+=cmpp(v128S(hs,'seasonBTTSPercentage_home'),'Ambas Marcam',v128S(as,'seasonBTTSPercentage_away'));rows+=cmpp(v128S(hs,'seasonOver25Percentage_home'),'Mais de 2.5 gols',v128S(as,'seasonOver25Percentage_away'))}else if(v127StatsSub==='corners'){title='Estatísticas — Escanteios';['65','75','85','95','105','115'].forEach(x=>{rows+=cmpp(v128S(hs,`over${x}CornersPercentage_home`),`Mais de ${x[0]}.${x.slice(1)} escanteios`,v128S(as,`over${x}CornersPercentage_away`))})}else if(v127StatsSub==='cards'){title='Estatísticas — Cartões';let pot=m.odds?.cards_potential;rows+=cmp(pot,'Potencial de cartões da partida',pot);rows+=cmpp(v128S(hs,'over05Cards_overall'),'Jogos acima de 0.5 cartões',v128S(as,'over05Cards_overall'));rows+=cmpp(v128S(hs,'over15Cards_overall'),'Jogos acima de 1.5 cartões',v128S(as,'over15Cards_overall'));rows+=cmpp(v128S(hs,'over25Cards_overall'),'Jogos acima de 2.5 cartões',v128S(as,'over25Cards_overall'))}else{title='Estatísticas — Chutes';rows+=cmp(v128S(hs,'shotsAVG_home'),'Média total de chutes',v128S(as,'shotsAVG_away'));rows+=cmp(v128S(hs,'shotsOnTargetAVG_home'),'Média de chutes no alvo',v128S(as,'shotsOnTargetAVG_away'));rows+=cmp(v128S(hs,'shotsOffTargetAVG_home'),'Média de chutes fora do alvo',v128S(as,'shotsOffTargetAVG_away'))}return `<div class="analysis-v127"><div class="v128-subtabs">${tabs.map(t=>`<button class="v128-pill ${v127StatsSub===t[0]?'active':''}" onclick="v127Stats('${t[0]}')">${t[1]}</button>`).join('')}</div><div class="v128-card"><h2>${title}</h2><div class="v128-compare"><div class="v128-compare-row"><div class="side muted"><b>${m.home}</b></div><div class="metric muted"><b>Métrica</b></div><div class="side muted"><b>${m.away}</b></div></div>${rows||'<div class="v128-empty">Sem dados suficientes.</div>'}</div><div class="v128-note">Casa usa estatísticas do mandante em casa; visitante usa estatísticas do visitante fora. Campos indisponíveis ou -1 são ocultados.</div></div></div>`}
@@ -3626,7 +3624,7 @@ window.v128ShotMetricSet=function(x){v128ShotMetric=x;renderTab()};
     const stadiumName = o.stadium_name || raw.stadium_name || m.stadium_name || '';
     const stadiumLocation = o.stadium_location || raw.stadium_location || m.stadium_location || '';
     const stadiumHtml = (stadiumName || stadiumLocation)
-      ? `<div class="v128-stadium"><span>🏟️ ${[stadiumName, stadiumLocation].filter(Boolean).join(' • ')}</span></div>`
+      ? `<div class="v128-stadium"><span>🏟️ ${stadiumName}</span></div>`
       : `<div class="v128-stadium"><span>🏟️ Estádio não informado</span></div>`;
     return `<div class="hero-teams"><div class="hero-team">${logoEl(m.logoHome,m.home)}<span>${m.home}</span></div><div><div class="muted">${m.league}</div><div class="vs">VS</div><div class="hero-meta"><span>${m.date}</span><span>•</span><span>${m.time}</span></div>${stadiumHtml}<span class="status">${m.status}</span></div><div class="hero-team">${logoEl(m.logoAway,m.away)}<span>${m.away}</span></div></div>`;
   };
@@ -3701,7 +3699,7 @@ window.v128ShotMetricSet=function(x){v128ShotMetric=x;renderTab()};
   window.v128Header = function(m){
     const st=getStadium(m);
     const stadiumHtml = (st.name || st.loc)
-      ? `<div class="v128-stadium"><span>🏟️ ${[st.name,st.loc].filter(Boolean).join(' • ')}</span></div>`
+      ? `<div class="v128-stadium"><span>🏟️ ${st.name}</span></div>`
       : `<div class="v128-stadium"><span>🏟️ Estádio não informado</span></div>`;
     return `<div class="hero-teams"><div class="hero-team">${logoEl(m.logoHome,m.home)}<span>${m.home}</span></div><div><div class="muted">${m.league}</div><div class="vs">VS</div><div class="hero-meta"><span>${m.date}</span><span>•</span><span>${m.time}</span></div>${stadiumHtml}<span class="status">${m.status}</span></div><div class="hero-team">${logoEl(m.logoAway,m.away)}<span>${m.away}</span></div></div>`;
   };
@@ -5730,7 +5728,7 @@ window.v128Header=v128Header=function(m){
   }
   // Fallback raw
   if(!sn){var r=m.raw||o;sn=r.stadium_name||r.stadium||r.venue||r.venue_name||'';sl=r.stadium_location||r.stadium_address||'';}
-  var loc=[sn,sl].filter(Boolean).join(' • ');
+  var loc=sn||'';
   var stadHtml=loc?'<div class="v128-stadium"><span>🏟️ '+loc+'</span></div>':'';
   return '<div class="hero-teams">'+
     '<div class="hero-team">'+(typeof logoEl==='function'?logoEl(m.logoHome,m.home):m.home)+'<span>'+m.home+'</span></div>'+
@@ -6157,6 +6155,120 @@ css.textContent=`
 `;
 document.head.appendChild(css);
 
+})();
+</script>
+
+
+
+<!-- JTIPS V23.1 ajuste solicitado: paleta Estatísticas, estádio sem localização, termos PT-BR e remoção do menu Apostas Prontas -->
+<style id="jtips-user-request-final-colors">
+:root{
+  --bg:#050b08!important;
+  --bg-2:#08130d!important;
+  --bg-3:#0d1e14!important;
+  --panel:#102419!important;
+  --panel-2:#142b1f!important;
+  --card:#11271b!important;
+  --gold:#d8b86b!important;
+  --gold2:#d8b86b!important;
+  --gold-2:#f2d58a!important;
+  --gold-3:#a9782d!important;
+  --green:#3f7a58!important;
+  --green-2:#75bc7d!important;
+  --blue:#d8b86b!important;
+  --blue2:#a9782d!important;
+  --text:#fff8e8!important;
+  --text-2:#e8dcc0!important;
+  --muted:#b9c2ad!important;
+  --muted-2:#8fa28f!important;
+  --line:rgba(216,184,107,.22)!important;
+  --line2:rgba(216,184,107,.42)!important;
+  --border:rgba(216,184,107,.22)!important;
+  --border-strong:rgba(216,184,107,.42)!important;
+}
+html,body{
+  background:radial-gradient(circle at 18% 0%,rgba(216,184,107,.09),transparent 28%),radial-gradient(circle at 88% 10%,rgba(63,122,88,.12),transparent 26%),linear-gradient(180deg,#050b08,#08130d)!important;
+  color:var(--text)!important;
+}
+.sidebar,.side,.nav{background:linear-gradient(180deg,#07100b,#0b1811)!important;border-right-color:var(--border)!important;}
+.panel,.games-card,.filters,.match-hero,.analysis-content,.stat-card,.footy-block,.stats-title-card,.v127-card,.v128-card,.v23-section,.v23-ai-card,.es-panel,.ticket-head,.ticket-block,.live-main,.live-info-card,.best{
+  background:linear-gradient(180deg,rgba(20,43,31,.92),rgba(8,19,13,.96))!important;
+  border-color:var(--border)!important;
+  color:var(--text)!important;
+}
+.nav-item:hover,.nav-item.active,.menu-item:hover,.menu-item.active{background:linear-gradient(180deg,rgba(216,184,107,.18),rgba(216,184,107,.07))!important;border-color:var(--border-strong)!important;color:var(--text)!important;}
+button,.btn,.action,.tab,.analysis-tab,.stats-subtab,.inner-tab,.v128-pill,.v127-pill,.v23-ttab{background:linear-gradient(180deg,rgba(20,43,31,.9),rgba(8,19,13,.9))!important;border-color:var(--border)!important;color:var(--text-2)!important;box-shadow:none!important;}
+button:hover,.btn:hover,.action:hover,.tab:hover,.analysis-tab:hover,.stats-subtab:hover,.inner-tab:hover,.v128-pill:hover,.v127-pill:hover,.v23-ttab:hover{border-color:var(--border-strong)!important;color:var(--gold-2)!important;}
+button.active,.btn.primary,.tab.active,.analysis-tab.active,.stats-subtab.active,.inner-tab.active,.v128-pill.active,.v127-pill.active,.v23-ttab.active{background:linear-gradient(180deg,var(--gold-2),var(--gold-3))!important;color:#151008!important;border-color:rgba(255,232,165,.62)!important;box-shadow:0 10px 24px rgba(216,184,107,.22)!important;}
+.table-head,.stats-table th,.metric-table th,.mini-table th,.es-th,.v128-compare-row .metric,.v23-stitle,.v23-ai-title{color:var(--gold-2)!important;}
+.stats-table th,.stats-table td,.metric-table th,.metric-table td,.mini-table th,.mini-table td,.v128-row:not(.head),.v23-trend-item,.v23-ai-hdr,.v23-ai-footer{border-color:rgba(216,184,107,.14)!important;}
+.metric-table .subhead td,.es-subhead{background:rgba(216,184,107,.08)!important;color:var(--gold-2)!important;}
+.tag,.status,.v128-stadium span,.v128-kpi,.v128-sensor-head .v128-kpi,.v128-alert,.v128-insight,.info-note,.v23-ai-icon,.es-kpi,.es-pred-card,.es-score-card,.es-corner-header>div,.top-pill,.mini-card{border-color:rgba(216,184,107,.24)!important;background:rgba(216,184,107,.07)!important;color:var(--text-2)!important;}
+.logo-team,.es-logo-fb{background:#102419!important;border-color:rgba(216,184,107,.34)!important;color:var(--gold-2)!important;}
+.vs,.score,.blue,.back,.es-pred-val,.es-form-ppg,.es-pbar-val,.v23-ttab.active,.best b,.prob b,.market small{color:var(--gold-2)!important;}
+.meter div,.es-pbar-fill,.compare-bar div,.v128-fill.good,.v127-fill.good{background:linear-gradient(90deg,var(--green),var(--gold-2))!important;}
+.nav-item[data-page="bets"],.analysis-tab[data-tab="bets"],.tab[data-tab="bets"]{display:none!important;}
+</style>
+<script id="jtips-user-request-final-js">
+(function(){
+  'use strict';
+  function translateTermsText(s){
+    return String(s||'')
+      .replace(/BTTS\s+No\s*&\s*O(\d+(?:\.\d+)?)/gi,'Ambas Marcam Não & Mais de $1')
+      .replace(/BTTS\s*&\s*Over\s+(\d+(?:\.\d+)?)/gi,'Ambas Marcam & Mais de $1')
+      .replace(/BTTS\s*&\s*Win/gi,'Ambas Marcam & Vitória')
+      .replace(/BTTS\s*&\s*Draw/gi,'Ambas Marcam & Empate')
+      .replace(/Over\s+X\s+Goals/gi,'Mais de X Gols')
+      .replace(/Under\s+X\s+Goals/gi,'Menos de X Gols')
+      .replace(/Over\s+X\s+Gols/gi,'Mais de X Gols')
+      .replace(/Under\s+X\s+Gols/gi,'Menos de X Gols')
+      .replace(/Over\s+X\s+Cards/gi,'Mais de X Cartões')
+      .replace(/Under\s+X\s+Cards/gi,'Menos de X Cartões')
+      .replace(/Over\s+X\s+Corners/gi,'Mais de X Escanteios')
+      .replace(/Under\s+X\s+Corners/gi,'Menos de X Escanteios')
+      .replace(/\bFH\s+Over\s+(\d+(?:\.\d+)?)/gi,'1ºT Mais de $1')
+      .replace(/\b2H\s+Over\s+(\d+(?:\.\d+)?)/gi,'2ºT Mais de $1')
+      .replace(/\bOT\s+Over\s+(\d+(?:\.\d+)?)/gi,'No alvo Mais de $1')
+      .replace(/\bOver\s+(\d+(?:\.\d+)?)/gi,'Mais de $1')
+      .replace(/\bUnder\s+(\d+(?:\.\d+)?)/gi,'Menos de $1')
+      .replace(/\bOver\b/gi,'Mais de')
+      .replace(/\bUnder\b/gi,'Menos de')
+      .replace(/\bBTTS\b/gi,'Ambas Marcam');
+  }
+  window.jtipsTranslateTerms=translateTermsText;
+  function walkTranslate(root){
+    if(!root) return;
+    var walker=document.createTreeWalker(root,NodeFilter.SHOW_TEXT,{acceptNode:function(node){
+      var p=node.parentNode;
+      if(!p || /^(SCRIPT|STYLE|TEXTAREA|INPUT|SELECT|OPTION)$/i.test(p.nodeName)) return NodeFilter.FILTER_REJECT;
+      return /\b(Over|Under|BTTS)\b/i.test(node.nodeValue||'') ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_SKIP;
+    }});
+    var nodes=[]; while(walker.nextNode()) nodes.push(walker.currentNode);
+    nodes.forEach(function(n){ n.nodeValue=translateTermsText(n.nodeValue); });
+  }
+  function cleanBetsMenu(){
+    document.querySelectorAll('.nav-item[data-page="bets"]').forEach(function(el){el.remove();});
+    document.querySelectorAll('.nav-item').forEach(function(el){if(/Apostas\s+Prontas/i.test(el.textContent||'')) el.remove();});
+  }
+  function applyFixes(){ cleanBetsMenu(); walkTranslate(document.body); }
+  ['renderTab','renderAnalysis','renderAll','renderBetsPage'].forEach(function(name){
+    var old=window[name];
+    if(typeof old==='function'){
+      window[name]=function(){ var r=old.apply(this,arguments); setTimeout(applyFixes,0); return r; };
+      try{ if(name in window) eval(name+'=window[name]'); }catch(e){}
+    }
+  });
+  var oldGo=window.goPage;
+  if(typeof oldGo==='function'){
+    window.goPage=function(p){ if(p==='bets') p='games'; var args=Array.prototype.slice.call(arguments); args[0]=p; var r=oldGo.apply(this,args); setTimeout(applyFixes,0); return r; };
+    try{ goPage=window.goPage; }catch(e){}
+  }
+  document.addEventListener('DOMContentLoaded',function(){
+    applyFixes();
+    var mo=new MutationObserver(function(){ clearTimeout(window.__jtipsTranslateTimer); window.__jtipsTranslateTimer=setTimeout(applyFixes,30); });
+    mo.observe(document.body,{childList:true,subtree:true,characterData:true});
+  });
+  setTimeout(applyFixes,0);
 })();
 </script>
 
