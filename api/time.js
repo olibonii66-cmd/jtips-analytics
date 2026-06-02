@@ -1,11 +1,12 @@
-
 const API_BASE = 'https://api.football-data-api.com';
 const cache = new Map();
 const TTL = 1000 * 60 * 10;
 
 function norm(v) {
   if (v === undefined || v === null) return '';
-  return String(v).trim();
+  const s = String(v).trim();
+  if (!s || ['nan','none','null','[]','0'].includes(s.toLowerCase())) return '';
+  return s;
 }
 
 function parseStats(v) {
@@ -14,13 +15,12 @@ function parseStats(v) {
   try { return JSON.parse(v); } catch (e) { return {}; }
 }
 
-function validId(v) {
-  const s = norm(v);
-  return s && s !== '0' && s.toLowerCase() !== 'nan' && s.toLowerCase() !== 'none' && s.toLowerCase() !== 'null';
-}
-
 function rowCompetitionId(row) {
   return norm(row?.competition_id || row?.league_id || row?.season_id || row?.seasonID || row?.id);
+}
+
+function statsCount(row) {
+  return Object.keys(parseStats(row?.stats)).length;
 }
 
 function scoreRow(row, requestedCompetitionId) {
@@ -28,21 +28,20 @@ function scoreRow(row, requestedCompetitionId) {
   const req = norm(requestedCompetitionId);
   const cid = rowCompetitionId(row);
   let score = 0;
-  if (req && cid === req) score += 1000;
-  if (norm(row.season_format).toLowerCase() === 'domestic league') score += 50;
-  if (norm(row.season) === '2026') score += 10;
-  if (parseStats(row.stats) && Object.keys(parseStats(row.stats)).length) score += 5;
+  if (req && cid === req) score += 100000;
+  if (norm(row.competition_id) && req && norm(row.competition_id) === req) score += 5000;
+  if (norm(row.season) === '2026') score += 100;
+  if (String(row.season_format || '').toLowerCase().includes('domestic league')) score += 50;
+  score += statsCount(row);
   return score;
 }
 
-async function callFootyStats(key, teamId, competitionId, mode) {
+async function callTeam(key, teamId, competitionId, mode) {
   const url = new URL(`${API_BASE}/team`);
   url.searchParams.set('key', key);
   url.searchParams.set('team_id', teamId);
   url.searchParams.set('include', 'stats');
 
-  // A FootyStats costuma tratar o ID de temporada/liga como league_id/season_id.
-  // Tentamos variações, mas nunca aceitamos linha errada quando competition_id foi pedido.
   if (competitionId) {
     if (mode === 'league_id') url.searchParams.set('league_id', competitionId);
     if (mode === 'season_id') url.searchParams.set('season_id', competitionId);
@@ -52,7 +51,19 @@ async function callFootyStats(key, teamId, competitionId, mode) {
   const response = await fetch(url);
   let json = {};
   try { json = await response.json(); } catch (e) {}
-  return { mode, response, json, url: url.toString().replace(key, '***') };
+  const rows = response.ok && json?.success
+    ? (Array.isArray(json.data) ? json.data : (json.data ? [json.data] : []))
+    : [];
+
+  return {
+    mode,
+    status: response.status,
+    ok: response.ok,
+    success: !!json?.success,
+    message: json?.message || null,
+    rows,
+    url: url.toString().replace(key, '***')
+  };
 }
 
 export default async function handler(req, res) {
@@ -63,10 +74,9 @@ export default async function handler(req, res) {
     const teamId = norm(req.query.team_id || req.query.id);
     const competitionId = norm(req.query.competition_id || req.query.league_id || req.query.season_id);
     const refresh = req.query.refresh === '1' || req.query.refresh === 'true';
-
     if (!teamId) return res.status(400).json({ ok: false, error: 'team_id obrigatório.' });
 
-    const cacheKey = `time:v22_8:${teamId}:${competitionId}`;
+    const cacheKey = `time:v22_9:${teamId}:${competitionId}`;
     const cached = cache.get(cacheKey);
     if (!refresh && cached && Date.now() - cached.ts < TTL) {
       res.setHeader('Cache-Control', 's-maxage=600, stale-while-revalidate=1200');
@@ -78,58 +88,50 @@ export default async function handler(req, res) {
     let allRows = [];
 
     for (const mode of modes) {
-      const attempt = await callFootyStats(key, teamId, competitionId, mode);
-      attempts.push({ mode, status: attempt.response.status, ok: attempt.response.ok, success: attempt.json?.success, url: attempt.url, message: attempt.json?.message || null });
-      if (attempt.response.ok && attempt.json?.success) {
-        const rows = Array.isArray(attempt.json.data) ? attempt.json.data : (attempt.json.data ? [attempt.json.data] : []);
-        allRows = rows;
-        // Se veio a competição exata, já podemos parar.
-        if (!competitionId || rows.some(r => rowCompetitionId(r) === competitionId)) break;
+      const a = await callTeam(key, teamId, competitionId, mode);
+      attempts.push({ mode: a.mode, status: a.status, ok: a.ok, success: a.success, message: a.message, total_rows: a.rows.length, url: a.url });
+      if (a.rows.length) {
+        allRows = allRows.concat(a.rows);
+        if (competitionId && a.rows.some(r => rowCompetitionId(r) === competitionId)) break;
+        if (!competitionId) break;
       }
     }
 
-    let team = null;
-    if (allRows.length) {
-      const sorted = [...allRows].sort((a, b) => scoreRow(b, competitionId) - scoreRow(a, competitionId));
-      team = sorted[0] || null;
-    }
+    // Remove duplicados por competição/id, mantendo primeira ocorrência.
+    const seen = new Set();
+    allRows = allRows.filter(r => {
+      const k = `${rowCompetitionId(r)}:${norm(r.id)}:${norm(r.name)}`;
+      if (seen.has(k)) return false;
+      seen.add(k);
+      return true;
+    });
 
-    const selectedCompetitionId = rowCompetitionId(team);
-    const exact_competition_match = !!competitionId && selectedCompetitionId === competitionId;
-
-    // Se o frontend pediu uma liga/temporada específica, não mascarar erro com outra liga.
-    // Isso evita número “parecido” mas errado.
-    if (competitionId && !exact_competition_match) {
-      const payload = {
+    if (!allRows.length) {
+      return res.status(200).json({
         ok: false,
-        error: 'Competição exata não encontrada para este time. Não vou retornar estatística de outra liga.',
+        error: 'Nenhuma estatística retornada para este time.',
         team_id: teamId,
-        requested_competition_id: competitionId,
-        selected_competition_id: selectedCompetitionId || null,
-        exact_competition_match: false,
+        requested_competition_id: competitionId || null,
+        stats: {},
         attempts,
-        available_competitions: allRows.map(r => ({
-          competition_id: r.competition_id,
-          league_id: r.league_id,
-          season_id: r.season_id,
-          season: r.season,
-          season_format: r.season_format,
-          name: r.name,
-          table_position: r.table_position,
-          performance_rank: r.performance_rank
-        }))
-      };
-      return res.status(200).json(payload);
+        available_competitions: []
+      });
     }
 
+    const sorted = [...allRows].sort((a, b) => scoreRow(b, competitionId) - scoreRow(a, competitionId));
+    const team = sorted[0];
+    const selectedCompetitionId = rowCompetitionId(team);
+    const exactCompetitionMatch = !!competitionId && selectedCompetitionId === competitionId;
     const stats = parseStats(team?.stats);
+
     const payload = {
       ok: true,
-      fonte: 'footystats_team_exact_competition',
+      fonte: exactCompetitionMatch ? 'footystats_team_exact_competition' : 'footystats_team_best_available_fallback',
       team_id: teamId,
       requested_competition_id: competitionId || null,
       selected_competition_id: selectedCompetitionId || null,
-      exact_competition_match,
+      exact_competition_match: exactCompetitionMatch,
+      warning: competitionId && !exactCompetitionMatch ? 'Competição exata não veio na API; retornando melhor linha disponível para não zerar a tela.' : null,
       team,
       stats,
       debug_corner_values: {
@@ -141,7 +143,7 @@ export default async function handler(req, res) {
         over105CornersPercentage_overall: stats.over105CornersPercentage_overall ?? null,
         over115CornersPercentage_overall: stats.over115CornersPercentage_overall ?? null,
         over125CornersPercentage_overall: stats.over125CornersPercentage_overall ?? null,
-        over135CornersPercentage_overall: stats.over135CornersPercentage_overall ?? null,
+        over135CornersPercentage_overall: stats.over135CornersPercentage_overall ?? null
       },
       attempts,
       available_competitions: allRows.map(r => ({
@@ -151,8 +153,10 @@ export default async function handler(req, res) {
         season: r.season,
         season_format: r.season_format,
         name: r.name,
+        cleanName: r.cleanName,
         table_position: r.table_position,
-        performance_rank: r.performance_rank
+        performance_rank: r.performance_rank,
+        stats_fields: statsCount(r)
       }))
     };
 
