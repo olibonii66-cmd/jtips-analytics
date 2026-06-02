@@ -51,3 +51,20 @@ Esta versão integra o Dataset Final gerado no Endpoint 21.
 - Se o JSON não existir, mantém fallback para `/api/jogos`.
 - A página `Apostas Prontas` usa os bilhetes compactos do dataset final quando disponíveis.
 - O logo JTIPS foi incluído em `assets/jtips-logo.png` e `assets/jtips-logo-full.jpg`.
+
+## V12.16 — Correção de Escanteios
+
+- Corrigida a aba Probabilidades > Escanteios para seguir o padrão FootyStats.
+- Linhas exibidas agora são: Mais que 6, 7, 8, 9, 10, 11, 12 e 13.
+- A coluna Média/Jogo agora é calculada pelo recorte Casa x Visitante, em vez de usar odd ou potencial genérico.
+- A tela busca estatísticas completas do time via `/api/time` antes de renderizar a tabela final.
+
+
+## Endpoint 22.2 — Correção global dos dados
+
+- Probabilidades agora usam estatísticas reais de temporada via `/api/time`.
+- Removido uso de odds/potenciais para montar tabelas de Probabilidades.
+- Corrigidos Vencedores, Gols, Escanteios e Cartões.
+- Escanteios segue padrão FootyStats: Mais que 6, 7, 8, 9, 10, 11, 12 e 13.
+- Under/Menos é calculado como complemento estatístico da mesma linha, quando houver dado Over.
+- Quando o dado não existir, o site mostra `—` em vez de inventar percentual.
