@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>JTIPS Analytics — V12.15 Acesso Público</title>
+  <title>JTIPS Analytics — V12.16 Dataset Final</title>
   <style>
     :root{--bg:#050a12;--bg2:#07111d;--panel:#0b1524;--panel2:#0d1a2a;--line:#183353;--line2:#214d78;--text:#f4f8ff;--muted:#8da8c8;--blue:#1aa8ff;--blue2:#0b79ff;--green:#37e889;--yellow:#ffd53f;--red:#ff4d6a;--shadow:0 20px 60px rgba(0,0,0,.38);--r:18px;--sidebar:214px}
     *{box-sizing:border-box} body{margin:0;background:radial-gradient(circle at 20% 0,rgba(16,130,255,.12),transparent 34%),linear-gradient(135deg,#02060c 0%,#071220 45%,#03080f 100%);font-family:Inter,Segoe UI,Arial,sans-serif;color:var(--text);overflow-x:hidden} button,input,select{font:inherit} .app{min-height:100vh;display:block}
@@ -4281,6 +4281,246 @@ body.auth-locked .app, body.auth-unlocked .app, .app{display:grid!important}
     }
     if(typeof window.renderPlans==='function') window.renderPlans();
   });
+})();
+</script>
+
+
+
+<script>
+/* ============================================================
+   JTIPS Analytics — Endpoint 22
+   Integração do Dataset Final do Site
+   - Prioriza /data/jtips_site_dataset_final.json
+   - Fallback automático para /api/jogos
+   ============================================================ */
+(function(){
+  const DATASET_URL = '/data/jtips_site_dataset_final.json';
+  const oldLoadGames = window.loadGames;
+  const oldLoadDates = window.loadDates;
+  const oldOpenAnalysis = window.openAnalysis;
+  const oldRenderBetsPage = window.renderBetsPage;
+
+  function spDateFromUnix(value){
+    const n = Number(value);
+    if(!Number.isFinite(n) || n <= 0) return '';
+    return new Date(n * 1000).toLocaleDateString('sv-SE', { timeZone:'America/Sao_Paulo' });
+  }
+
+  function normTxt(v){
+    if(v === null || v === undefined) return '';
+    const s = String(v).trim();
+    if(!s || ['nan','none','null','[]'].includes(s.toLowerCase())) return '';
+    return s;
+  }
+
+  function normNum(v){
+    if(v === null || v === undefined || v === '') return null;
+    const n = Number(String(v).replace(',','.'));
+    return Number.isFinite(n) && n !== -1 ? n : null;
+  }
+
+  function pickBestOdd(odds, marketNeedle, selectionNeedles){
+    const market = String(marketNeedle || '').toLowerCase();
+    const selections = (Array.isArray(selectionNeedles) ? selectionNeedles : [selectionNeedles]).map(x => String(x || '').toLowerCase());
+    const candidates = (odds || []).filter(o => {
+      const mg = String(o.market_group || o.market_raw || '').toLowerCase();
+      const sel = String(o.selection_raw || '').toLowerCase();
+      const odd = normNum(o.odd);
+      return odd && odd > 1 && mg.includes(market) && selections.every(s => sel.includes(s));
+    });
+    if(!candidates.length) return null;
+    candidates.sort((a,b) => Number(b.score_mercado || 0) - Number(a.score_mercado || 0));
+    return normNum(candidates[0].odd);
+  }
+
+  function marketScore(markets, needle){
+    const n = String(needle || '').toLowerCase();
+    const row = (markets || []).find(m => String(m.tipo_mercado || '').toLowerCase().includes(n));
+    return row ? normNum(row.score_mercado) : null;
+  }
+
+  function firstMarketClass(markets){
+    const valid = (markets || []).filter(m => normNum(m.score_mercado) !== null);
+    valid.sort((a,b) => Number(b.score_mercado || 0) - Number(a.score_mercado || 0));
+    return valid[0] || null;
+  }
+
+  function convertDataset21ToApiShape(dataset){
+    const oddsByMatch = new Map();
+    const marketsByMatch = new Map();
+    const ticketsByMatch = new Map();
+    const predictionsByMatch = new Map();
+
+    (dataset.odds || []).forEach(o => {
+      const id = String(o.match_id || '');
+      if(!oddsByMatch.has(id)) oddsByMatch.set(id, []);
+      oddsByMatch.get(id).push(o);
+    });
+    (dataset.markets || []).forEach(m => {
+      const id = String(m.match_id || '');
+      if(!marketsByMatch.has(id)) marketsByMatch.set(id, []);
+      marketsByMatch.get(id).push(m);
+    });
+    (dataset.tickets || []).forEach(t => ticketsByMatch.set(String(t.match_id || ''), t));
+    (dataset.predictions || []).forEach(p => predictionsByMatch.set(String(p.match_id || ''), p));
+
+    const rows = (dataset.matches || []).map((m, idx) => {
+      const id = String(m.match_id || m.id || idx + 1);
+      const odds = oddsByMatch.get(id) || [];
+      const markets = marketsByMatch.get(id) || [];
+      const ticket = ticketsByMatch.get(id) || null;
+      const prediction = predictionsByMatch.get(id) || null;
+      const bestMarket = firstMarketClass(markets);
+
+      const row = {
+        id,
+        match_id: id,
+        home_name: normTxt(m.home_name),
+        away_name: normTxt(m.away_name),
+        homeID: m.home_id,
+        awayID: m.away_id,
+        home_id: m.home_id,
+        away_id: m.away_id,
+        competition_id: m.competition_id,
+        season: m.season || m.starting_year || '',
+        league_name: normTxt(m.league),
+        competition_name: normTxt(m.league),
+        __league_name: normTxt(m.league),
+        date_unix: normNum(m.date_unix),
+        date_gmt: normTxt(m.date_gmt),
+        status: normTxt(m.status_raw || m.status_site || 'incomplete'),
+        status_site_dataset: normTxt(m.status_site),
+        qualidade_dados: normTxt(m.qualidade_dados),
+        score_jogo_dataset: normNum(m.score_jogo),
+        classificacao_jogo: normTxt(m.classificacao_jogo),
+        score_gols: normNum(m.score_gols),
+        score_btts: normNum(m.score_btts),
+        score_escanteios: normNum(m.score_escanteios),
+        score_cartoes: normNum(m.score_cartoes),
+        score_times: normNum(m.score_times),
+        o15_potential: normNum(m.o15_potential) || marketScore(markets, '1.5') || marketScore(markets, 'gols'),
+        o25_potential: normNum(m.o25_potential) || marketScore(markets, '2.5'),
+        u25_potential: normNum(m.u25_potential),
+        btts_potential: normNum(m.btts_potential) || marketScore(markets, 'btts') || marketScore(markets, 'ambas'),
+        corners_o85_potential: normNum(m.corners_potential_raw) || marketScore(markets, 'escante'),
+        cards_potential: normNum(m.cards_potential_raw) || marketScore(markets, 'cart'),
+        odds_ft_1: pickBestOdd(odds, 'ft result', ['home']) || pickBestOdd(odds, 'resultado', ['home']),
+        odds_ft_x: pickBestOdd(odds, 'ft result', ['draw']) || pickBestOdd(odds, 'resultado', ['draw']),
+        odds_ft_2: pickBestOdd(odds, 'ft result', ['away']) || pickBestOdd(odds, 'resultado', ['away']),
+        odds_doublechance_1x: pickBestOdd(odds, 'double chance', ['home','draw']) || pickBestOdd(odds, 'chance dupla', ['home','draw']),
+        odds_doublechance_12: pickBestOdd(odds, 'double chance', ['home','away']) || pickBestOdd(odds, 'chance dupla', ['home','away']),
+        odds_doublechance_x2: pickBestOdd(odds, 'double chance', ['draw','away']) || pickBestOdd(odds, 'chance dupla', ['draw','away']),
+        odds_ft_over15: pickBestOdd(odds, 'goals', ['over','1.5']) || pickBestOdd(odds, 'gols', ['over','1.5']),
+        odds_ft_over25: pickBestOdd(odds, 'goals', ['over','2.5']) || pickBestOdd(odds, 'gols', ['over','2.5']),
+        odds_ft_under25: pickBestOdd(odds, 'goals', ['under','2.5']) || pickBestOdd(odds, 'gols', ['under','2.5']),
+        odds_btts_yes: pickBestOdd(odds, 'btts', ['yes']) || pickBestOdd(odds, 'ambas', ['sim']),
+        odds_btts_no: pickBestOdd(odds, 'btts', ['no']) || pickBestOdd(odds, 'ambas', ['não']),
+        odds_corners_over_85: pickBestOdd(odds, 'corners', ['over','8.5']) || pickBestOdd(odds, 'escante', ['over','8.5']),
+        odds_corners_over_95: pickBestOdd(odds, 'corners', ['over','9.5']) || pickBestOdd(odds, 'escante', ['over','9.5']),
+        odds_corners_over_105: pickBestOdd(odds, 'corners', ['over','10.5']) || pickBestOdd(odds, 'escante', ['over','10.5']),
+        odds_dataset_final: odds,
+        markets_dataset_final: markets,
+        ticket_dataset_final: ticket,
+        prediction_dataset_final: prediction,
+        best_market_dataset_final: bestMarket ? bestMarket.tipo_mercado : '',
+        best_market_score_dataset_final: bestMarket ? normNum(bestMarket.score_mercado) : null
+      };
+
+      if(row.score_jogo_dataset !== null){
+        row.o15_potential = row.o15_potential || row.score_gols;
+        row.o25_potential = row.o25_potential || row.score_gols;
+      }
+
+      return row;
+    });
+
+    return {
+      ok: true,
+      fonte: 'dataset_final_endpoint_21',
+      meta: dataset.meta || {},
+      columns: Array.from(new Set(rows.flatMap(r => Object.keys(r)))),
+      dados: rows
+    };
+  }
+
+  async function fetchDataset21(force){
+    const url = force ? `${DATASET_URL}?t=${Date.now()}` : DATASET_URL;
+    const response = await fetch(url, { cache: force ? 'no-store' : 'default' });
+    if(!response.ok) throw new Error('Dataset final não encontrado em /data/jtips_site_dataset_final.json');
+    const dataset = await response.json();
+    if(!dataset || !Array.isArray(dataset.matches)) throw new Error('Dataset final inválido.');
+    return convertDataset21ToApiShape(dataset);
+  }
+
+  window.loadGames = async function(date, force=false){
+    try{
+      window.currentDate = date || (typeof todaySP === 'function' ? todaySP() : '');
+      const topDate = document.getElementById('topDateText');
+      if(topDate && typeof brDate === 'function') topDate.textContent = brDate(window.currentDate);
+      const banner = document.getElementById('dataBanner');
+      if(banner){
+        banner.className = 'data-banner';
+        banner.innerHTML = '<span>Carregando dataset final...</span>';
+      }
+      const payload = await fetchDataset21(force);
+      if(typeof setData === 'function'){
+        setData(payload);
+        const b = document.getElementById('dataBanner');
+        if(b){
+          b.className = 'data-banner';
+          b.innerHTML = `<span>● Dataset final carregado</span><span>${payload.dados.length} jogos • Endpoint 21/22</span>`;
+        }
+        return;
+      }
+      throw new Error('Função setData não encontrada.');
+    }catch(err){
+      console.warn('[JTIPS Endpoint 22] Fallback para API de jogos:', err.message);
+      if(typeof oldLoadGames === 'function') return oldLoadGames(date, force);
+      throw err;
+    }
+  };
+
+  window.loadDates = async function(){
+    const date = typeof todaySP === 'function' ? todaySP() : new Date().toISOString().slice(0,10);
+    const input = document.getElementById('dateSelect');
+    if(input) input.value = date;
+    await window.loadGames(date, false);
+  };
+
+  window.openAnalysis = async function(id){
+    try{
+      const base = (typeof allMatches !== 'undefined' ? allMatches : []).find(m => String(m.id) === String(id)) || (typeof allMatches !== 'undefined' ? allMatches[0] : null);
+      if(base && base.raw && base.raw.markets_dataset_final){
+        selected = base;
+        activeTab = 'winners';
+        if(typeof renderAnalysis === 'function') renderAnalysis();
+        if(typeof goPage === 'function') goPage('analysis');
+        return;
+      }
+    }catch(e){}
+    if(typeof oldOpenAnalysis === 'function') return oldOpenAnalysis(id);
+  };
+
+  window.renderBetsPage = function(){
+    try{
+      const list = (typeof allMatches !== 'undefined' ? allMatches : []) || [];
+      const tickets = list.map(m => m.raw && m.raw.ticket_dataset_final ? { match:m, ticket:m.raw.ticket_dataset_final } : null).filter(Boolean);
+      const target = document.getElementById('betsContent');
+      if(!target) return;
+      if(!tickets.length){
+        if(typeof oldRenderBetsPage === 'function') return oldRenderBetsPage();
+        target.innerHTML = '<div class="ticket-shell"><div class="ticket-empty">Nenhum bilhete encontrado no dataset final.</div></div>';
+        return;
+      }
+      target.innerHTML = `<div class="ticket-shell"><div class="ticket-head"><h2>Apostas Prontas do Dataset Final</h2><p class="muted">Bilhetes compactos vindos do Endpoint 21, já com anti-correlação e odds válidas.</p><div class="ticket-responsible">18+ Jogo Responsável — O JTIPS não garante lucro nem resultado.</div></div>${tickets.map(({match,ticket}) => {
+        const selections = Array.isArray(ticket.selecoes) ? ticket.selecoes : [];
+        return `<div class="v128-bet-card"><div class="v128-bet-head"><div><h3>${match.home} x ${match.away}</h3><p class="muted">${ticket.league || match.league} • ${match.time || 'Horário não informado'}</p></div><div class="v128-bet-pills"><span>${selections.length || ticket.qtd_selecoes || 1} seleção(ões)</span><span>Odd total ${ticket.odd_total_estimativa || '—'}</span><span>${ticket.odd_total_faixa || 'Bilhete'}</span></div></div>${selections.map(s => `<div class="v128-bet-selection"><div>✓</div><div><b>${s.mercado || s.market || s.selection || s.nome || 'Mercado'}</b><div class="v128-mini">${s.bookmaker ? 'Bookmaker: '+s.bookmaker : 'Seleção validada no dataset final'}</div></div><span class="v128-tag favoravel">Odd ${s.odd || s.odd_decimal || '—'}</span></div>`).join('')}<div class="v128-note">${ticket.aviso || '18+ Jogo Responsável — Análise estatística. Não garante resultado.'}</div></div>`;
+      }).join('')}</div>`;
+    }catch(err){
+      console.warn('[JTIPS Endpoint 22] Erro ao renderizar bilhetes finais:', err);
+      if(typeof oldRenderBetsPage === 'function') return oldRenderBetsPage();
+    }
+  };
 })();
 </script>
 

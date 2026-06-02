@@ -1,0 +1,11 @@
+Copie para esta pasta o arquivo:
+
+jtips_site_dataset_final.json
+
+Ele fica dentro do ZIP do Endpoint 21 em:
+json/jtips_site_dataset_final.json
+
+O site vai tentar carregar:
+/data/jtips_site_dataset_final.json
+
+Se esse arquivo não existir, o frontend usa fallback nas APIs /api/jogos e /api/partida.

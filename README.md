@@ -33,3 +33,21 @@ Adicionado fluxo de login no frontend para proteger visualmente o acesso ao sist
 
 ### Observação importante
 Esse login é local/frontend, indicado para protótipo e testes. Para venda real, substituir por autenticação segura com Supabase, Firebase Auth, Auth0 ou backend próprio.
+
+
+## V12.16 — Endpoint 22 / Dataset Final
+
+Esta versão integra o Dataset Final gerado no Endpoint 21.
+
+### Como usar
+1. Gere o ZIP `jtips_site_dataset_final_endpoint_21.zip` no Colab.
+2. Extraia o arquivo `json/jtips_site_dataset_final.json`.
+3. Copie esse JSON para a pasta `data/` deste projeto com o nome:
+   `data/jtips_site_dataset_final.json`.
+4. Faça deploy normalmente na Vercel.
+
+### Comportamento
+- O frontend tenta carregar primeiro `/data/jtips_site_dataset_final.json`.
+- Se o JSON não existir, mantém fallback para `/api/jogos`.
+- A página `Apostas Prontas` usa os bilhetes compactos do dataset final quando disponíveis.
+- O logo JTIPS foi incluído em `assets/jtips-logo.png` e `assets/jtips-logo-full.jpg`.
