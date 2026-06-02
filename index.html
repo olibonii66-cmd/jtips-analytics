@@ -1581,7 +1581,7 @@ input[type="date"]::-webkit-calendar-picker-indicator{
   <aside class="sidebar">
     <div class="brand"><img src="assets/jtips-logo.png" alt="JTIPS"><div><strong>JTIPS<br>Analytics</strong></div></div>
     <nav class="nav">
-      <div class="nav-item" data-page="dashboard">⌂ Dashboard</div><div class="nav-item active" data-page="games">▦ Jogos</div><div class="nav-item" data-page="analysis">▣ Análise</div><div class="nav-item" data-page="bets">Apostas Prontas</div><div class="nav-item" data-page="plans">♕ Planos</div><div class="nav-item" data-page="admin">⚙ Admin</div>
+      <div class="nav-item" data-page="dashboard">⌂ Dashboard</div><div class="nav-item active" data-page="games">▦ Jogos</div><div class="nav-item" data-page="analysis">▣ Análise</div><div class="nav-item" data-page="plans">♕ Planos</div><div class="nav-item" data-page="admin">⚙ Admin</div>
     </nav>
     <div class="side-bottom"><div class="mini-card"><small>Jonathan</small><b>Premium</b></div></div>
   </aside>
@@ -5942,190 +5942,163 @@ window.v128AI=v128AI=function(m){
   '</div>';
 };
 
-// ── 8. CSS — PALETA AZUL + ESTILOS V23 ────────────────────
+// ── 8. CSS — PALETA ESTATÍSTICAS + ESTILOS V23 ────────────────────
 var css=document.createElement('style');
 css.textContent=`
-  /* Override variáveis de cor gold → azul */
+  /* Override final: aplica no site inteiro a mesma paleta da aba Estatísticas */
   :root {
-    --gold: #1aa8ff !important;
-    --gold2: #0b79ff !important;
+    --bg:#050b08 !important;
+    --bg2:#08130d !important;
+    --bg-2:#08130d !important;
+    --bg-3:#0d1e14 !important;
+    --panel:#102419 !important;
+    --panel2:#142b1f !important;
+    --panel-2:#142b1f !important;
+    --card:#11271b !important;
+    --card-2:#0d1c14 !important;
+    --line:rgba(216,184,107,.22) !important;
+    --line2:rgba(216,184,107,.42) !important;
+    --border:rgba(216,184,107,.22) !important;
+    --border-strong:rgba(216,184,107,.42) !important;
+    --text:#fff8e8 !important;
+    --text-2:#e8dcc0 !important;
+    --muted:#b9c2ad !important;
+    --muted-2:#8fa28f !important;
+    --gold:#d8b86b !important;
+    --gold2:#f2d58a !important;
+    --gold-2:#f2d58a !important;
+    --gold-3:#a9782d !important;
+    --green:#3f7a58 !important;
+    --green-2:#75bc7d !important;
+    --blue:#d8b86b !important;
+    --blue2:#a9782d !important;
+    --yellow:#d8b86b !important;
+    --red:#d56d64 !important;
+    --shadow:0 18px 46px rgba(0,0,0,.36) !important;
   }
 
-  /* Subtabs e pills */
-  .stats-subtab, .inner-tab, .v128-pill, .v127-pill, .v128-pill {
-    border-color: rgba(72,146,220,.32) !important;
-    color: #b8d4ec !important;
-    background: rgba(7,17,30,.85) !important;
-  }
-  .stats-subtab.active, .inner-tab.active,
-  .v128-pill.active, .v127-pill.active,
-  .analysis-v127 .tab.active {
-    background: linear-gradient(135deg,#1aa8ff,#0b79ff) !important;
-    color: #fff !important;
-    border-color: transparent !important;
+  body, .login-screen {
+    background:
+      radial-gradient(circle at 18% 0%, rgba(216,184,107,.09), transparent 28%),
+      radial-gradient(circle at 88% 10%, rgba(63,122,88,.12), transparent 26%),
+      linear-gradient(180deg,#050b08,#08130d) !important;
+    color:var(--text) !important;
   }
 
-  /* Aba principal ativa */
-  .tab.active, .analysis-tab.active {
-    background: linear-gradient(135deg,#1aa8ff,#0b79ff) !important;
-    border-color: transparent !important;
-    color: #fff !important;
+  .sidebar,.side,.nav {
+    background:linear-gradient(180deg,#07100b,#0b1811) !important;
+    border-right:1px solid var(--border) !important;
+  }
+  .brand { border-bottom-color:rgba(216,184,107,.20) !important; }
+  .brand small,.blue,a { color:var(--gold-2) !important; }
+  .avatar { background:linear-gradient(135deg,var(--gold-2),var(--gold-3)) !important; }
+
+  .nav-item[data-page="bets"]{display:none!important}
+  .nav-item,.menu-item {
+    color:var(--text-2) !important;
+    font-weight:850 !important;
+  }
+  .nav-item.active,.menu-item.active,.nav-item:hover,.menu-item:hover {
+    background:linear-gradient(180deg,rgba(216,184,107,.18),rgba(216,184,107,.07)) !important;
+    color:var(--text) !important;
+    border-color:var(--border-strong) !important;
+    box-shadow:inset 3px 0 0 var(--gold),0 8px 24px rgba(0,0,0,.18) !important;
   }
 
-  /* Cabeçalhos das tabelas */
-  .stats-table th, .metric-table th, .mini-table th {
-    color: #8fcfff !important;
-  }
-  .stats-table th, .stats-table td,
-  .metric-table th, .metric-table td,
-  .mini-table th, .mini-table td {
-    border-bottom-color: rgba(72,146,220,.14) !important;
-  }
-  .metric-table .subhead td {
-    background: rgba(26,168,255,.07) !important;
-    color: #8fcfff !important;
+  .panel,.filters,.games-card,.match-hero,.best-strip,.stat-card,.card,.mini-card,.top-pill,
+  .v127-card,.v128-card,.v23-section,.v23-ai-card,.es-panel,.es-kpi,.es-mini-r,.es-pred-card,.es-score-card,
+  .es-corner-header>div,.lineup-team-card,.footy-block,.stats-title-card,.ticket-shell,.ticket-compact,
+  .v1215-plan-card {
+    background:linear-gradient(180deg,rgba(20,43,31,.92),rgba(8,19,13,.94)) !important;
+    border:1px solid var(--border) !important;
+    box-shadow:var(--shadow) !important;
+    color:var(--text) !important;
   }
 
-  /* V127/V128 cards */
-  .v127-card, .v128-card {
-    border-color: rgba(72,146,220,.2) !important;
-    background: rgba(7,17,30,.9) !important;
+  h1,h2,h3,h4,.title h1,.section-title,.v23-stitle,.v23-ai-title,.es-panel-title,
+  .teams strong,.league strong,.market b,.v127-card h2,.v127-card h3,.v128-card h2,.v128-card h3 {
+    color:var(--text) !important;
   }
-  .v127-note, .v128-note {
-    color: rgba(143,207,255,.55) !important;
+  p,small,.muted,.title p,.page-subtitle,.teams small,.league small,.v127-note,.v128-note,.v23-ai-sub,
+  .v23-ai-intro,.v23-ai-body,.v23-ai-footer,.v23-trend-text,.v23-fp,.es-note,.es-empty,.es-muted-sm,
+  .es-label,.es-cmuted,.es-cnote,.es-form-better,.table-caption,.stats-data-note {
+    color:var(--muted) !important;
   }
-  .v128-row:not(.head) {
-    border-bottom-color: rgba(72,146,220,.1) !important;
-  }
-  .v128-compare-row .metric { color: #8fcfff !important; }
 
-  /* Best markets */
-  .best { border-color: rgba(72,146,220,.2) !important; }
-  .best b { color: #1aa8ff !important; }
+  input,select {
+    background:rgba(8,19,13,.82) !important;
+    border:1px solid var(--border) !important;
+    color:var(--text) !important;
+  }
+  label,.field label,.stats-table th,.metric-table th,.mini-table th,.es-th,.es-subhead,.lineup-section-title,
+  .lineup-group-title {
+    color:var(--gold-2) !important;
+  }
 
-  /* Panels */
-  .panel { border-color: rgba(72,146,220,.2) !important; }
+  button,.btn,.action,.tab,.analysis-tab,.stats-subtab,.inner-tab,.v128-pill,.v127-pill,.v23-ttab {
+    border:1px solid var(--border) !important;
+    background:linear-gradient(180deg,rgba(20,43,31,.9),rgba(8,19,13,.9)) !important;
+    color:var(--text-2) !important;
+    box-shadow:none !important;
+  }
+  button:hover,.btn:hover,.action:hover,.tab:hover,.analysis-tab:hover,.stats-subtab:hover,.inner-tab:hover,
+  .v128-pill:hover,.v127-pill:hover,.v23-ttab:hover {
+    color:var(--gold-2) !important;
+    border-color:var(--border-strong) !important;
+  }
+  button.active,.btn.primary,.tab.active,.analysis-tab.active,.stats-subtab.active,.inner-tab.active,
+  .v128-pill.active,.v127-pill.active,.analysis-v127 .tab.active,.v23-ttab.active {
+    background:linear-gradient(180deg,var(--gold-2),var(--gold-3)) !important;
+    color:#151008 !important;
+    border-color:rgba(255,232,165,.62) !important;
+    box-shadow:0 10px 24px rgba(216,184,107,.22) !important;
+  }
+  .v23-ttab.active { border-bottom-color:var(--gold-2) !important; }
 
-  /* V11 H2H bar */
-  .v11-h2h-bar>div:first-child { background: #1aa8ff !important; }
+  .status,.tag,.lineup-tag,.pill,.badge,.odd-pill,.v127-tag,.v128-tag {
+    background:rgba(216,184,107,.12) !important;
+    border:1px solid var(--border-strong) !important;
+    color:var(--gold-2) !important;
+  }
+  .status.final { background:rgba(216,184,107,.10) !important; color:var(--gold-2) !important; }
 
-  /* ── V23 Estilos ── */
-  .v23-section {
-    background: linear-gradient(180deg,rgba(11,26,43,.9),rgba(7,17,30,.92));
-    border: 1px solid rgba(72,146,220,.22);
-    border-radius: 16px;
-    padding: 18px;
-    margin-top: 14px;
+  .table-head,.result-meta,.game-row,.v127-row,.v128-row:not(.head),.v23-ai-hdr,.v23-trend-item,
+  .stats-table th,.stats-table td,.metric-table th,.metric-table td,.mini-table th,.mini-table td,
+  .es-table td,.es-table th {
+    border-color:rgba(216,184,107,.14) !important;
   }
-  .v23-stitle {
-    font-size: 15px;
-    font-weight: 950;
-    color: #e0f0ff;
-    margin: 0 0 14px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-  .v23-trend-tabs {
-    display: flex;
-    border-bottom: 2px solid rgba(72,146,220,.2);
-    margin-bottom: 14px;
-    gap: 0;
-  }
-  .v23-ttab {
-    background: none;
-    border: none;
-    padding: 10px 20px;
-    color: #7a9bbf;
-    font-weight: 900;
-    cursor: pointer;
-    border-bottom: 3px solid transparent;
-    margin-bottom: -2px;
-    font-size: 14px;
-    transition: color .15s;
-  }
-  .v23-ttab.active {
-    color: #1aa8ff;
-    border-bottom-color: #1aa8ff;
-  }
-  .v23-trend-item {
-    display: flex;
-    gap: 10px;
-    padding: 11px 0;
-    border-bottom: 1px solid rgba(72,146,220,.1);
-    align-items: flex-start;
-  }
-  .v23-trend-item:last-child { border-bottom: none; }
-  .v23-trend-icon { flex-shrink: 0; margin-top: 1px; }
-  .v23-trend-text {
-    font-size: 13px;
-    line-height: 1.65;
-    color: #bdd6ee;
-  }
-  .v23-fp {
-    font-size: 13px;
-    line-height: 1.7;
-    color: #bdd6ee;
-    margin: 0 0 10px;
-  }
-  .v23-fp:last-child { margin-bottom: 0; }
+  .game-row:hover,.es-table tbody tr:hover { background:rgba(216,184,107,.05) !important; }
 
-  /* AI Card */
-  .v23-ai-card {
-    background: linear-gradient(180deg,rgba(11,26,43,.9),rgba(7,17,30,.92));
-    border: 1px solid rgba(72,146,220,.22);
-    border-radius: 16px;
-    padding: 20px;
+  .logo-team,.es-logo-fb {
+    background:#102419 !important;
+    border-color:rgba(216,184,107,.30) !important;
+    color:var(--gold-2) !important;
   }
-  .v23-ai-hdr {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    margin-bottom: 16px;
-    padding-bottom: 14px;
-    border-bottom: 1px solid rgba(72,146,220,.2);
+  .score,.prob b,.best b,.es-pred-val,.es-form-ppg,.es-pbar-val,.es-td.es-num,.es-cnum,
+  .v128-compare-row .metric,.v23-ttab.active {
+    color:var(--gold-2) !important;
   }
+  .market small,.green,.v127-badge.good,.v128-tag.green { color:#9de6a9 !important; }
+  .red,.danger,.v127-badge.bad { color:#f0aaa3 !important; }
+
+  .meter,.team-bar-track,.progress,.bar,.chance-bar,.odds-bar,.winner-bar,.es-cbar,.es-pbar-track {
+    background:rgba(255,255,255,.06) !important;
+  }
+  .meter div,.team-bar-fill,.progress>*,.bar>*,.chance-bar>*,.odds-bar>*,.winner-bar>*,
+  .es-cbar>div,.es-pbar-fill,.v127-fill.good,.v128-bar-v.good {
+    background:linear-gradient(90deg,var(--green),var(--gold)) !important;
+  }
+  .team-bar-fill.away,.segment-away {
+    background:linear-gradient(90deg,var(--gold-3),var(--gold)) !important;
+  }
+
   .v23-ai-icon {
-    width: 44px;
-    height: 44px;
-    border-radius: 12px;
-    background: rgba(26,168,255,.1);
-    border: 1px solid rgba(26,168,255,.28);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 22px;
-    flex-shrink: 0;
+    background:rgba(216,184,107,.10) !important;
+    border:1px solid rgba(216,184,107,.28) !important;
   }
-  .v23-ai-title {
-    font-size: 16px;
-    font-weight: 950;
-    color: #e0f0ff;
-  }
-  .v23-ai-sub {
-    font-size: 12px;
-    color: var(--muted);
-    margin-top: 2px;
-  }
-  .v23-ai-intro {
-    font-size: 13px;
-    color: #8faeca;
-    margin: 0 0 12px;
-    line-height: 1.65;
-  }
-  .v23-ai-body {
-    font-size: 13px;
-    color: #bdd6ee;
-    line-height: 1.7;
-    margin: 0 0 9px;
-  }
-  .v23-ai-footer {
-    font-size: 11px;
-    color: rgba(143,174,202,.55);
-    padding-top: 12px;
-    border-top: 1px solid rgba(72,146,220,.15);
-    font-style: italic;
-    margin-top: 6px;
+  .metric-table .subhead td,.es-subhead {
+    background:rgba(216,184,107,.08) !important;
+    color:var(--gold-2) !important;
   }
 `;
 document.head.appendChild(css);
