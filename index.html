@@ -1593,7 +1593,7 @@ input[type="date"]::-webkit-calendar-picker-indicator{
       <div class="panel filters"><h2>Filtros</h2><p>Os jogos da data selecionada são carregados automaticamente.</p><div class="filter-grid"><div class="field"><label>Data</label><input id="dateSelect" type="date"></div><div class="field"><label>Liga</label><select id="filterLeague"><option value="all">Todas</option></select></div><div class="field"><label>Status</label><select id="filterStatus"><option value="all">Todos</option><option value="pre">Pré-jogo</option><option value="running">Em andamento</option><option value="final">Finalizado</option></select></div><div class="field"><label>Mercado</label><select id="filterMarket"><option value="all">Todos</option><option value="winner">Vencedores</option><option value="goals">Gols</option><option value="btts">Ambas Marcam</option><option value="corners">Escanteios</option></select></div><div class="field"><label>Score mín.</label><select id="filterScore"><option value="0">Todos</option><option value="50">50%+</option><option value="60">60%+</option><option value="70">70%+</option><option value="80">80%+</option></select></div><div class="field"><label>Buscar</label><input id="filterSearch" placeholder="Time, jogo, liga ou país"></div><button class="btn" onclick="refreshData()">Atualizar dados ↻</button></div><div class="result-meta"><div><strong id="resultCount">0 jogos encontrados</strong><br><small id="resultSub">—</small></div><div id="activeTags" class="tag">Sem filtros ativos</div></div></div>
       <div class="panel games-card"><div class="section-head"><div class="section-title">Resultados</div><span id="paginationInfo" class="muted">—</span></div><div class="table-head"><div>Jogo</div><div>Liga</div><div>Horário</div><div>Status</div><div>Melhor mercado</div><div>Score</div><div>Ações</div></div><div id="gamesList"></div><div class="pager"><span id="pageInfo">—</span><div><button class="action" onclick="changePage(-1)">‹</button> <span id="pageNumber">1</span> <button class="action" onclick="changePage(1)">›</button></div></div></div>
     </section>
-    <section id="analysis" class="page"><span class="back" onclick="goPage('games')">← Voltar para jogos</span><div class="analysis-layout v128-analysis-layout"><div><div id="analysisHeader" class="panel match-hero"></div><div id="tabs" class="tabs"></div><div id="analysisContent" class="panel analysis-content"></div><div class="info-note">ⓘ Probabilidades calculadas com base em dados históricos, odds e métricas pré-jogo disponíveis.</div></div><aside id="quickSummary" class="quick" style="display:none"></aside></div></section>
+    <section id="analysis" class="page"><span class="back" onclick="goPage('games')">← Voltar para jogos</span><div class="analysis-layout v128-analysis-layout"><div><div id="analysisHeader" class="panel match-hero"></div><div id="tabs" class="tabs"></div><div id="analysisContent" class="panel analysis-content"></div><div class="info-note">ⓘ Estatísticas reais da FootyStats por recorte casa/fora. Não são probabilidades calculadas por odds.</div></div><aside id="quickSummary" class="quick" style="display:none"></aside></div></section>
     <section id="bets" class="page"><div id="betsContent"></div></section>
     <section id="plans" class="page"><div id="plansGrid" class="cards-grid"></div></section>
     <section id="admin" class="page"><div class="advanced-grid"><div id="adminFile" class="panel stat-card"></div><div id="adminColumns" class="panel stat-card"></div><div class="panel stat-card"><h4>Colunas recebidas</h4><div id="adminAllColumns" style="display:flex;gap:6px;flex-wrap:wrap"></div></div></div></section>
@@ -4920,5 +4920,188 @@ body.auth-locked .app, body.auth-unlocked .app, .app{display:grid!important}
 /* JTIPS V22.4 — garantia visual: remove texto antigo de odds/potenciais da tabela nova */
 .v128-card .v128-note{color:#fff2c9!important}
 </style>
+
+
+
+<!-- =========================================================
+     ENDPOINT 22.5 — FOOTYSTATS STATS MODE
+     Corrige a aba antiga de Probabilidades para exibir ESTATÍSTICAS
+     iguais ao padrão FootyStats: Casa | Visitante | Média.
+     Não usa odds. Não usa potencial. Não inventa percentual.
+     ========================================================= -->
+<script>
+(function(){
+  const oldV128FetchJson = typeof v128FetchJson === 'function' ? v128FetchJson : async (url)=>{
+    const r = await fetch(url); const j = await r.json().catch(()=>({}));
+    if(!r.ok || j.ok===false) throw new Error(j.error || 'Erro');
+    return j;
+  };
+
+  function fsNum(v){
+    if(v===null || v===undefined || v==='' || v==='[]' || v==='-1' || v===-1) return null;
+    const x = Number(v);
+    return Number.isFinite(x) ? x : null;
+  }
+  function fsTxt(v,d=''){
+    if(v===null || v===undefined) return d;
+    const s = String(v).trim();
+    return (!s || ['nan','none','null','[]'].includes(s.toLowerCase())) ? d : s;
+  }
+  function fsParseStats(v){
+    if(!v) return {};
+    if(typeof v === 'object') return v;
+    try { return JSON.parse(v); } catch(e){ return {}; }
+  }
+  function fsPct(v){
+    const x = fsNum(v);
+    if(x===null) return null;
+    return Math.max(0, Math.min(100, Math.round(x)));
+  }
+  function fsAvg(a,b){
+    a = fsPct(a); b = fsPct(b);
+    if(a===null || b===null) return null;
+    return Math.round((a+b)/2);
+  }
+  function fsComp(v){
+    const x = fsPct(v);
+    return x===null ? null : 100 - x;
+  }
+  function fsCls(v){
+    const x = fsPct(v);
+    if(x===null) return 'none';
+    return x>=68 ? 'good' : x>=45 ? 'mid' : 'bad';
+  }
+  function fsBadge(v){
+    const x = fsPct(v), c = fsCls(v);
+    return `<span class="v128-badge ${c}">${x===null?'—':x+'%'}</span>${x===null?'':`<span class="v128-bar"><span class="v128-fill ${c}" style="width:${x}%"></span></span>`}`;
+  }
+  function fsCell(v){ return `<div class="v128-cell">${fsBadge(v)}</div>`; }
+  function fsRow(label, home, away){
+    const avg = fsAvg(home, away);
+    return `<div class="v128-row"><div class="v128-label">${label}</div>${fsCell(home)}${fsCell(away)}${fsCell(avg)}</div>`;
+  }
+  function fsS(stats, key){ return fsNum(stats && stats[key]); }
+  function fsUnderFromOver(stats, key){ return fsComp(fsS(stats,key)); }
+
+  async function fsLoadTeamSeason(m){
+    if(!m || !m.odds) return;
+    const o = m.odds || {};
+    const seasonId = (typeof v128SeasonId==='function') ? v128SeasonId(m) : (o.competition_id || o.season_id || o.seasonID || o.season);
+    const homeId = o.homeID || o.home_id || o.home_id || o.team_a_id;
+    const awayId = o.awayID || o.away_id || o.away_id || o.team_b_id;
+    if(!seasonId || !homeId || !awayId) return;
+    if(m.footySeasonStats && m.footySeasonStats.home && m.footySeasonStats.away) return;
+    const [home, away] = await Promise.allSettled([
+      oldV128FetchJson(`/api/time?team_id=${encodeURIComponent(homeId)}&competition_id=${encodeURIComponent(seasonId)}`),
+      oldV128FetchJson(`/api/time?team_id=${encodeURIComponent(awayId)}&competition_id=${encodeURIComponent(seasonId)}`)
+    ]);
+    m.footySeasonStats = {
+      home: home.status === 'fulfilled' ? { raw: home.value, stats: fsParseStats(home.value.stats || home.value.team?.stats) } : { raw: {}, stats: {} },
+      away: away.status === 'fulfilled' ? { raw: away.value, stats: fsParseStats(away.value.stats || away.value.team?.stats) } : { raw: {}, stats: {} }
+    };
+  }
+
+  const oldLoadData = typeof v128LoadData === 'function' ? v128LoadData : async()=>{};
+  v128LoadData = async function(m){
+    await oldLoadData(m);
+    await fsLoadTeamSeason(m);
+  };
+
+  // Agora v128StatsObj não usa lastx por padrão na aba principal; usa stats da temporada da API /team.
+  v128StatsObj = function(m, side){
+    const s = m && m.footySeasonStats && m.footySeasonStats[side] && m.footySeasonStats[side].stats;
+    if(s && Object.keys(s).length) return s;
+    return (m && m.teamTrends && m.teamTrends[side] && m.teamTrends[side].stats) || {};
+  };
+
+  function fsStatsHeader(m, hs, as, mode){
+    if(mode === 'corners'){
+      const hAvg = fsNum(hs.cornersAVG_home), aAvg = fsNum(as.cornersAVG_away);
+      const total = (hAvg!==null && aAvg!==null) ? Math.round((hAvg+aAvg)*100)/100 : null;
+      return `<div class="v128-footy-head"><div><b>${total===null?'—':total}</b><span>Escanteios / Partida</span><small>Média entre ${m.home} em casa e ${m.away} fora</small></div><div><b>${hAvg===null?'—':hAvg}</b><span>${m.home}</span></div><div><b>${aAvg===null?'—':aAvg}</b><span>${m.away}</span></div></div>`;
+    }
+    if(mode === 'goals'){
+      const hAvg = fsNum(hs.seasonAVG_home), aAvg = fsNum(as.seasonAVG_away);
+      const total = (hAvg!==null && aAvg!==null) ? Math.round((hAvg+aAvg)*100)/100 : null;
+      return `<div class="v128-footy-head"><div><b>${total===null?'—':total}</b><span>Gols / Partida</span><small>Média entre mandante em casa e visitante fora</small></div><div><b>${hAvg===null?'—':hAvg}</b><span>${m.home}</span></div><div><b>${aAvg===null?'—':aAvg}</b><span>${m.away}</span></div></div>`;
+    }
+    if(mode === 'cards'){
+      const hAvg = fsNum(hs.cardsAVG_home), aAvg = fsNum(as.cardsAVG_away);
+      const total = (hAvg!==null && aAvg!==null) ? Math.round((hAvg+aAvg)*100)/100 : null;
+      return `<div class="v128-footy-head"><div><b>${total===null?'—':total}</b><span>Cartões / Partida</span><small>Média entre mandante em casa e visitante fora</small></div><div><b>${hAvg===null?'—':hAvg}</b><span>${m.home}</span></div><div><b>${aAvg===null?'—':aAvg}</b><span>${m.away}</span></div></div>`;
+    }
+    return '';
+  }
+
+  v128Probabilities = function(m){
+    const hs = v128StatsObj(m,'home'), as = v128StatsObj(m,'away');
+    const subt=[['winners','Vencedores'],['goals','Gols'],['corners','Escanteios'],['cards','Cartões']];
+    let rows='', head='', footer='';
+
+    if(v127ProbSub==='winners'){
+      head = '';
+      rows += fsRow('Venceu a partida', fsS(hs,'winPercentage_home'), fsS(as,'winPercentage_away'));
+      rows += fsRow('A partida terminou empatada', fsS(hs,'drawPercentage_home'), fsS(as,'drawPercentage_away'));
+      rows += fsRow('Perdeu a partida', fsS(hs,'losePercentage_home'), fsS(as,'losePercentage_away'));
+      rows += fsRow('Não perdeu', 100 - fsPct(fsS(hs,'losePercentage_home')), 100 - fsPct(fsS(as,'losePercentage_away')));
+      rows += fsRow('Não empatou', 100 - fsPct(fsS(hs,'drawPercentage_home')), 100 - fsPct(fsS(as,'drawPercentage_away')));
+      footer = 'Estatísticas de resultado por recorte: mandante em casa e visitante fora.';
+    } else if(v127ProbSub==='goals'){
+      head = fsStatsHeader(m,hs,as,'goals');
+      rows += fsRow('Mais que 0.5', fsS(hs,'seasonOver05Percentage_home'), fsS(as,'seasonOver05Percentage_away'));
+      rows += fsRow('Mais que 1.5', fsS(hs,'seasonOver15Percentage_home'), fsS(as,'seasonOver15Percentage_away'));
+      rows += fsRow('Mais que 2.5', fsS(hs,'seasonOver25Percentage_home'), fsS(as,'seasonOver25Percentage_away'));
+      rows += fsRow('Mais que 3.5', fsS(hs,'seasonOver35Percentage_home'), fsS(as,'seasonOver35Percentage_away'));
+      rows += fsRow('Menos que 3.5', fsUnderFromOver(hs,'seasonOver35Percentage_home'), fsUnderFromOver(as,'seasonOver35Percentage_away'));
+      rows += fsRow('Menos que 2.5', fsUnderFromOver(hs,'seasonOver25Percentage_home'), fsUnderFromOver(as,'seasonOver25Percentage_away'));
+      rows += fsRow('Menos que 1.5', fsUnderFromOver(hs,'seasonOver15Percentage_home'), fsUnderFromOver(as,'seasonOver15Percentage_away'));
+      rows += fsRow('Menos que 0.5', fsUnderFromOver(hs,'seasonOver05Percentage_home'), fsUnderFromOver(as,'seasonOver05Percentage_away'));
+      footer = 'Total Match Goals no padrão FootyStats. Menos que é complemento da linha Mais que correspondente.';
+    } else if(v127ProbSub==='corners'){
+      head = fsStatsHeader(m,hs,as,'corners');
+      const lines=[['Mais que 6','over65CornersPercentage_home','over65CornersPercentage_away'],['Mais que 7','over75CornersPercentage_home','over75CornersPercentage_away'],['Mais que 8','over85CornersPercentage_home','over85CornersPercentage_away'],['Mais que 9','over95CornersPercentage_home','over95CornersPercentage_away'],['Mais que 10','over105CornersPercentage_home','over105CornersPercentage_away'],['Mais que 11','over115CornersPercentage_home','over115CornersPercentage_away'],['Mais que 12','over125CornersPercentage_home','over125CornersPercentage_away'],['Mais que 13','over135CornersPercentage_home','over135CornersPercentage_away']];
+      rows = lines.map(([lab,h,a])=>fsRow(lab, fsS(hs,h), fsS(as,a))).join('');
+      footer = `Total Match Corners de ${m.home} e ${m.away}. Média da liga/jogo exibida como média entre os dois recortes.`;
+    } else {
+      head = fsStatsHeader(m,hs,as,'cards');
+      rows += fsRow('Mais que 3.5 cartões', fsS(hs,'over35CardsPercentage_home'), fsS(as,'over35CardsPercentage_away'));
+      rows += fsRow('Mais que 4.5 cartões', fsS(hs,'over45CardsPercentage_home'), fsS(as,'over45CardsPercentage_away'));
+      rows += fsRow('Mais que 5.5 cartões', fsS(hs,'over55CardsPercentage_home'), fsS(as,'over55CardsPercentage_away'));
+      rows += fsRow('Mais que 6.5 cartões', fsS(hs,'over65CardsPercentage_home'), fsS(as,'over65CardsPercentage_away'));
+      rows += fsRow('Menos que 6.5 cartões', fsUnderFromOver(hs,'over65CardsPercentage_home'), fsUnderFromOver(as,'over65CardsPercentage_away'));
+      rows += fsRow('Menos que 5.5 cartões', fsUnderFromOver(hs,'over55CardsPercentage_home'), fsUnderFromOver(as,'over55CardsPercentage_away'));
+      rows += fsRow('Menos que 4.5 cartões', fsUnderFromOver(hs,'over45CardsPercentage_home'), fsUnderFromOver(as,'over45CardsPercentage_away'));
+      rows += fsRow('Menos que 3.5 cartões', fsUnderFromOver(hs,'over35CardsPercentage_home'), fsUnderFromOver(as,'over35CardsPercentage_away'));
+      footer = 'Total Match Cards no padrão FootyStats. Linhas sem retorno da API aparecem como —.';
+    }
+
+    return `<div class="analysis-v127 footystats-mode"><div class="v128-subtabs">${subt.map(t=>`<button class="v128-pill ${v127ProbSub===t[0]?'active':''}" onclick="v127Sub('${t[0]}')">${t[1]}</button>`).join('')}</div><div class="v128-card"><h2>Estatísticas</h2>${head}<div class="v128-table"><div class="v128-row head"><div>Mercado</div><div>Casa</div><div>Visitante</div><div>Média</div></div>${rows}</div><div class="v128-note">${footer}</div></div></div>`;
+  };
+
+  // Rótulo principal: não é probabilidade de acontecer; é estatística FootyStats.
+  if(typeof V128_TABS !== 'undefined'){
+    const t = V128_TABS.find(x=>x[0]==='probabilities');
+    if(t) t[1] = 'Estatísticas';
+  }
+
+  const oldRenderAnalysis = typeof renderAnalysis === 'function' ? renderAnalysis : null;
+  if(oldRenderAnalysis){
+    renderAnalysis = function(){ oldRenderAnalysis(); };
+  }
+
+  // CSS complementar do cabeçalho estilo FootyStats.
+  const css = document.createElement('style');
+  css.textContent = `
+    .footystats-mode .v128-card h2{margin-bottom:12px}
+    .v128-footy-head{display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:12px;margin:8px 0 18px;border-bottom:1px solid rgba(231,196,106,.2);padding-bottom:14px}
+    .v128-footy-head>div{background:rgba(255,255,255,.035);border:1px solid rgba(231,196,106,.18);border-radius:10px;padding:12px;text-align:center}
+    .v128-footy-head b{display:block;font-size:24px;color:#fff7d8;line-height:1.05}
+    .v128-footy-head span{display:block;color:#e7c46a;font-weight:800;margin-top:4px}
+    .v128-footy-head small{display:block;color:#b7c5b6;margin-top:4px;font-size:11px}
+    @media(max-width:760px){.v128-footy-head{grid-template-columns:1fr}.v128-footy-head>div{text-align:left}}
+  `;
+  document.head.appendChild(css);
+})();
+</script>
 
 </body></html>
