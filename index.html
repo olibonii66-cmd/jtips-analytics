@@ -5680,4 +5680,457 @@ document.head.appendChild(css);
 })();
 </script>
 
+
+<!-- V23.0 — Tab cleanup, Team Trends, Fixture Analysis, AI redesign, Blue palette -->
+<script>
+(function(){
+'use strict';
+
+// ── 1. OVERRIDE V128_TABS → 4 abas apenas ──────────────────
+if(typeof V128_TABS!=='undefined'){
+  while(V128_TABS.length)V128_TABS.pop();
+  V128_TABS.push(
+    ['estat','Estatísticas'],
+    ['sensor','Sensor do Jogo'],
+    ['ai','Insights da IA'],
+    ['matches','Partidas']
+  );
+}
+
+// ── 2. REDIRECIONAR ABAS REMOVIDAS → estat ─────────────────
+var __oldRA230=typeof renderAnalysis==='function'?renderAnalysis:null;
+window.renderAnalysis=renderAnalysis=function(){
+  var valid=['estat','sensor','ai','matches'];
+  if(valid.indexOf(activeTab)<0)activeTab='estat';
+  if(__oldRA230)__oldRA230();
+};
+
+// ── 3. RESETAR ESTADO AO ABRIR NOVA PARTIDA ────────────────
+var __oldOA230=typeof openAnalysis==='function'?openAnalysis:null;
+if(__oldOA230){
+  window.openAnalysis=openAnalysis=async function(id){
+    if(typeof ES!=='undefined')ES.sub='completas';
+    window._trendsTab='home';
+    return __oldOA230(id);
+  };
+}
+
+// ── HELPERS LOCAIS ─────────────────────────────────────────
+function _hS(m){return(m&&m.footySeasonStats&&m.footySeasonStats.home&&m.footySeasonStats.home.stats)||(typeof v128StatsObj==='function'?v128StatsObj(m,'home'):{})||{};}
+function _aS(m){return(m&&m.footySeasonStats&&m.footySeasonStats.away&&m.footySeasonStats.away.stats)||(typeof v128StatsObj==='function'?v128StatsObj(m,'away'):{})||{};}
+function _sv(s,k){
+  if(!s)return null;
+  var v=s[k];
+  if(v==null&&s.additional_info)v=s.additional_info[k];
+  var n=Number(v);
+  return Number.isFinite(n)?n:null;
+}
+function _d1(v){if(v==null)return'—';var n=Number(v);return Number.isFinite(n)?n.toFixed(1):'—';}
+function _d2(v){if(v==null)return'—';var n=Number(v);return Number.isFinite(n)?n.toFixed(2):'—';}
+function _pct(v){if(v==null)return'—';return Math.round(Number(v))+'%';}
+
+function _unbeatenStreak(f){
+  var s=String(f||'').split('').reverse(),c=0;
+  for(var i=0;i<s.length;i++){if(s[i]==='l')break;c++;}
+  return c;
+}
+
+// ── 4. GERADOR DE TEAM TRENDS ──────────────────────────────
+function generateTrends(m,side){
+  var name=side==='home'?m.home:m.away;
+  var opp=side==='home'?m.away:m.home;
+  var ctx=side==='home'?'home':'away';
+  var tr=m.teamTrends&&m.teamTrends[side];
+
+  // Se API já fornece bullets prontos
+  if(tr&&tr.trends&&Array.isArray(tr.trends)&&tr.trends.length)return tr.trends;
+
+  var s=(tr&&tr.stats)||{};
+  var ai=s.additional_info||{};
+  var bullets=[];
+  var games=_sv(s,'seasonMatchesPlayed_overall')||5;
+  var ppg=_sv(s,'seasonPPG_overall');
+  var pts=ppg!=null?Math.round(ppg*games):null;
+  var btts=_sv(s,'seasonBTTS_overall');
+  var scored=_sv(s,'seasonScoredNum_overall');
+  var bttsPct=_sv(s,'seasonBTTSPercentage_overall');
+  var ftsPct=_sv(s,'seasonFTSPercentage_overall');
+  var over15=_sv(s,'seasonOver15Num_overall');
+  var form=ai.formRun_overall||s.formRun_overall||'';
+
+  // Bullet 1 — resumo de pontos
+  if(ppg!=null){
+    var t='Coming into this game, '+name+' has picked up '+(pts||'?')+' points from the last '+games+' games, both home and away. That\'s '+_d2(ppg)+' points per game on average.';
+    if(btts!=null)t+=' BTTS has landed in an intriguing '+btts+' of those games.';
+    if(scored!=null)t+=' '+name+' has scored '+scored+' times in the last '+games+' fixtures.';
+    bullets.push(t);
+  }
+
+  // Bullet 2 — confiança no contexto casa/fora
+  var ctxFTS=_sv(s,ctx==='home'?'seasonFTSPercentage_home':'seasonFTSPercentage_away');
+  var ctxPPG=_sv(s,ctx==='home'?'seasonPPG_home':'seasonPPG_away');
+  var ctxWins=_sv(s,ctx==='home'?'seasonWinsNum_home':'seasonWinsNum_away');
+  if(ctxFTS===0){
+    bullets.push(name+' will be confident of scoring today and will look to keep up their record of scoring in every single '+ctx+' game this season.');
+  } else if(ctxPPG!=null&&ctxPPG>=1.5){
+    bullets.push(name+' has enjoyed playing '+(ctx==='home'?'at home':'away from home')+' recently, with the side currently unbeaten in '+(ctxWins||'several')+' games.');
+  }
+
+  // Bullet 3 — momentum / sequência invicto
+  var unb=_unbeatenStreak(form);
+  if(unb>=3){
+    bullets.push('Momentum is really building for '+name+' as they have now gone '+unb+' games without losing. They have won '+(Math.round(unb*0.6)||1)+' of the last '+games+' games they have played.');
+  } else if(over15!=null&&over15>=3){
+    bullets.push('It\'s possible we will see a couple of goals here, with the last '+games+' games for '+name+' ending with 2 goals or more in '+over15+' of them.');
+  }
+
+  // Bullet 4 — H2H invicto
+  var ind=(m.h2hData&&m.h2hData.indicadores)||{};
+  if(ind.total_confrontos){
+    var sWins=side==='home'?(ind.vitorias_mandante_atual||0):(ind.vitorias_visitante_atual||0);
+    var sDraws=ind.empates||0;
+    var sLoss=ind.total_confrontos-sWins-sDraws;
+    if(sLoss===0&&sWins+sDraws>0){
+      bullets.push(name+' is unbeaten in the last '+ind.total_confrontos+' games coming into this fixture against '+opp+', having won '+sWins+' and drawn '+sDraws+'. They have scored '+(scored||'?')+' goals in those '+games+' games.');
+    }
+  }
+
+  // Bullet 5 — BTTS detalhe
+  if(btts!=null&&bttsPct!=null){
+    bullets.push('In the last '+games+' matches for '+name+', '+btts+' of those games has ended with both teams scoring. This season '+Math.round(bttsPct)+'% of all matches involving '+name+' has seen BTTS landing.');
+  }
+
+  // Bullet 6 — vai marcar
+  if(ftsPct!=null&&ftsPct<30){
+    var net=Math.round((1-ftsPct/100)*games);
+    bullets.push('It\'s likely that '+name+' will score today, as they have netted in the last '+net+' games coming into this one and have scored '+(scored||'?')+' goals in the last five games.');
+  }
+
+  return bullets;
+}
+
+// ── 5. GERADOR DE FIXTURE ANALYSIS ────────────────────────
+function generateFixture(m){
+  var h=m.home||'Casa',a=m.away||'Fora';
+  var ind=(m.h2hData&&m.h2hData.indicadores)||{};
+  var ult=(m.h2hData&&m.h2hData.ultimos)||[];
+  if(!ind.total_confrontos)return null;
+
+  var hs=_hS(m),as=_aS(m);
+  var last=ult[0];
+  var lastStr=last?'The last meeting ended with the following result: <b>'+last.home_name+' '+last.homeGoalCount+' - '+last.awayGoalCount+' '+last.away_name+'</b>.':'';
+  var hWins=ind.vitorias_mandante_atual||0;
+  var aWins=ind.vitorias_visitante_atual||0;
+  var draws=ind.empates||0;
+  var hPPG=_sv(hs,'seasonPPG_home'),aPPG=_sv(as,'seasonPPG_away');
+  function fl(p){return p?p>=1.5?'good form':p>=1.0?'average form':'poor form':'average form';}
+  var avg=ind.media_gols,bttsPct=ind.ambas_marcam;
+  var ps=[];
+  ps.push('On <b>'+m.date+'</b>, <b>'+h+'</b> and <b>'+a+'</b> go head to head in the <b>'+m.league+'</b>. '+lastStr);
+  ps.push('These 2 teams have met <b>'+ind.total_confrontos+'</b> times in the last several seasons based on the data that we have of them.');
+  ps.push('Out of '+ind.total_confrontos+' previous meetings, <b>'+h+' have won '+hWins+' matches</b> while <b>'+a+' won '+aWins+'</b>. '+draws+' match'+(draws!==1?'es':'')+' between them have ended in a draw.');
+  ps.push('<b>'+h+'</b> is in <b>'+fl(hPPG)+'</b> while <b>'+a+'</b> are performing <b>'+fl(aPPG)+'</b>.');
+  if(avg!=null)ps.push('Previous matches between <b>'+h+'</b> and <b>'+a+'</b> have averaged <b>'+_d2(avg)+' goals</b> while BTTS has happened <b>'+_pct(bttsPct)+'</b> of the time.');
+  if(hPPG!=null||aPPG!=null)ps.push('So far this season in the <b>'+m.league+'</b>, <b>'+h+'</b> have averaged <b>'+_d2(hPPG)+' Points Per Game</b> at home matches and <b>'+a+'</b> <b>'+_d2(aPPG)+' Points Per Game</b> at away matches.');
+  return ps;
+}
+
+// ── 6. OVERRIDE SENSOR — ADICIONAR TEAM TRENDS + FIXTURE ──
+var __oldSensor=typeof v128Sensor==='function'?v128Sensor:null;
+window.v128Sensor=v128Sensor=function(m){
+  var existing=__oldSensor?__oldSensor(m):'';
+  if(!m)return existing;
+  var h=m.home||'Casa',a=m.away||'Fora';
+  var tab=window._trendsTab||'home';
+
+  // Team Trends
+  function icon(){return'<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M12 2L14.09 8.26L21 9.27L16.5 13.64L17.82 21L12 17.27L6.18 21L7.5 13.64L3 9.27L9.91 8.26L12 2Z" fill="#37e889"/></svg>';}
+  function renderBullets(bullets){
+    if(!bullets.length)return'<div class="es-empty">Tendências não disponíveis.</div>';
+    return bullets.map(function(b){
+      return'<div class="v23-trend-item"><div class="v23-trend-icon">'+icon()+'</div><div class="v23-trend-text">'+b+'</div></div>';
+    }).join('');
+  }
+  var hBullets=generateTrends(m,'home');
+  var aBullets=generateTrends(m,'away');
+  var trendsHtml='<div class="v23-section">'+
+    '<h3 class="v23-stitle">Team Trends</h3>'+
+    '<div class="v23-trend-tabs">'+
+      '<button class="v23-ttab'+(tab==='home'?' active':'')+'" onclick="window._trendsTab=\'home\';renderTab()">'+h+'</button>'+
+      '<button class="v23-ttab'+(tab==='away'?' active':'')+'" onclick="window._trendsTab=\'away\';renderTab()">'+a+'</button>'+
+    '</div>'+
+    renderBullets(tab==='away'?aBullets:hBullets)+
+  '</div>';
+
+  // Fixture Analysis
+  var paras=generateFixture(m);
+  var fixtureHtml='';
+  if(paras){
+    fixtureHtml='<div class="v23-section">'+
+      '<h3 class="v23-stitle"><span>☰</span> Fixture Analysis</h3>'+
+      paras.map(function(p){return'<p class="v23-fp">'+p+'</p>';}).join('')+
+    '</div>';
+  }
+
+  return existing+trendsHtml+fixtureHtml;
+};
+
+// ── 7. OVERRIDE AI TAB — NOVO CARD DESIGN ─────────────────
+var __oldAI=typeof v128AI==='function'?v128AI:null;
+window.v128AI=v128AI=function(m){
+  var o=(m&&m.odds)||{};
+  // Extrair texto da IA
+  var txt='';
+  var g=o.gpt_int;
+  if(g){
+    if(typeof g==='object'&&g.pt)txt=g.pt;
+    else if(typeof g==='object'&&g.en)txt=g.en;
+    else if(typeof g==='string')txt=g;
+  }
+  if(!txt&&o.gpt_en)txt=o.gpt_en;
+
+  if(!txt){
+    // Fallback para versão antiga
+    if(__oldAI){
+      var old=__oldAI(m);
+      // Wrapper no novo estilo
+      return'<div class="v23-ai-card"><div class="v23-ai-hdr">'+
+        '<div class="v23-ai-icon">🤖</div>'+
+        '<div><div class="v23-ai-title">AI Stats Summary</div>'+
+        '<div class="v23-ai-sub">'+(m.league||'')+(m.home?' — '+m.home+' vs '+m.away:'')+'</div></div></div>'+
+        old+
+      '</div>';
+    }
+    return'<div class="v23-ai-card"><div class="v23-ai-hdr">'+
+      '<div class="v23-ai-icon">🤖</div>'+
+      '<div><div class="v23-ai-title">AI Stats Summary</div>'+
+      '<div class="v23-ai-sub">Insights da IA</div></div></div>'+
+      '<div class="es-empty" style="padding:20px 0">Análise da IA não disponível para esta partida.</div>'+
+    '</div>';
+  }
+
+  // Formatar parágrafos
+  var lines=txt.replace(/\r\n/g,'\n').split(/\n\n|\n/).map(function(s){return s.trim();}).filter(Boolean);
+  var intro=lines[0]||'';
+  var body=lines.slice(1);
+
+  // Detectar e separar nota de rodapé
+  var footer='';
+  var bodyFiltered=body.filter(function(line){
+    if(line.indexOf('*')===0||line.indexOf('This summary was generated')>=0||line.indexOf('Due to limitations')>=0){
+      footer=line.replace(/^\*/,'').trim();
+      return false;
+    }
+    return true;
+  });
+
+  // Destacar labels de seção
+  function fmt(s){
+    return s.replace(/(Home advantage:|Goal expectancy:|Scenarios to watch:|Betting angles:|Note:|Vantagem em casa:|Expectativa de gols:|Cenários a observar:|Ângulos de apostas:|Nota:)/g,'<b>$1</b>');
+  }
+
+  return'<div class="v23-ai-card">'+
+    '<div class="v23-ai-hdr">'+
+      '<div class="v23-ai-icon">🤖</div>'+
+      '<div><div class="v23-ai-title">AI Stats Summary</div>'+
+      '<div class="v23-ai-sub">'+(m.home||'')+' vs '+(m.away||'')+' — '+(m.league||'')+'</div></div>'+
+    '</div>'+
+    '<p class="v23-ai-intro">'+fmt(intro)+'</p>'+
+    bodyFiltered.map(function(p){return'<p class="v23-ai-body">'+fmt(p)+'</p>';}).join('')+
+    (footer?'<div class="v23-ai-footer">* '+footer+'</div>':
+      '<div class="v23-ai-footer">* This summary was generated by AI with access to the FootyStats database. Due to limitations of the AI, we cannot guarantee absolute correctness.</div>')+
+  '</div>';
+};
+
+// ── 8. CSS — PALETA AZUL + ESTILOS V23 ────────────────────
+var css=document.createElement('style');
+css.textContent=`
+  /* Override variáveis de cor gold → azul */
+  :root {
+    --gold: #1aa8ff !important;
+    --gold2: #0b79ff !important;
+  }
+
+  /* Subtabs e pills */
+  .stats-subtab, .inner-tab, .v128-pill, .v127-pill, .v128-pill {
+    border-color: rgba(72,146,220,.32) !important;
+    color: #b8d4ec !important;
+    background: rgba(7,17,30,.85) !important;
+  }
+  .stats-subtab.active, .inner-tab.active,
+  .v128-pill.active, .v127-pill.active,
+  .analysis-v127 .tab.active {
+    background: linear-gradient(135deg,#1aa8ff,#0b79ff) !important;
+    color: #fff !important;
+    border-color: transparent !important;
+  }
+
+  /* Aba principal ativa */
+  .tab.active, .analysis-tab.active {
+    background: linear-gradient(135deg,#1aa8ff,#0b79ff) !important;
+    border-color: transparent !important;
+    color: #fff !important;
+  }
+
+  /* Cabeçalhos das tabelas */
+  .stats-table th, .metric-table th, .mini-table th {
+    color: #8fcfff !important;
+  }
+  .stats-table th, .stats-table td,
+  .metric-table th, .metric-table td,
+  .mini-table th, .mini-table td {
+    border-bottom-color: rgba(72,146,220,.14) !important;
+  }
+  .metric-table .subhead td {
+    background: rgba(26,168,255,.07) !important;
+    color: #8fcfff !important;
+  }
+
+  /* V127/V128 cards */
+  .v127-card, .v128-card {
+    border-color: rgba(72,146,220,.2) !important;
+    background: rgba(7,17,30,.9) !important;
+  }
+  .v127-note, .v128-note {
+    color: rgba(143,207,255,.55) !important;
+  }
+  .v128-row:not(.head) {
+    border-bottom-color: rgba(72,146,220,.1) !important;
+  }
+  .v128-compare-row .metric { color: #8fcfff !important; }
+
+  /* Best markets */
+  .best { border-color: rgba(72,146,220,.2) !important; }
+  .best b { color: #1aa8ff !important; }
+
+  /* Panels */
+  .panel { border-color: rgba(72,146,220,.2) !important; }
+
+  /* V11 H2H bar */
+  .v11-h2h-bar>div:first-child { background: #1aa8ff !important; }
+
+  /* ── V23 Estilos ── */
+  .v23-section {
+    background: linear-gradient(180deg,rgba(11,26,43,.9),rgba(7,17,30,.92));
+    border: 1px solid rgba(72,146,220,.22);
+    border-radius: 16px;
+    padding: 18px;
+    margin-top: 14px;
+  }
+  .v23-stitle {
+    font-size: 15px;
+    font-weight: 950;
+    color: #e0f0ff;
+    margin: 0 0 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .v23-trend-tabs {
+    display: flex;
+    border-bottom: 2px solid rgba(72,146,220,.2);
+    margin-bottom: 14px;
+    gap: 0;
+  }
+  .v23-ttab {
+    background: none;
+    border: none;
+    padding: 10px 20px;
+    color: #7a9bbf;
+    font-weight: 900;
+    cursor: pointer;
+    border-bottom: 3px solid transparent;
+    margin-bottom: -2px;
+    font-size: 14px;
+    transition: color .15s;
+  }
+  .v23-ttab.active {
+    color: #1aa8ff;
+    border-bottom-color: #1aa8ff;
+  }
+  .v23-trend-item {
+    display: flex;
+    gap: 10px;
+    padding: 11px 0;
+    border-bottom: 1px solid rgba(72,146,220,.1);
+    align-items: flex-start;
+  }
+  .v23-trend-item:last-child { border-bottom: none; }
+  .v23-trend-icon { flex-shrink: 0; margin-top: 1px; }
+  .v23-trend-text {
+    font-size: 13px;
+    line-height: 1.65;
+    color: #bdd6ee;
+  }
+  .v23-fp {
+    font-size: 13px;
+    line-height: 1.7;
+    color: #bdd6ee;
+    margin: 0 0 10px;
+  }
+  .v23-fp:last-child { margin-bottom: 0; }
+
+  /* AI Card */
+  .v23-ai-card {
+    background: linear-gradient(180deg,rgba(11,26,43,.9),rgba(7,17,30,.92));
+    border: 1px solid rgba(72,146,220,.22);
+    border-radius: 16px;
+    padding: 20px;
+  }
+  .v23-ai-hdr {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid rgba(72,146,220,.2);
+  }
+  .v23-ai-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    background: rgba(26,168,255,.1);
+    border: 1px solid rgba(26,168,255,.28);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    flex-shrink: 0;
+  }
+  .v23-ai-title {
+    font-size: 16px;
+    font-weight: 950;
+    color: #e0f0ff;
+  }
+  .v23-ai-sub {
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 2px;
+  }
+  .v23-ai-intro {
+    font-size: 13px;
+    color: #8faeca;
+    margin: 0 0 12px;
+    line-height: 1.65;
+  }
+  .v23-ai-body {
+    font-size: 13px;
+    color: #bdd6ee;
+    line-height: 1.7;
+    margin: 0 0 9px;
+  }
+  .v23-ai-footer {
+    font-size: 11px;
+    color: rgba(143,174,202,.55);
+    padding-top: 12px;
+    border-top: 1px solid rgba(72,146,220,.15);
+    font-style: italic;
+    margin-top: 6px;
+  }
+`;
+document.head.appendChild(css);
+
+})();
+</script>
+
 </body></html>
