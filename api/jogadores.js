@@ -12,6 +12,7 @@ function toNumber(value) {
 function pickFields(p) {
   return {
     id: p.id,
+    competition_id: p.competition_id,
     full_name: p.full_name,
     first_name: p.first_name,
     last_name: p.last_name,
@@ -22,14 +23,31 @@ function pickFields(p) {
     club_team_2_id: p.club_team_2_id,
     national_team_id: p.national_team_id,
     minutes_played_overall: toNumber(p.minutes_played_overall),
+    minutes_played_home: toNumber(p.minutes_played_home),
+    minutes_played_away: toNumber(p.minutes_played_away),
     appearances_overall: toNumber(p.appearances_overall),
+    appearances_home: toNumber(p.appearances_home),
+    appearances_away: toNumber(p.appearances_away),
     goals_overall: toNumber(p.goals_overall),
+    goals_home: toNumber(p.goals_home),
+    goals_away: toNumber(p.goals_away),
     goals_per_90_overall: toNumber(p.goals_per_90_overall),
+    goals_per_90_home: toNumber(p.goals_per_90_home),
+    goals_per_90_away: toNumber(p.goals_per_90_away),
+    min_per_goal_overall: toNumber(p.min_per_goal_overall),
     cards_overall: toNumber(p.cards_overall),
     yellow_cards_overall: toNumber(p.yellow_cards_overall),
     red_cards_overall: toNumber(p.red_cards_overall),
     cards_per_90_overall: toNumber(p.cards_per_90_overall),
+    min_per_card_overall: toNumber(p.min_per_card_overall),
     assists_overall: toNumber(p.assists_overall),
+    assists_home: toNumber(p.assists_home),
+    assists_away: toNumber(p.assists_away),
+    goals_involved_per_90_overall: toNumber(p.goals_involved_per_90_overall),
+    rank_in_league_top_attackers: toNumber(p.rank_in_league_top_attackers),
+    rank_in_league_top_midfielders: toNumber(p.rank_in_league_top_midfielders),
+    rank_in_league_top_defenders: toNumber(p.rank_in_league_top_defenders),
+    rank_in_club_top_scorer: toNumber(p.rank_in_club_top_scorer),
     min_per_match: toNumber(p.min_per_match),
     last_match_timestamp: p.last_match_timestamp || null
   };
@@ -38,7 +56,7 @@ function pickFields(p) {
 async function fetchPlayersPage(key, seasonId, page = 1) {
   const url = new URL(`${API_BASE}/league-players`);
   url.searchParams.set('key', key);
-  url.searchParams.set('season_id', seasonId);
+  url.searchParams.set('league_id', seasonId);
   url.searchParams.set('page', String(page));
 
   const response = await fetch(url);
@@ -67,7 +85,7 @@ export default async function handler(req, res) {
 
     if (!seasonId) return res.status(400).json({ ok: false, error: 'season_id obrigatório.' });
 
-    const cacheKey = `jogadores:v105:${seasonId}:${homeId}:${awayId}`;
+    const cacheKey = `jogadores:footystats_league_players:v23_2:${seasonId}:${homeId}:${awayId}`;
     const cached = cache.get(cacheKey);
     if (cached && Date.now() - cached.ts < TTL) {
       res.setHeader('Cache-Control', 's-maxage=3600, stale-while-revalidate=7200');

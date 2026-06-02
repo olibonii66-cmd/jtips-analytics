@@ -33,11 +33,10 @@ function n(v, d = 0) {
 
 function choose(rows) {
   if (!Array.isArray(rows) || !rows.length) return { stats: {}, n: null };
-  const row = rows.find(r => String(r.last_x_match_num) === '10') ||
-              rows.find(r => String(r.last_x_match_num) === '6') ||
+  const row = rows.find(r => String(r.last_x_match_num) === '5' && String(r.last_x_home_away_or_overall) === '0') ||
               rows.find(r => String(r.last_x_match_num) === '5') ||
               rows[0];
-  return { stats: parseStats(row.stats), n: row.last_x_match_num || 5 };
+  return { stats: parseStats(row.stats), n: Number(row.last_x_match_num || 5), raw_context: row.last_x_home_away_or_overall ?? null, competition_id: row.competition_id ?? null };
 }
 
 function trends(stats, teamName) {
@@ -81,13 +80,16 @@ function trends(stats, teamName) {
 }
 
 async function getTeam(teamId, seasonId, name) {
-  const j = await apiGet('lastx', { team_id: teamId, season_id: seasonId });
+  const j = await apiGet('lastx', { team_id: teamId, last_x: 5 });
   const rows = Array.isArray(j.data) ? j.data : (j.data ? [j.data] : []);
   const chosen = choose(rows);
   return {
     team_id: Number(teamId),
     nome: name,
     last_x_match_num: chosen.n,
+    fonte: 'footystats_lastx_last_5',
+    raw_context: chosen.raw_context,
+    selected_competition_id: chosen.competition_id,
     stats: chosen.stats,
     trends: trends(chosen.stats, name),
     stats_keys: Object.keys(chosen.stats).length,
@@ -116,7 +118,7 @@ export default async function handler(req, res) {
       });
     }
 
-    const cacheKey = `lastx-trends:v11_1:${seasonId}:${homeId}:${awayId}`;
+    const cacheKey = `lastx-trends:footystats_last5:v23_2:${seasonId}:${homeId}:${awayId}`;
     const cached = cache.get(cacheKey);
     if (cached && Date.now() - cached.ts < TTL) {
       res.setHeader('Cache-Control', 's-maxage=2700, stale-while-revalidate=7200');

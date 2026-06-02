@@ -2,7 +2,7 @@ import { checkRateLimit, getClientIp } from './_helpers.js';
 
 const API_BASE = 'https://api.football-data-api.com';
 const cache = new Map();
-const TTL = 1000 * 60 * 10;
+const TTL = 1000 * 60 * 45;
 
 function norm(v) {
   if (v === undefined || v === null) return '';
@@ -83,14 +83,14 @@ export default async function handler(req, res) {
     const refresh = req.query.refresh === '1' || req.query.refresh === 'true';
     if (!teamId) return res.status(400).json({ ok: false, error: 'team_id obrigatório.' });
 
-    const cacheKey = `time:v22_9:${teamId}:${competitionId}`;
+    const cacheKey = `time:footystats_exact_competition:v23_2:${teamId}:${competitionId}`;
     const cached = cache.get(cacheKey);
     if (!refresh && cached && Date.now() - cached.ts < TTL) {
       res.setHeader('Cache-Control', 's-maxage=600, stale-while-revalidate=1200');
       return res.status(200).json(cached.data);
     }
 
-    const modes = competitionId ? ['league_id', 'season_id', 'competition_id', 'none'] : ['none'];
+    const modes = competitionId ? ['league_id', 'season_id', 'competition_id'] : ['none'];
     const attempts = [];
     let allRows = [];
 
@@ -126,19 +126,20 @@ export default async function handler(req, res) {
     }
 
     const sorted = [...allRows].sort((a, b) => scoreRow(b, competitionId) - scoreRow(a, competitionId));
-    const team = sorted[0];
+    const exactRows = competitionId ? sorted.filter(r => rowCompetitionId(r) === competitionId || norm(r.competition_id) === competitionId || norm(r.league_id) === competitionId || norm(r.season_id) === competitionId) : sorted;
+    const team = exactRows[0] || sorted[0];
     const selectedCompetitionId = rowCompetitionId(team);
-    const exactCompetitionMatch = !!competitionId && selectedCompetitionId === competitionId;
-    const stats = parseStats(team?.stats);
+    const exactCompetitionMatch = !competitionId || !!exactRows.length;
+    const stats = exactCompetitionMatch ? parseStats(team?.stats) : {};
 
     const payload = {
-      ok: true,
-      fonte: exactCompetitionMatch ? 'footystats_team_exact_competition' : 'footystats_team_best_available_fallback',
+      ok: exactCompetitionMatch,
+      fonte: exactCompetitionMatch ? 'footystats_team_exact_competition' : 'footystats_team_no_exact_competition',
       team_id: teamId,
       requested_competition_id: competitionId || null,
       selected_competition_id: selectedCompetitionId || null,
       exact_competition_match: exactCompetitionMatch,
-      warning: competitionId && !exactCompetitionMatch ? 'Competição exata não veio na API; retornando melhor linha disponível para não zerar a tela.' : null,
+      warning: competitionId && !exactCompetitionMatch ? 'A API não retornou estatística para a competição exata. Dados principais bloqueados para evitar número incorreto.' : null,
       team,
       stats,
       debug_corner_values: {
