@@ -5105,4 +5105,158 @@ body.auth-locked .app, body.auth-unlocked .app, .app{display:grid!important}
 </script>
 
 <!-- JTIPS_FIX_22_6_CORNER_FIELD_NAMES -->
+
+
+<script>
+/* ==========================================================
+   JTIPS 22.8 — FOOTYSTATS EXATO POR COMPETIÇÃO
+   Correção: não usar estatística de outra liga/temporada.
+   A tabela FootyStats de escanteios usa *_overall da competição exata.
+   ========================================================== */
+(function(){
+  const num = (v) => {
+    if(v === undefined || v === null || v === '' || v === -1 || v === '-1') return null;
+    const n = Number(String(v).replace(',','.'));
+    return Number.isFinite(n) ? n : null;
+  };
+  const pct = (v) => {
+    const n = num(v);
+    if(n === null || n < 0) return null;
+    return Math.max(0, Math.min(100, Math.round(n)));
+  };
+  const avg = (a,b) => {
+    a = pct(a); b = pct(b);
+    if(a === null && b === null) return null;
+    if(a === null) return b;
+    if(b === null) return a;
+    return Math.round((a+b)/2);
+  };
+  const text = (v,d='') => {
+    if(v === undefined || v === null) return d;
+    const s = String(v).trim();
+    return (!s || ['nan','none','null','[]'].includes(s.toLowerCase())) ? d : s;
+  };
+  const get = (obj, keys) => {
+    obj = obj || {};
+    for(const k of keys){ if(obj[k] !== undefined && obj[k] !== null && obj[k] !== '' && obj[k] !== -1 && obj[k] !== '-1') return obj[k]; }
+    return null;
+  };
+  const seasonId = (m) => {
+    const o = m?.odds || {};
+    const r = m?.raw || {};
+    return text(o.competition_id || r.competition_id || m?.competition_id || o.season_id || r.season_id || o.seasonID || r.seasonID || m?.season);
+  };
+  const teamId = (m, side) => {
+    const o = m?.odds || {};
+    const r = m?.raw || {};
+    return side === 'home'
+      ? text(o.homeID || o.home_id || r.homeID || r.home_id || m?.home_id)
+      : text(o.awayID || o.away_id || r.awayID || r.away_id || m?.away_id);
+  };
+  async function fetchExactTeam(m, side){
+    const tid = teamId(m, side);
+    const sid = seasonId(m);
+    if(!tid || !sid) return {ok:false, stats:{}, error:'sem team_id/competition_id'};
+    const url = `/api/time?team_id=${encodeURIComponent(tid)}&competition_id=${encodeURIComponent(sid)}&refresh=1`;
+    const r = await fetch(url);
+    const j = await r.json().catch(()=>({}));
+    const stats = (j && j.stats && typeof j.stats === 'object') ? j.stats : {};
+    return {ok:!!j.ok, stats, raw:j, url};
+  }
+  async function loadExactStats(m){
+    if(!m) return;
+    const sid = seasonId(m);
+    if(m.__jtipsExactStats && m.__jtipsExactStats.competition_id === sid) return;
+    try{
+      const [home,away] = await Promise.all([fetchExactTeam(m,'home'), fetchExactTeam(m,'away')]);
+      m.__jtipsExactStats = { competition_id:sid, home, away };
+      m.footySeasonStats = { home:{stats:home.stats, raw:home.raw}, away:{stats:away.stats, raw:away.raw} };
+      m.__jtipsSeasonStats = { home:home.stats, away:away.stats };
+    }catch(e){
+      m.__jtipsExactStats = { competition_id:sid, home:{ok:false,stats:{},error:e.message}, away:{ok:false,stats:{},error:e.message} };
+    }
+  }
+  const oldOpen = window.openAnalysis;
+  if(typeof oldOpen === 'function'){
+    window.openAnalysis = async function(id){
+      await oldOpen(id);
+      if(window.selected){
+        await loadExactStats(window.selected);
+        if(typeof window.renderAnalysis === 'function') window.renderAnalysis();
+      }
+    };
+  }
+  const statsFor = (m, side) => m?.__jtipsExactStats?.[side]?.stats || {};
+  const sourceOk = (m, side) => !!m?.__jtipsExactStats?.[side]?.ok;
+  function badge(v){
+    const p = pct(v);
+    if(p === null) return '<span class="v128-badge none">—</span>';
+    const c = p >= 68 ? 'good' : p >= 45 ? 'mid' : 'bad';
+    return `<span class="v128-badge ${c}">${p}%</span><span class="v128-bar"><span class="v128-fill ${c}" style="width:${p}%"></span></span>`;
+  }
+  function cell(v){ return `<div class="v128-cell">${badge(v)}</div>`; }
+  function row(label,h,a){ return `<div class="v128-row"><div class="v128-label">${label}</div>${cell(h)}${cell(a)}${cell(avg(h,a))}</div>`; }
+  function val(stats, key){ return get(stats,[key]); }
+  function under(stats, key){ const x=pct(val(stats,key)); return x===null ? null : 100-x; }
+  function kpi(label,value,sub=''){
+    const n=num(value);
+    const out=n===null?'—':String(Math.round(n*100)/100).replace('.',',');
+    return `<div><b>${out}</b><span>${label}</span>${sub?`<small>${sub}</small>`:''}</div>`;
+  }
+  function footyHeader(m,hs,as,type){
+    if(type==='corners'){
+      const h=val(hs,'cornersAVG_overall'), a=val(as,'cornersAVG_overall');
+      const total=(num(h)!==null&&num(a)!==null)?Math.round((num(h)+num(a))*100)/100:null;
+      return `<div class="v128-footy-head">${kpi('Escanteios / Partida',total,'Soma das médias gerais dos dois times')}${kpi(m.home,h,'Escanteios')}${kpi(m.away,a,'Escanteios')}</div>`;
+    }
+    if(type==='goals'){
+      const h=val(hs,'seasonAVG_overall'), a=val(as,'seasonAVG_overall');
+      const total=(num(h)!==null&&num(a)!==null)?Math.round((num(h)+num(a))*100)/100:null;
+      return `<div class="v128-footy-head">${kpi('Gols / Partida',total,'Soma das médias gerais dos dois times')}${kpi(m.home,h,'Gols')}${kpi(m.away,a,'Gols')}</div>`;
+    }
+    return '';
+  }
+  function renderExactStats(m){
+    const hs=statsFor(m,'home'), as=statsFor(m,'away');
+    const tabs=[['winners','Vencedores'],['goals','Gols'],['corners','Escanteios'],['cards','Cartões']];
+    const current = typeof v127ProbSub !== 'undefined' ? v127ProbSub : 'winners';
+    const sourceWarn = (!sourceOk(m,'home') || !sourceOk(m,'away')) ? `<div class="info-note">Não encontrei estatística exata da competição ${seasonId(m)} para um dos times. Para não mostrar número errado, campos sem fonte aparecem como “—”.</div>` : '';
+    let rows='', head='', note='';
+    if(current==='corners'){
+      head=footyHeader(m,hs,as,'corners');
+      [['Mais que 6','over65CornersPercentage_overall'],['Mais que 7','over75CornersPercentage_overall'],['Mais que 8','over85CornersPercentage_overall'],['Mais que 9','over95CornersPercentage_overall'],['Mais que 10','over105CornersPercentage_overall'],['Mais que 11','over115CornersPercentage_overall'],['Mais que 12','over125CornersPercentage_overall'],['Mais que 13','over135CornersPercentage_overall']]
+        .forEach(([lab,k])=>rows+=row(lab,val(hs,k),val(as,k)));
+      note='Fonte exata: /api/time por team_id + competition_id. Campos usados: overXXCornersPercentage_overall, igual à tabela Number of Corners do FootyStats.';
+    }else if(current==='goals'){
+      head=footyHeader(m,hs,as,'goals');
+      [['Mais que 0.5','seasonOver05Percentage_overall'],['Mais que 1.5','seasonOver15Percentage_overall'],['Mais que 2.5','seasonOver25Percentage_overall'],['Mais que 3.5','seasonOver35Percentage_overall']].forEach(([lab,k])=>rows+=row(lab,val(hs,k),val(as,k)));
+      [['Menos que 3.5','seasonOver35Percentage_overall'],['Menos que 2.5','seasonOver25Percentage_overall'],['Menos que 1.5','seasonOver15Percentage_overall'],['Menos que 0.5','seasonOver05Percentage_overall']].forEach(([lab,k])=>rows+=row(lab,under(hs,k),under(as,k)));
+      note='Fonte exata: estatísticas gerais da temporada dos dois times. Under é complemento do Over.';
+    }else if(current==='cards'){
+      [['Mais que 3.5 cartões','over35CardsPercentage_overall'],['Mais que 4.5 cartões','over45CardsPercentage_overall'],['Mais que 5.5 cartões','over55CardsPercentage_overall'],['Mais que 6.5 cartões','over65CardsPercentage_overall']].forEach(([lab,k])=>rows+=row(lab,val(hs,k),val(as,k)));
+      [['Menos que 6.5 cartões','over65CardsPercentage_overall'],['Menos que 5.5 cartões','over55CardsPercentage_overall'],['Menos que 4.5 cartões','over45CardsPercentage_overall'],['Menos que 3.5 cartões','over35CardsPercentage_overall']].forEach(([lab,k])=>rows+=row(lab,under(hs,k),under(as,k)));
+      note='Fonte exata: estatísticas gerais da temporada dos dois times.';
+    }else{
+      rows+=row('Venceu a partida',val(hs,'winPercentage_overall'),val(as,'winPercentage_overall'));
+      rows+=row('A partida terminou empatada',val(hs,'drawPercentage_overall'),val(as,'drawPercentage_overall'));
+      rows+=row('Perdeu a partida',val(hs,'losePercentage_overall'),val(as,'losePercentage_overall'));
+      note='Fonte exata: estatísticas gerais da temporada dos dois times.';
+    }
+    return `<div class="analysis-v127 footystats-mode"><div class="v128-subtabs">${tabs.map(t=>`<button class="v128-pill ${current===t[0]?'active':''}" onclick="v127Sub('${t[0]}')">${t[1]}</button>`).join('')}</div><div class="v128-card"><h2>Estatísticas</h2>${sourceWarn}${head}<div class="v128-table"><div class="v128-row head"><div>Mercado</div><div>Casa</div><div>Visitante</div><div>Média</div></div>${rows}</div><div class="v128-note">${note}</div></div></div>`;
+  }
+  window.v128Probabilities = renderExactStats;
+  try{ v128Probabilities = renderExactStats; }catch(e){}
+  if(typeof V128_TABS !== 'undefined'){
+    const tab = V128_TABS.find(t=>t[0]==='probabilities');
+    if(tab) tab[1]='Estatísticas';
+  }
+})();
+</script>
+
+<style>
+/* JTIPS 22.8 */
+.v128-badge.none{background:rgba(255,255,255,.08);color:#d9d9d9;border-color:rgba(255,255,255,.15)}
+.footystats-mode .info-note{margin-bottom:12px;color:#ffd98a;border-color:rgba(255,217,138,.35)}
+</style>
+
 </body></html>
