@@ -1,3 +1,5 @@
+import { checkRateLimit, getClientIp } from './_helpers.js';
+
 const API_BASE = 'https://api.football-data-api.com';
 const cache = new Map();
 const TTL = 1000 * 60 * 10;
@@ -30,7 +32,7 @@ function scoreRow(row, requestedCompetitionId) {
   let score = 0;
   if (req && cid === req) score += 100000;
   if (norm(row.competition_id) && req && norm(row.competition_id) === req) score += 5000;
-  if (norm(row.season) === '2026') score += 100;
+  if (norm(row.season) === String(new Date().getFullYear())) score += 100;
   if (String(row.season_format || '').toLowerCase().includes('domestic league')) score += 50;
   score += statsCount(row);
   return score;
@@ -68,6 +70,11 @@ async function callTeam(key, teamId, competitionId, mode) {
 
 export default async function handler(req, res) {
   try {
+    const ip = getClientIp(req);
+    if (!checkRateLimit(ip)) {
+      return res.status(429).json({ ok: false, error: 'Muitas requisições. Tente novamente em breve.' });
+    }
+
     const key = process.env.FOOTYSTATS_API_KEY;
     if (!key) return res.status(500).json({ ok: false, error: 'FOOTYSTATS_API_KEY não configurada na Vercel.' });
 

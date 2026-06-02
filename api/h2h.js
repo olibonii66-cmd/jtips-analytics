@@ -1,3 +1,5 @@
+import { checkRateLimit, getClientIp } from './_helpers.js';
+
 const API_BASE = 'https://api.football-data-api.com';
 const cache = new Map();
 const TTL = 1000 * 60 * 60;
@@ -172,6 +174,11 @@ async function fetchMatchSafe(id) {
 
 export default async function handler(req, res) {
   try {
+    const ip = getClientIp(req);
+    if (!checkRateLimit(ip)) {
+      return res.status(429).json({ ok: false, error: 'Muitas requisições. Tente novamente em breve.' });
+    }
+
     const matchId = req.query.match_id || req.query.id;
     if (!matchId) return res.status(400).json({ ok: false, error: 'match_id obrigatório.' });
 

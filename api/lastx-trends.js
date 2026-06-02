@@ -1,3 +1,5 @@
+import { checkRateLimit, getClientIp } from './_helpers.js';
+
 const API_BASE = 'https://api.football-data-api.com';
 const cache = new Map();
 const TTL = 1000 * 60 * 45;
@@ -95,6 +97,11 @@ async function getTeam(teamId, seasonId, name) {
 
 export default async function handler(req, res) {
   try {
+    const ip = getClientIp(req);
+    if (!checkRateLimit(ip)) {
+      return res.status(429).json({ ok: false, error: 'Muitas requisições. Tente novamente em breve.' });
+    }
+
     const seasonId = req.query.season_id || req.query.competition_id || req.query.seasonID || req.query.season;
     const homeId = req.query.home_id || req.query.homeID || req.query.team_a_id;
     const awayId = req.query.away_id || req.query.awayID || req.query.team_b_id;

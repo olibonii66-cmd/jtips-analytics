@@ -1,3 +1,4 @@
+import { checkRateLimit, getClientIp } from './_helpers.js';
 
 const API_BASE = 'https://api.football-data-api.com';
 const cache = new Map();
@@ -5,6 +6,11 @@ const TTL = 1000 * 20;
 
 export default async function handler(req, res) {
   try {
+    const ip = getClientIp(req);
+    if (!checkRateLimit(ip)) {
+      return res.status(429).json({ ok: false, error: 'Muitas requisições. Tente novamente em breve.' });
+    }
+
     const key = process.env.FOOTYSTATS_API_KEY;
     if (!key) return res.status(500).json({ ok: false, error: 'FOOTYSTATS_API_KEY não configurada na Vercel.' });
 
