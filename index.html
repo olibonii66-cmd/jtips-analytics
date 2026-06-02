@@ -1910,7 +1910,7 @@ function statsEscanteios(m){
       rowPct('Mais de 12',hs,as,'over125CornersPercentage_home','over125CornersPercentage_away')
     ])}
     ${simpleStatsTable('Escanteios por Time',m.home,m.away,[
-      rowNum('Escanteios a favor / jogo',hs,as,'cornersAVG_home','cornersAVG_away'),
+      rowNum('Escanteios / jogo',hs,as,'cornersAVG_home','cornersAVG_away'),
       rowNum('Escanteios contra / jogo',hs,as,'cornersAgainstAVG_home','cornersAgainstAVG_away'),
       rowPct('Mais de 2.5 a favor',hs,as,'over25CornersForPercentage_home','over25CornersForPercentage_away'),
       rowPct('Mais de 3.5 a favor',hs,as,'over35CornersForPercentage_home','over35CornersForPercentage_away'),
@@ -2221,7 +2221,7 @@ function statsEscanteios(m){
       rowPct('Mais de 6 2H',hs,as,'corners_2h_over6_percentage_home','corners_2h_over6_percentage_away')
     ])}
     ${tableBlock('Escanteios por Time','Produção e concessão de cantos',m,[
-      rowNum('Escanteios a favor / jogo',hs,as,'cornersAVG_home','cornersAVG_away'),
+      rowNum('Escanteios / jogo',hs,as,'cornersAVG_home','cornersAVG_away'),
       rowNum('Escanteios contra / jogo',hs,as,'cornersAgainstAVG_home','cornersAgainstAVG_away'),
       rowNum('Total médio de escanteios',hs,as,'cornersTotalAVG_home','cornersTotalAVG_away'),
       rowPct('Mais de 2.5 a favor',hs,as,'over25CornersForPercentage_home','over25CornersForPercentage_away'),
@@ -4613,21 +4613,21 @@ body.auth-locked .app, body.auth-unlocked .app, .app{display:grid!important}
     const codeNum = String(code);
     const line = String(Number(codeNum) / 10).replace('.', '');
     const keys = [
+      `over${codeNum}CornersPercentage_overall`,
+      `over${codeNum}EscanteiosPercentage_overall`,
+      `over${codeNum}_corners_percentage_overall`,
+      `over${line}CornersPercentage_overall`,
+      `over${line}EscanteiosPercentage_overall`,
+      `over${codeNum}Corners_overall`,
+      `over${codeNum}Escanteios_overall`,
       `over${codeNum}CornersPercentage_${ctx}`,
       `over${codeNum}EscanteiosPercentage_${ctx}`,
       `over${codeNum}_corners_percentage_${ctx}`,
       `over${codeNum}_escanteios_percentage_${ctx}`,
-      `over${codeNum}CornersPercentage_overall`,
-      `over${codeNum}EscanteiosPercentage_overall`,
-      `over${codeNum}_corners_percentage_overall`,
       `over${line}CornersPercentage_${ctx}`,
       `over${line}EscanteiosPercentage_${ctx}`,
-      `over${line}CornersPercentage_overall`,
-      `over${line}EscanteiosPercentage_overall`,
       `over${codeNum}Corners_${ctx}`,
-      `over${codeNum}Escanteios_${ctx}`,
-      `over${codeNum}Corners_overall`,
-      `over${codeNum}Escanteios_overall`
+      `over${codeNum}Escanteios_${ctx}`
     ];
     return pct(getAny(stats, keys));
   }
@@ -4635,12 +4635,12 @@ body.auth-locked .app, body.auth-unlocked .app, .app{display:grid!important}
   function cornerAvg(stats, side) {
     const ctx = side === 'home' ? 'home' : 'away';
     return toNum(getAny(stats, [
-      `cornersAVG_${ctx}`,
       `cornersAVG_overall`,
-      `cornersTotalAVG_${ctx}`,
       `cornersTotalAVG_overall`,
-      `escanteiosAVG_${ctx}`,
-      `escanteiosAVG_overall`
+      `escanteiosAVG_overall`,
+      `cornersAVG_${ctx}`,
+      `cornersTotalAVG_${ctx}`,
+      `escanteiosAVG_${ctx}`
     ]), null);
   }
 
@@ -4665,7 +4665,7 @@ body.auth-locked .app, body.auth-unlocked .app, .app{display:grid!important}
     const as = sideStats(m, 'away');
     const homeAvg = cornerAvg(hs, 'home');
     const awayAvg = cornerAvg(as, 'away');
-    const matchAvg = toNum(m?.odds?.corners_potential, null) ?? ((homeAvg !== null && awayAvg !== null) ? homeAvg + awayAvg : null);
+    const matchAvg = (homeAvg !== null && awayAvg !== null) ? Math.round((homeAvg + awayAvg) * 100) / 100 : null;
     const lines = [
       ['Mais que 6', '65'],
       ['Mais que 7', '75'],
@@ -4683,15 +4683,15 @@ body.auth-locked .app, body.auth-unlocked .app, .app{display:grid!important}
       <div class="v127-card v1216-corners-card">
         <h2>Número de Escanteios</h2>
         <div class="v1216-corner-summary">
-          ${numBox('Escanteios / Jogo', matchAvg, `Média esperada entre ${m.home} e ${m.away}`)}
-          ${numBox(`${m.home}`, homeAvg, 'Escanteios a favor / jogo')}
-          ${numBox(`${m.away}`, awayAvg, 'Escanteios a favor / jogo')}
+          ${numBox('Escanteios / Jogo', matchAvg, `Soma das médias gerais dos dois times`)}
+          ${numBox(`${m.home}`, homeAvg, 'Escanteios / jogo')}
+          ${numBox(`${m.away}`, awayAvg, 'Escanteios / jogo')}
         </div>
         <div class="v127-table">
           <div class="v127-row head"><div>Mercado</div><div>${m.home}</div><div>${m.away}</div><div>Média</div></div>
           ${rows}
         </div>
-        <div class="v127-note">Tabela corrigida no padrão FootyStats: linhas Over 6 a Over 13; a coluna Média é calculada pelo recorte casa/fora dos dois times.</div>
+        <div class="v127-note">Tabela no padrão FootyStats: usa estatística geral da temporada por time; Média = média dos dois times.</div>
       </div>
     </div>`;
   }
@@ -5016,9 +5016,9 @@ body.auth-locked .app, body.auth-unlocked .app, .app{display:grid!important}
 
   function fsStatsHeader(m, hs, as, mode){
     if(mode === 'corners'){
-      const hAvg = fsNum(hs.cornersAVG_home), aAvg = fsNum(as.cornersAVG_away);
+      const hAvg = fsNum(hs.cornersAVG_overall), aAvg = fsNum(as.cornersAVG_overall);
       const total = (hAvg!==null && aAvg!==null) ? Math.round((hAvg+aAvg)*100)/100 : null;
-      return `<div class="v128-footy-head"><div><b>${total===null?'—':total}</b><span>Escanteios / Partida</span><small>Média entre ${m.home} em casa e ${m.away} fora</small></div><div><b>${hAvg===null?'—':hAvg}</b><span>${m.home}</span></div><div><b>${aAvg===null?'—':aAvg}</b><span>${m.away}</span></div></div>`;
+      return `<div class="v128-footy-head"><div><b>${total===null?'—':total}</b><span>Escanteios / Partida</span><small>Soma das médias gerais dos dois times, igual FootyStats</small></div><div><b>${hAvg===null?'—':hAvg}</b><span>${m.home}</span></div><div><b>${aAvg===null?'—':aAvg}</b><span>${m.away}</span></div></div>`;
     }
     if(mode === 'goals'){
       const hAvg = fsNum(hs.seasonAVG_home), aAvg = fsNum(as.seasonAVG_away);
@@ -5059,9 +5059,9 @@ body.auth-locked .app, body.auth-unlocked .app, .app{display:grid!important}
       footer = 'Total Match Goals no padrão FootyStats. Menos que é complemento da linha Mais que correspondente.';
     } else if(v127ProbSub==='corners'){
       head = fsStatsHeader(m,hs,as,'corners');
-      const lines=[['Mais que 6','over65CornersPercentage_home','over65CornersPercentage_away'],['Mais que 7','over75CornersPercentage_home','over75CornersPercentage_away'],['Mais que 8','over85CornersPercentage_home','over85CornersPercentage_away'],['Mais que 9','over95CornersPercentage_home','over95CornersPercentage_away'],['Mais que 10','over105CornersPercentage_home','over105CornersPercentage_away'],['Mais que 11','over115CornersPercentage_home','over115CornersPercentage_away'],['Mais que 12','over125CornersPercentage_home','over125CornersPercentage_away'],['Mais que 13','over135CornersPercentage_home','over135CornersPercentage_away']];
+      const lines=[['Mais que 6','over65CornersPercentage_overall','over65CornersPercentage_overall'],['Mais que 7','over75CornersPercentage_overall','over75CornersPercentage_overall'],['Mais que 8','over85CornersPercentage_overall','over85CornersPercentage_overall'],['Mais que 9','over95CornersPercentage_overall','over95CornersPercentage_overall'],['Mais que 10','over105CornersPercentage_overall','over105CornersPercentage_overall'],['Mais que 11','over115CornersPercentage_overall','over115CornersPercentage_overall'],['Mais que 12','over125CornersPercentage_overall','over125CornersPercentage_overall'],['Mais que 13','over135CornersPercentage_overall','over135CornersPercentage_overall']];
       rows = lines.map(([lab,h,a])=>fsRow(lab, fsS(hs,h), fsS(as,a))).join('');
-      footer = `Total Match Corners de ${m.home} e ${m.away}. Média da liga/jogo exibida como média entre os dois recortes.`;
+      footer = `Total Match Corners de ${m.home} e ${m.away}. Valores iguais ao padrão FootyStats: estatística geral da temporada por time; Média = média dos dois times.`;
     } else {
       head = fsStatsHeader(m,hs,as,'cards');
       rows += fsRow('Mais que 3.5 cartões', fsS(hs,'over35CardsPercentage_home'), fsS(as,'over35CardsPercentage_away'));
