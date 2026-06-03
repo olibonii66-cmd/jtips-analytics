@@ -5033,8 +5033,8 @@ body.auth-locked .app, body.auth-unlocked .app, .app{display:grid!important}
     if(!seasonId || !homeId || !awayId) return;
     if(m.footySeasonStats && m.footySeasonStats.home && m.footySeasonStats.away) return;
     const [home, away] = await Promise.allSettled([
-      oldV128FetchJson(`/api/time?team_id=${encodeURIComponent(homeId)}&competition_id=${encodeURIComponent(seasonId)}`),
-      oldV128FetchJson(`/api/time?team_id=${encodeURIComponent(awayId)}&competition_id=${encodeURIComponent(seasonId)}`)
+      oldV128FetchJson(`/api/time?team_id=${encodeURIComponent(homeId)}&competition_id=${encodeURIComponent(seasonId)}&refresh=1`),
+      oldV128FetchJson(`/api/time?team_id=${encodeURIComponent(awayId)}&competition_id=${encodeURIComponent(seasonId)}&refresh=1`)
     ]);
     m.footySeasonStats = {
       home: home.status === 'fulfilled' ? { raw: home.value, stats: fsParseStats(home.value.stats || home.value.team?.stats) } : { raw: {}, stats: {} },
@@ -5158,16 +5158,8 @@ window.setEInner=function(k,v){ES.inner[k]=v;renderTab();};
 function gi(k,d){return ES.inner[k]||d;}
 
 // DADOS
-function hasStatKeys(o){return !!(o&&typeof o==='object'&&Object.keys(o).length);}
-function officialSideStats(m,side){
-  var fs=m&&m.footySeasonStats&&m.footySeasonStats[side]&&m.footySeasonStats[side].stats;
-  if(hasStatKeys(fs))return fs;
-  var js=m&&m.__jtipsSeasonStats&&m.__jtipsSeasonStats[side];
-  if(hasStatKeys(js))return js;
-  return {};
-}
-function hStats(m){return officialSideStats(m,'home');}
-function aStats(m){return officialSideStats(m,'away');}
+function hStats(m){return (m&&m.footySeasonStats&&m.footySeasonStats.home&&m.footySeasonStats.home.stats)||{};}
+function aStats(m){return (m&&m.footySeasonStats&&m.footySeasonStats.away&&m.footySeasonStats.away.stats)||{};}
 
 function sv(s,k,def){
   if(def===undefined)def=null;
@@ -5340,77 +5332,77 @@ function tabGols(m){
   var h=m.home||'Casa',a=m.away||'Fora';
   var hs=hStats(m),as=aStats(m);
   var gI=gi('gols','ft'),bI=gi('btts','over');
-  var hGols=sv(hs,'seasonScoredAVG_home'),aGols=sv(as,'seasonScoredAVG_away');
-  var hConc=sv(hs,'seasonConcededAVG_home'),aConc=sv(as,'seasonConcededAVG_away');
+  var hGols=sv(hs,'seasonScoredAVG_overall'),aGols=sv(as,'seasonScoredAVG_overall');
+  var hConc=sv(hs,'seasonConcededAVG_overall'),aConc=sv(as,'seasonConcededAVG_overall');
 
   var sFT='<table class="es-table">'+thead(h,a)+'<tbody>'+
-    stRow('Mais de 0.5',sv(hs,'seasonScoredOver05Percentage_home'),sv(as,'seasonScoredOver05Percentage_away'))+
-    stRow('Mais de 1.5',sv(hs,'seasonScoredOver15Percentage_home'),sv(as,'seasonScoredOver15Percentage_away'))+
-    stRow('Mais de 2.5',sv(hs,'seasonScoredOver25Percentage_home'),sv(as,'seasonScoredOver25Percentage_away'))+
-    stRow('Mais de 3.5',sv(hs,'seasonScoredOver35Percentage_home'),sv(as,'seasonScoredOver35Percentage_away'))+
-    stRow('Não Marcou',sv(hs,'seasonFTSPercentage_home'),sv(as,'seasonFTSPercentage_away'))+
+    stRow('Mais de 0.5',sv(hs,'seasonScoredOver05Percentage_overall'),sv(as,'seasonScoredOver05Percentage_overall'))+
+    stRow('Mais de 1.5',sv(hs,'seasonScoredOver15Percentage_overall'),sv(as,'seasonScoredOver15Percentage_overall'))+
+    stRow('Mais de 2.5',sv(hs,'seasonScoredOver25Percentage_overall'),sv(as,'seasonScoredOver25Percentage_overall'))+
+    stRow('Mais de 3.5',sv(hs,'seasonScoredOver35Percentage_overall'),sv(as,'seasonScoredOver35Percentage_overall'))+
+    stRow('Não Marcou',sv(hs,'seasonFTSPercentage_overall'),sv(as,'seasonFTSPercentage_overall'))+
     '</tbody></table>';
   var sH='<table class="es-table">'+thead(h,a)+'<tbody>'+
-    stRow('Marcou 1ºT',sv(hs,'seasonFTSPercentageHT_home')!=null?100-sv(hs,'seasonFTSPercentageHT_home'):null,sv(as,'seasonFTSPercentageHT_away')!=null?100-sv(as,'seasonFTSPercentageHT_away'):null)+
-    stRow('Marcou 2ºT',sv(hs,'fts_2hg_percentage_home')!=null?100-sv(hs,'fts_2hg_percentage_home'):null,sv(as,'fts_2hg_percentage_away')!=null?100-sv(as,'fts_2hg_percentage_away'):null)+
-    stRow('Marcou Ambos',sv(hs,'scoredBothHalvesPercentage_home'),sv(as,'scoredBothHalvesPercentage_away'))+
-    numRow('Média 1ºT',d1(sv(hs,'scoredAVGHT_home')),d1(sv(as,'scoredAVGHT_away')))+
-    numRow('Média 2ºT',d1(sv(hs,'scored_2hg_avg_home')),d1(sv(as,'scored_2hg_avg_away')))+
+    stRow('Marcou 1ºT',sv(hs,'seasonFTSPercentageHT_overall')!=null?100-sv(hs,'seasonFTSPercentageHT_overall'):null,sv(as,'seasonFTSPercentageHT_overall')!=null?100-sv(as,'seasonFTSPercentageHT_overall'):null)+
+    stRow('Marcou 2ºT',sv(hs,'fts_2hg_percentage_overall')!=null?100-sv(hs,'fts_2hg_percentage_overall'):null,sv(as,'fts_2hg_percentage_overall')!=null?100-sv(as,'fts_2hg_percentage_overall'):null)+
+    stRow('Marcou Ambos',sv(hs,'scoredBothHalvesPercentage_overall'),sv(as,'scoredBothHalvesPercentage_overall'))+
+    numRow('Média 1ºT',d1(sv(hs,'scoredAVGHT_overall')),d1(sv(as,'scoredAVGHT_overall')))+
+    numRow('Média 2ºT',d1(sv(hs,'scored_2hg_avg_overall')),d1(sv(as,'scored_2hg_avg_overall')))+
     '</tbody></table>';
 
   var cFT='<table class="es-table">'+thead(h,a)+'<tbody>'+
-    stRow('Mais de 0.5',sv(hs,'seasonConcededOver05Percentage_home'),sv(as,'seasonConcededOver05Percentage_away'))+
-    stRow('Mais de 1.5',sv(hs,'seasonConcededOver15Percentage_home'),sv(as,'seasonConcededOver15Percentage_away'))+
-    stRow('Mais de 2.5',sv(hs,'seasonConcededOver25Percentage_home'),sv(as,'seasonConcededOver25Percentage_away'))+
-    stRow('Mais de 3.5',sv(hs,'seasonConcededOver35Percentage_home'),sv(as,'seasonConcededOver35Percentage_away'))+
-    stRow('Sem Sofrer Gol',sv(hs,'seasonCSPercentage_home'),sv(as,'seasonCSPercentage_away'))+
+    stRow('Mais de 0.5',sv(hs,'seasonConcededOver05Percentage_overall'),sv(as,'seasonConcededOver05Percentage_overall'))+
+    stRow('Mais de 1.5',sv(hs,'seasonConcededOver15Percentage_overall'),sv(as,'seasonConcededOver15Percentage_overall'))+
+    stRow('Mais de 2.5',sv(hs,'seasonConcededOver25Percentage_overall'),sv(as,'seasonConcededOver25Percentage_overall'))+
+    stRow('Mais de 3.5',sv(hs,'seasonConcededOver35Percentage_overall'),sv(as,'seasonConcededOver35Percentage_overall'))+
+    stRow('Lençóis Limpos',sv(hs,'seasonCSPercentage_overall'),sv(as,'seasonCSPercentage_overall'))+
     '</tbody></table>';
   var cH='<table class="es-table">'+thead(h,a)+'<tbody>'+
-    stRow('CS 1ºT',sv(hs,'seasonCSPercentageHT_home'),sv(as,'seasonCSPercentageHT_away'))+
-    stRow('CS 2ºT',sv(hs,'cs_2hg_percentage_home'),sv(as,'cs_2hg_percentage_away'))+
-    numRow('Média Sofrida 1ºT',d1(sv(hs,'concededAVGHT_home')),d1(sv(as,'concededAVGHT_away')))+
-    numRow('Média Sofrida 2ºT',d1(sv(hs,'conceded_2hg_avg_home')),d1(sv(as,'conceded_2hg_avg_away')))+
+    stRow('1H Folha Limpa',sv(hs,'seasonCSPercentageHT_overall'),sv(as,'seasonCSPercentageHT_overall'))+
+    stRow('2H Folha Limpa',sv(hs,'cs_2hg_percentage_overall'),sv(as,'cs_2hg_percentage_overall'))+
+    numRow('Média concedida 1H',d1(sv(hs,'concededAVGHT_overall')),d1(sv(as,'concededAVGHT_overall')))+
+    numRow('Média concedida 2H',d1(sv(hs,'conceded_2hg_avg_overall')),d1(sv(as,'conceded_2hg_avg_overall')))+
     '</tbody></table>';
 
   function under(v){return v!=null?100-v:null;}
   var bOver='<table class="es-table">'+thead(h,a)+'<tbody>'+
-    stRow('Mais de 0.5',sv(hs,'seasonOver05Percentage_home'),sv(as,'seasonOver05Percentage_away'))+
-    stRow('Mais de 1.5',sv(hs,'seasonOver15Percentage_home'),sv(as,'seasonOver15Percentage_away'))+
-    stRow('Mais de 2.5',sv(hs,'seasonOver25Percentage_home'),sv(as,'seasonOver25Percentage_away'))+
-    stRow('Mais de 3.5',sv(hs,'seasonOver35Percentage_home'),sv(as,'seasonOver35Percentage_away'))+
-    stRow('Mais de 4.5',sv(hs,'seasonOver45Percentage_home'),sv(as,'seasonOver45Percentage_away'))+
-    stRow('Ambas Marcam',sv(hs,'seasonBTTSPercentage_home'),sv(as,'seasonBTTSPercentage_away'))+
-    stRow('Ambas Marcam & Vitória',sv(hs,'BTTS_and_win_percentage_home'),sv(as,'BTTS_and_win_percentage_away'))+
-    stRow('Ambas Marcam & Empate',sv(hs,'BTTS_and_draw_percentage_home'),sv(as,'BTTS_and_draw_percentage_away'))+
-    stRow('Ambas Marcam & Mais de 2.5',sv(hs,'over25_and_btts_percentage_home'),sv(as,'over25_and_btts_percentage_away'))+
-    stRow('Ambas Não & Mais de 2.5',sv(hs,'over25_and_no_btts_percentage_home'),sv(as,'over25_and_no_btts_percentage_away'))+
+    stRow('Mais de 0.5',sv(hs,'seasonOver05Percentage_overall'),sv(as,'seasonOver05Percentage_overall'))+
+    stRow('Mais de 1.5',sv(hs,'seasonOver15Percentage_overall'),sv(as,'seasonOver15Percentage_overall'))+
+    stRow('Mais de 2.5',sv(hs,'seasonOver25Percentage_overall'),sv(as,'seasonOver25Percentage_overall'))+
+    stRow('Mais de 3.5',sv(hs,'seasonOver35Percentage_overall'),sv(as,'seasonOver35Percentage_overall'))+
+    stRow('Mais de 4.5',sv(hs,'seasonOver45Percentage_overall'),sv(as,'seasonOver45Percentage_overall'))+
+    stRow('BTTS',sv(hs,'seasonBTTSPercentage_overall'),sv(as,'seasonBTTSPercentage_overall'))+
+    stRow('Ambas Marcam & Vitória',sv(hs,'BTTS_and_win_percentage_overall'),sv(as,'BTTS_and_win_percentage_overall'))+
+    stRow('Ambas Marcam & Empate',sv(hs,'BTTS_and_draw_percentage_overall'),sv(as,'BTTS_and_draw_percentage_overall'))+
+    stRow('Ambas Marcam & Mais de 2.5',sv(hs,'over25_and_btts_percentage_overall'),sv(as,'over25_and_btts_percentage_overall'))+
+    stRow('Ambas Não & Mais de 2.5',sv(hs,'over25_and_no_btts_percentage_overall'),sv(as,'over25_and_no_btts_percentage_overall'))+
     '</tbody></table>';
   var bHalves='<table class="es-table">'+thead(h,a)+'<tbody>'+
     subhead('1º Tempo')+
-    stRow('Ambas Marcam 1ºT',sv(hs,'btts_fhg_percentage_home'),sv(as,'btts_fhg_percentage_away'))+
-    stRow('Mais de 0.5 1ºT',sv(hs,'seasonOver05PercentageHT_home'),sv(as,'seasonOver05PercentageHT_away'))+
-    stRow('Mais de 1.5 1ºT',sv(hs,'seasonOver15PercentageHT_home'),sv(as,'seasonOver15PercentageHT_away'))+
-    stRow('Mais de 2.5 1ºT',sv(hs,'seasonOver25PercentageHT_home'),sv(as,'seasonOver25PercentageHT_away'))+
+    stRow('Ambas Marcam 1ºT',sv(hs,'btts_fhg_percentage_overall'),sv(as,'btts_fhg_percentage_overall'))+
+    stRow('Mais de 0.5 1ºT',sv(hs,'seasonOver05PercentageHT_overall'),sv(as,'seasonOver05PercentageHT_overall'))+
+    stRow('Mais de 1.5 1ºT',sv(hs,'seasonOver15PercentageHT_overall'),sv(as,'seasonOver15PercentageHT_overall'))+
+    stRow('Mais de 2.5 1ºT',sv(hs,'seasonOver25PercentageHT_overall'),sv(as,'seasonOver25PercentageHT_overall'))+
     subhead('2º Tempo')+
-    stRow('Ambas Marcam 2ºT',sv(hs,'btts_2hg_percentage_home'),sv(as,'btts_2hg_percentage_away'))+
-    stRow('Ambas Marcam nos Dois Tempos',sv(hs,'BTTS_both_halves_percentage_home'),sv(as,'BTTS_both_halves_percentage_away'))+
-    stRow('Mais de 0.5 2ºT',sv(hs,'over05_2hg_percentage_home'),sv(as,'over05_2hg_percentage_away'))+
-    stRow('Mais de 1.5 2ºT',sv(hs,'over15_2hg_percentage_home'),sv(as,'over15_2hg_percentage_away'))+
-    stRow('Mais de 2.5 2ºT',sv(hs,'over25_2hg_percentage_home'),sv(as,'over25_2hg_percentage_away'))+
+    stRow('Ambas Marcam 2ºT',sv(hs,'btts_2hg_percentage_overall'),sv(as,'btts_2hg_percentage_overall'))+
+    stRow('Ambas Marcam nos Dois Tempos',sv(hs,'BTTS_both_halves_percentage_overall'),sv(as,'BTTS_both_halves_percentage_overall'))+
+    stRow('Mais de 0.5 2ºT',sv(hs,'over05_2hg_percentage_overall'),sv(as,'over05_2hg_percentage_overall'))+
+    stRow('Mais de 1.5 2ºT',sv(hs,'over15_2hg_percentage_overall'),sv(as,'over15_2hg_percentage_overall'))+
+    stRow('Mais de 2.5 2ºT',sv(hs,'over25_2hg_percentage_overall'),sv(as,'over25_2hg_percentage_overall'))+
     '</tbody></table>';
   var bUnder='<table class="es-table">'+thead(h,a)+'<tbody>'+
-    stRow('Menos de 0.5',sv(hs,'seasonUnder05Percentage_home'),sv(as,'seasonUnder05Percentage_away'))+
-    stRow('Menos de 1.5',sv(hs,'seasonUnder15Percentage_home'),sv(as,'seasonUnder15Percentage_away'))+
-    stRow('Menos de 2.5',sv(hs,'seasonUnder25Percentage_home'),sv(as,'seasonUnder25Percentage_away'))+
-    stRow('Menos de 3.5',sv(hs,'seasonUnder35Percentage_home'),sv(as,'seasonUnder35Percentage_away'))+
-    stRow('Menos de 4.5',sv(hs,'seasonUnder45Percentage_home'),sv(as,'seasonUnder45Percentage_away'))+
+    stRow('Menos de 0.5',sv(hs,'seasonUnder05Percentage_overall'),sv(as,'seasonUnder05Percentage_overall'))+
+    stRow('Menos de 1.5',sv(hs,'seasonUnder15Percentage_overall'),sv(as,'seasonUnder15Percentage_overall'))+
+    stRow('Menos de 2.5',sv(hs,'seasonUnder25Percentage_overall'),sv(as,'seasonUnder25Percentage_overall'))+
+    stRow('Menos de 3.5',sv(hs,'seasonUnder35Percentage_overall'),sv(as,'seasonUnder35Percentage_overall'))+
+    stRow('Menos de 4.5',sv(hs,'seasonUnder45Percentage_overall'),sv(as,'seasonUnder45Percentage_overall'))+
     subhead('Por Tempo')+
-    stRow('Menos de 0.5 1ºT',sv(hs,'seasonFTSPercentageHT_home'),sv(as,'seasonFTSPercentageHT_away'))+
-    stRow('Menos de 1.5 1ºT',under(sv(hs,'seasonOver15PercentageHT_home')),under(sv(as,'seasonOver15PercentageHT_away')))+
-    stRow('Menos de 2.5 1ºT',under(sv(hs,'seasonOver25PercentageHT_home')),under(sv(as,'seasonOver25PercentageHT_away')))+
-    stRow('Menos de 0.5 2ºT',sv(hs,'fts_2hg_percentage_home'),sv(as,'fts_2hg_percentage_away'))+
-    stRow('Menos de 1.5 2ºT',under(sv(hs,'over15_2hg_percentage_home')),under(sv(as,'over15_2hg_percentage_away')))+
-    stRow('Menos de 2.5 2ºT',under(sv(hs,'over25_2hg_percentage_home')),under(sv(as,'over25_2hg_percentage_away')))+
+    stRow('Menos de 0.5 1ºT',sv(hs,'seasonFTSPercentageHT_overall'),sv(as,'seasonFTSPercentageHT_overall'))+
+    stRow('Menos de 1.5 1ºT',under(sv(hs,'seasonOver15PercentageHT_overall')),under(sv(as,'seasonOver15PercentageHT_overall')))+
+    stRow('Menos de 2.5 1ºT',under(sv(hs,'seasonOver25PercentageHT_overall')),under(sv(as,'seasonOver25PercentageHT_overall')))+
+    stRow('Menos de 0.5 2ºT',sv(hs,'fts_2hg_percentage_overall'),sv(as,'fts_2hg_percentage_overall'))+
+    stRow('Menos de 1.5 2ºT',under(sv(hs,'over15_2hg_percentage_overall')),under(sv(as,'over15_2hg_percentage_overall')))+
+    stRow('Menos de 2.5 2ºT',under(sv(hs,'over25_2hg_percentage_overall')),under(sv(as,'over25_2hg_percentage_overall')))+
     '</tbody></table>';
 
   return panel('Gols Marcados',
@@ -5789,10 +5781,8 @@ window.v128Header=v128Header=function(m){
 // ═══════════════════════════════════════════════════════════
 // 3. HELPERS
 // ═══════════════════════════════════════════════════════════
-function _hasStatKeys(o){return !!(o&&typeof o==='object'&&Object.keys(o).length);}
-function _officialSideStats(m,side){var fs=m&&m.footySeasonStats&&m.footySeasonStats[side]&&m.footySeasonStats[side].stats;if(_hasStatKeys(fs))return fs;var js=m&&m.__jtipsSeasonStats&&m.__jtipsSeasonStats[side];if(_hasStatKeys(js))return js;return {};}
-function _hS(m){return _officialSideStats(m,'home');}
-function _aS(m){return _officialSideStats(m,'away');}
+function _hS(m){return(m&&m.footySeasonStats&&m.footySeasonStats.home&&m.footySeasonStats.home.stats)||(typeof v128StatsObj==='function'?v128StatsObj(m,'home'):{})||{};}
+function _aS(m){return(m&&m.footySeasonStats&&m.footySeasonStats.away&&m.footySeasonStats.away.stats)||(typeof v128StatsObj==='function'?v128StatsObj(m,'away'):{})||{};}
 function _sv(s,k){if(!s)return null;var v=s[k];if(v==null&&s.additional_info)v=s.additional_info[k];var n=Number(v);return Number.isFinite(n)?n:null;}
 function _d1(v){if(v==null)return'—';var n=Number(v);return Number.isFinite(n)?n.toFixed(1):'—';}
 function _d2(v){if(v==null)return'—';var n=Number(v);return Number.isFinite(n)?n.toFixed(2):'—';}
