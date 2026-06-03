@@ -1266,6 +1266,29 @@ button {
     width: 100%;
   }
 
+  .team-logo {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  object-fit: contain;
+  background: var(--green-soft);
+  border: 1px solid #cfe2d5;
+  padding: 4px;
+  flex-shrink: 0;
+}
+
+.big-logo {
+  width: 74px;
+  height: 74px;
+  border-radius: 20px;
+  object-fit: contain;
+  background: var(--green-soft);
+  border: 1px solid #cfe2d5;
+  padding: 8px;
+  margin: 0 auto 8px;
+  display: block;
+}
+
   .toggle-actions button {
     flex: 1;
   }
