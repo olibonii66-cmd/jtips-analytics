@@ -74,42 +74,31 @@ function extractH2HIds(match) {
   return [];
 }
 
-function pick(obj, keys, d = 0) {
-  for (const k of keys) {
-    if (obj && obj[k] !== undefined && obj[k] !== null && obj[k] !== '') return num(obj[k], d);
-  }
-  return d;
-}
-
 function indicadoresFromApi(match) {
   const h2h = extractH2H(match);
   if (!h2h || !h2h.betting_stats) return null;
   const r = h2h.previous_matches_results || {};
   const b = h2h.betting_stats || {};
-  const total = pick(r, ['totalMatches', 'total_matches', 'matches'], pick(b, ['total_matches', 'totalMatches', 'matches'], 0));
-  if (!total && !Object.keys(b).length) return null;
-  const aWins = pick(r, ['team_a_wins', 'teamAWins', 'clubAWins'], 0);
-  const bWins = pick(r, ['team_b_wins', 'teamBWins', 'clubBWins'], 0);
-  const draws = pick(r, ['draw', 'draws'], 0);
+  const total = num(r.totalMatches, num(b.total_matches, 0));
   return {
     total_confrontos: total,
-    vitorias_mandante_atual: aWins,
-    empates: draws,
-    vitorias_visitante_atual: bWins,
-    pct_mandante_atual: pick(r, ['team_a_win_percent', 'teamAWinPercent', 'clubAWinPercentage'], total ? Math.round(aWins / total * 100) : 0),
-    pct_empate: pick(r, ['draw_percent', 'drawPercentage'], total ? Math.round(draws / total * 100) : 0),
-    pct_visitante_atual: pick(r, ['team_b_win_percent', 'teamBWinPercent', 'clubBWinPercentage'], total ? Math.round(bWins / total * 100) : 0),
+    vitorias_mandante_atual: num(r.team_a_wins, 0),
+    empates: num(r.draw, 0),
+    vitorias_visitante_atual: num(r.team_b_wins, 0),
+    pct_mandante_atual: num(r.team_a_win_percent, total ? Math.round(num(r.team_a_wins,0) / total * 100) : 0),
+    pct_empate: total ? Math.round(num(r.draw,0) / total * 100) : 0,
+    pct_visitante_atual: num(r.team_b_win_percent, total ? Math.round(num(r.team_b_wins,0) / total * 100) : 0),
     gols_mandante_atual: null,
     gols_visitante_atual: null,
-    media_gols: pick(b, ['avg_goals', 'avgGoals', 'average_goals'], 0),
-    mais_1_5_gols: pick(b, ['over15Percentage', 'over15_percentage', 'over_15_percentage'], 0),
-    mais_2_5_gols: pick(b, ['over25Percentage', 'over25_percentage', 'over_25_percentage'], 0),
-    mais_3_5_gols: pick(b, ['over35Percentage', 'over35_percentage', 'over_35_percentage'], 0),
-    ambas_marcam: pick(b, ['bttsPercentage', 'btts_percentage', 'BTTSPercentage'], 0),
-    clean_mandante_atual: pick(b, ['clubACSPercentage', 'club_a_cs_percentage'], 0),
-    clean_visitante_atual: pick(b, ['clubBCSPercentage', 'club_b_cs_percentage'], 0),
-    clean_mandante_count: pick(b, ['clubACS', 'club_a_cs'], 0),
-    clean_visitante_count: pick(b, ['clubBCS', 'club_b_cs'], 0),
+    media_gols: num(b.avg_goals, 0),
+    mais_1_5_gols: num(b.over15Percentage, 0),
+    mais_2_5_gols: num(b.over25Percentage, 0),
+    mais_3_5_gols: num(b.over35Percentage, 0),
+    ambas_marcam: num(b.bttsPercentage, 0),
+    clean_mandante_atual: num(b.clubACSPercentage, 0),
+    clean_visitante_atual: num(b.clubBCSPercentage, 0),
+    clean_mandante_count: num(b.clubACS, 0),
+    clean_visitante_count: num(b.clubBCS, 0),
     fonte: 'footystats_match_h2h_betting_stats'
   };
 }
@@ -151,7 +140,7 @@ export default async function handler(req, res) {
     if (!checkRateLimit(ip)) return res.status(429).json({ ok: false, error: 'Muitas requisições. Tente novamente em breve.' });
     const matchId = req.query.match_id || req.query.id;
     if (!matchId) return res.status(400).json({ ok: false, error: 'match_id obrigatório.' });
-    const cacheKey = `h2h:api_first_with_fallback:v23_3:${matchId}`;
+    const cacheKey = `h2h:footystats_api_first:v23_2:${matchId}`;
     const cached = cache.get(cacheKey);
     if (!req.query.refresh && cached && Date.now() - cached.ts < TTL) {
       res.setHeader('Cache-Control', 's-maxage=3600, stale-while-revalidate=7200');
@@ -188,12 +177,10 @@ export default async function handler(req, res) {
       }
     }
 
-    const recalculado = calc(details, match.homeID, match.awayID);
-    const indicadores = (apiIndicadores && apiIndicadores.total_confrontos) ? apiIndicadores : recalculado;
-    indicadores.fallback_used = !(apiIndicadores && apiIndicadores.total_confrontos);
+    const indicadores = apiIndicadores || calc(details, match.homeID, match.awayID);
     const ultimos = details.map(m => ({ id: m.id, data_formatada: formatDate(m.date_unix), home_name: m.home_name || m.team_a_name || 'Casa', away_name: m.away_name || m.team_b_name || 'Visitante', homeGoalCount: m.homeGoalCount ?? m.team_a_goals, awayGoalCount: m.awayGoalCount ?? m.team_b_goals, status: m.status })).filter(x => x.id || x.homeGoalCount !== undefined);
 
-    const payload = { ok: true, match_id: Number(matchId), fonte: indicadores.fonte || 'footystats_h2h', source: indicadores.fonte || 'footystats_h2h', fallback_used: !!indicadores.fallback_used, ids, ids_total: ids.length, matches_loaded: details.length, indicadores, ultimos };
+    const payload = { ok: true, match_id: Number(matchId), fonte: indicadores.fonte || 'footystats_h2h', ids, ids_total: ids.length, matches_loaded: details.length, indicadores, ultimos };
     cache.set(cacheKey, { ts: Date.now(), data: payload });
     res.setHeader('Cache-Control', 's-maxage=3600, stale-while-revalidate=7200');
     return res.status(200).json(payload);
