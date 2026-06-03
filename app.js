@@ -25,6 +25,7 @@ function initDateNavigation() {
 
   dateNav.innerHTML = `
     <button type="button" onclick="changeSelectedDate(-1)">‹</button>
+
     ${dates.map(function(item) {
       return `
         <button
@@ -36,6 +37,7 @@ function initDateNavigation() {
         </button>
       `;
     }).join("")}
+
     <button type="button" onclick="changeSelectedDate(1)">›</button>
   `;
 }
@@ -57,7 +59,10 @@ function buildDateOptions(centerDate) {
     if (offset === -1 && centerDate === today) label = "Ontem";
     if (offset === 1 && centerDate === today) label = "Amanhã";
 
-    return { date: iso, label };
+    return {
+      date: iso,
+      label
+    };
   });
 }
 
@@ -184,8 +189,18 @@ function normalizeMatch(match) {
     match.away ||
     `Visitante ${match.awayID || ""}`.trim();
 
-  const homeGoals = getNumber(match.homeGoalCount, match.home_goals, match.homeGoals);
-  const awayGoals = getNumber(match.awayGoalCount, match.away_goals, match.awayGoals);
+  const homeGoals = getNumber(
+    match.homeGoalCount,
+    match.home_goals,
+    match.homeGoals
+  );
+
+  const awayGoals = getNumber(
+    match.awayGoalCount,
+    match.away_goals,
+    match.awayGoals
+  );
+
   const status = normalizeStatus(match.status, match.game_status, match);
 
   return {
@@ -204,100 +219,20 @@ function normalizeMatch(match) {
       formatOdd(match.odds_ft_x || match.odds_ft_X || match.odds_x || match.draw_odds),
       formatOdd(match.odds_ft_2 || match.odds_2 || match.away_odds)
     ],
-    over25: formatPercent(match.o25_potential || match.over_25_percentage || match.over25 || match.over_2_5_probability),
-    btts: formatPercent(match.btts_potential || match.btts_percentage || match.btts || match.btts_probability),
-    homeForm: getTeamForm(match, "home", homeGoals, awayGoals, status),
-    awayForm: getTeamForm(match, "away", homeGoals, awayGoals, status),
+    over25: formatPercent(
+      match.o25_potential ||
+      match.over_25_percentage ||
+      match.over25 ||
+      match.over_2_5_probability
+    ),
+    btts: formatPercent(
+      match.btts_potential ||
+      match.btts_percentage ||
+      match.btts ||
+      match.btts_probability
+    ),
     raw: match
   };
-}
-
-function getTeamForm(match, side, homeGoals, awayGoals, status) {
-  const raw =
-    side === "home"
-      ? (
-        match.home_form ||
-        match.homeForm ||
-        match.team_a_form ||
-        match.teamAForm ||
-        match.team_a_recent_form ||
-        match.home_recent_form ||
-        match.form_home ||
-        ""
-      )
-      : (
-        match.away_form ||
-        match.awayForm ||
-        match.team_b_form ||
-        match.teamBForm ||
-        match.team_b_recent_form ||
-        match.away_recent_form ||
-        match.form_away ||
-        ""
-      );
-
-  const parsed = parseForm(raw);
-
-  if (parsed.length) {
-    return padForm(parsed);
-  }
-
-  if (status === "done" && homeGoals !== null && awayGoals !== null) {
-    if (homeGoals === awayGoals) return padForm(["d"]);
-    if (side === "home") return padForm([homeGoals > awayGoals ? "w" : "l"]);
-    return padForm([awayGoals > homeGoals ? "w" : "l"]);
-  }
-
-  return ["n", "n", "n", "n", "n"];
-}
-
-function parseForm(value) {
-  if (!value) return [];
-
-  if (Array.isArray(value)) {
-    return value
-      .map(normalizeFormItem)
-      .filter(Boolean)
-      .slice(0, 5);
-  }
-
-  const text = String(value).trim();
-
-  if (!text) return [];
-
-  if (text.includes(",") || text.includes("-") || text.includes(" ")) {
-    return text
-      .split(/[,\-\s]+/)
-      .map(normalizeFormItem)
-      .filter(Boolean)
-      .slice(0, 5);
-  }
-
-  return text
-    .split("")
-    .map(normalizeFormItem)
-    .filter(Boolean)
-    .slice(0, 5);
-}
-
-function normalizeFormItem(value) {
-  const item = String(value).toLowerCase().trim();
-
-  if (["w", "v", "win", "victory", "won", "1"].includes(item)) return "w";
-  if (["d", "e", "draw", "empate", "0"].includes(item)) return "d";
-  if (["l", "dft", "loss", "lost", "derrota", "-1"].includes(item)) return "l";
-
-  return "";
-}
-
-function padForm(items) {
-  const output = items.slice(0, 5);
-
-  while (output.length < 5) {
-    output.push("n");
-  }
-
-  return output;
 }
 
 function getTeamLogo(match, side) {
@@ -333,18 +268,37 @@ function normalizeImageUrl(value) {
 
   if (!clean) return "";
 
-  if (clean.startsWith("http://") || clean.startsWith("https://")) return clean;
-  if (clean.startsWith("//")) return `https:${clean}`;
-  if (clean.startsWith("/img/")) return `https://cdn.footystats.org${clean}`;
-  if (clean.startsWith("img/")) return `https://cdn.footystats.org/${clean}`;
-  if (clean.startsWith("/teams/")) return `https://cdn.footystats.org/img${clean}`;
-  if (clean.startsWith("teams/")) return `https://cdn.footystats.org/img/${clean}`;
+  if (clean.startsWith("http://") || clean.startsWith("https://")) {
+    return clean;
+  }
+
+  if (clean.startsWith("//")) {
+    return `https:${clean}`;
+  }
+
+  if (clean.startsWith("/img/")) {
+    return `https://cdn.footystats.org${clean}`;
+  }
+
+  if (clean.startsWith("img/")) {
+    return `https://cdn.footystats.org/${clean}`;
+  }
+
+  if (clean.startsWith("/teams/")) {
+    return `https://cdn.footystats.org/img${clean}`;
+  }
+
+  if (clean.startsWith("teams/")) {
+    return `https://cdn.footystats.org/img/${clean}`;
+  }
 
   return `https://cdn.footystats.org/img/${clean.replace(/^\/+/, "")}`;
 }
 
 function getLeagueName(match) {
-  if (match.resolved_league_name) return match.resolved_league_name;
+  if (match.resolved_league_name) {
+    return match.resolved_league_name;
+  }
 
   const country =
     match.country ||
@@ -361,8 +315,13 @@ function getLeagueName(match) {
     match.name ||
     "";
 
-  if (league && country) return `${country} › ${league}`;
-  if (league) return league;
+  if (league && country) {
+    return `${country} › ${league}`;
+  }
+
+  if (league) {
+    return league;
+  }
 
   const leagueId =
     match.competition_id ||
@@ -402,20 +361,30 @@ function normalizeStatus(status, gameStatus, match) {
     return "done";
   }
 
-  const unix = match.date_unix || match.match_time || match.timestamp || match.kickoff_unix;
+  const unix =
+    match.date_unix ||
+    match.match_time ||
+    match.timestamp ||
+    match.kickoff_unix;
 
   if (unix && Number.isFinite(Number(unix))) {
     const matchTime = Number(unix) * 1000;
     const now = Date.now();
 
-    if (matchTime > now) return "pre";
+    if (matchTime > now) {
+      return "pre";
+    }
   }
 
   return "pre";
 }
 
 function getMatchTime(match) {
-  const unix = match.date_unix || match.match_time || match.timestamp || match.kickoff_unix;
+  const unix =
+    match.date_unix ||
+    match.match_time ||
+    match.timestamp ||
+    match.kickoff_unix;
 
   if (unix && Number.isFinite(Number(unix))) {
     const date = new Date(Number(unix) * 1000);
@@ -427,7 +396,11 @@ function getMatchTime(match) {
     });
   }
 
-  const rawDate = match.date || match.kickoff || match.match_date || match.time;
+  const rawDate =
+    match.date ||
+    match.kickoff ||
+    match.match_date ||
+    match.time;
 
   if (rawDate) {
     const date = new Date(rawDate);
@@ -452,7 +425,9 @@ function getNumber() {
 
     const number = Number(value);
 
-    if (Number.isFinite(number)) return number;
+    if (Number.isFinite(number)) {
+      return number;
+    }
   }
 
   return null;
@@ -461,13 +436,17 @@ function getNumber() {
 function formatOdd(value) {
   const number = Number(value);
 
-  if (!Number.isFinite(number) || number <= 0) return "-";
+  if (!Number.isFinite(number) || number <= 0) {
+    return "-";
+  }
 
   return number.toFixed(2);
 }
 
 function formatPercent(value) {
-  if (value === null || value === undefined || value === "") return "-";
+  if (value === null || value === undefined || value === "") {
+    return "-";
+  }
 
   const number = Number(value);
 
@@ -476,7 +455,9 @@ function formatPercent(value) {
     return text.includes("%") ? text : "-";
   }
 
-  if (number <= 1) return `${Math.round(number * 100)}%`;
+  if (number <= 1) {
+    return `${Math.round(number * 100)}%`;
+  }
 
   return `${Math.round(number)}%`;
 }
@@ -502,23 +483,6 @@ function escapeHTML(value) {
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#039;");
-}
-
-function getFormLabel(item) {
-  if (item === "w") return "V";
-  if (item === "d") return "E";
-  if (item === "l") return "D";
-  return "–";
-}
-
-function renderFormLine(items) {
-  return `
-    <div class="form-line">
-      ${items.map(function(item) {
-        return `<span class="${escapeHTML(item)}">${getFormLabel(item)}</span>`;
-      }).join("")}
-    </div>
-  `;
 }
 
 function renderTeamIcon(match, side) {
@@ -570,7 +534,6 @@ function renderMatches() {
       <article class="league-card">
         <header class="league-header">
           <div class="league-name">${escapeHTML(league.name)}</div>
-          <div class="col-label">Forma</div>
           <div class="col-label">Odds<br>1 · X · 2</div>
           <div class="col-label">+2.5</div>
           <div class="col-label">BTTS</div>
@@ -597,11 +560,6 @@ function renderMatches() {
               <div class="team away-team">
                 ${renderTeamIcon(match, "away")}
                 <span class="team-name">${escapeHTML(match.away)}</span>
-              </div>
-
-              <div class="form-cell">
-                ${renderFormLine(match.homeForm)}
-                ${renderFormLine(match.awayForm)}
               </div>
 
               <div class="odds">
@@ -636,10 +594,10 @@ function showStats(encodedMatchId) {
   document.getElementById("homePage").classList.add("hidden");
   document.getElementById("statsPage").classList.remove("hidden");
 
-  renderTab("completas");
+  renderTab("dadosapi");
 
   tabButtons.forEach(function(item) {
-    item.classList.toggle("active", item.dataset.tab === "completas");
+    item.classList.toggle("active", item.dataset.tab === "dadosapi");
   });
 
   window.scrollTo({ top: 0, behavior: "smooth" });
@@ -698,6 +656,7 @@ function showHome() {
 
 function renderTab(tab) {
   const views = {
+    dadosapi: renderDadosApi,
     completas: renderCompletas,
     gols: renderGols,
     escanteios: renderEscanteios,
@@ -753,6 +712,228 @@ function aiHero(title, description, chip1, chip2, chip3) {
   `;
 }
 
+function renderDadosApi() {
+  const raw = selectedMatch ? selectedMatch.raw : null;
+
+  if (!raw) {
+    return `
+      <article class="card">
+        <h2>Nenhum dado carregado</h2>
+        <p class="small-note">Volte para a lista e selecione uma partida.</p>
+      </article>
+    `;
+  }
+
+  const groups = buildApiGroups(raw);
+  const keys = Object.keys(raw || {});
+
+  return `
+    ${aiHero(
+      "Dados API",
+      "Mapa completo dos campos retornados pela API para esta partida. Use esta tela para escolher quais dados entram em cada aba.",
+      ["Campos recebidos", String(keys.length)],
+      ["Partida", `${escapeHTML(getCurrentHomeName())} x ${escapeHTML(getCurrentAwayName())}`],
+      ["Status", "Auditoria"]
+    )}
+
+    <section class="api-toolbar">
+      <input
+        id="apiSearch"
+        type="search"
+        placeholder="Filtrar campos da API. Exemplo: corner, card, goal, odds, shots..."
+        oninput="filterApiRows(this.value)"
+      />
+      <small>
+        Dica: pesquise por <strong>goal</strong>, <strong>corner</strong>, <strong>card</strong>, <strong>shot</strong>,
+        <strong>odds</strong>, <strong>xg</strong>, <strong>team</strong>, <strong>image</strong>.
+      </small>
+      <div>
+        <span class="api-badge">Total: ${keys.length}</span>
+        <span class="api-badge">Gols: ${groups.gols.length}</span>
+        <span class="api-badge">Odds: ${groups.odds.length}</span>
+        <span class="api-badge">Escanteios: ${groups.escanteios.length}</span>
+        <span class="api-badge">Cartões: ${groups.cartoes.length}</span>
+        <span class="api-badge">Chutes: ${groups.chutes.length}</span>
+      </div>
+    </section>
+
+    <section class="api-grid">
+      ${renderApiGroup("⚽ Gols / Placar / BTTS / Over", groups.gols)}
+      ${renderApiGroup("💰 Odds / Mercado", groups.odds)}
+      ${renderApiGroup("🚩 Escanteios", groups.escanteios)}
+      ${renderApiGroup("🟨 Cartões / Faltas", groups.cartoes)}
+      ${renderApiGroup("🎯 Chutes / Ataque", groups.chutes)}
+      ${renderApiGroup("🏟️ Times / Liga / Imagens", groups.times)}
+      ${renderApiGroup("⏱️ Status / Data / Tempo", groups.status)}
+      ${renderApiGroup("📦 Outros campos", groups.outros)}
+
+      <article class="api-card">
+        <h3>🧾 JSON bruto completo</h3>
+        <pre class="raw-json">${escapeHTML(JSON.stringify(raw, null, 2))}</pre>
+      </article>
+    </section>
+  `;
+}
+
+function buildApiGroups(raw) {
+  const entries = Object.keys(raw || {}).map(function(key) {
+    return {
+      key,
+      value: raw[key]
+    };
+  });
+
+  const groups = {
+    gols: [],
+    odds: [],
+    escanteios: [],
+    cartoes: [],
+    chutes: [],
+    times: [],
+    status: [],
+    outros: []
+  };
+
+  entries.forEach(function(entry) {
+    const key = entry.key.toLowerCase();
+
+    if (
+      key.includes("goal") ||
+      key.includes("gols") ||
+      key.includes("btts") ||
+      key.includes("over") ||
+      key.includes("under") ||
+      key.includes("xg") ||
+      key.includes("score")
+    ) {
+      groups.gols.push(entry);
+      return;
+    }
+
+    if (
+      key.includes("odd") ||
+      key.includes("market") ||
+      key.includes("probability") ||
+      key.includes("potential") ||
+      key.includes("prediction")
+    ) {
+      groups.odds.push(entry);
+      return;
+    }
+
+    if (
+      key.includes("corner") ||
+      key.includes("corners")
+    ) {
+      groups.escanteios.push(entry);
+      return;
+    }
+
+    if (
+      key.includes("card") ||
+      key.includes("cards") ||
+      key.includes("yellow") ||
+      key.includes("red") ||
+      key.includes("foul") ||
+      key.includes("booking")
+    ) {
+      groups.cartoes.push(entry);
+      return;
+    }
+
+    if (
+      key.includes("shot") ||
+      key.includes("shots") ||
+      key.includes("attack") ||
+      key.includes("dangerous") ||
+      key.includes("possession") ||
+      key.includes("offside")
+    ) {
+      groups.chutes.push(entry);
+      return;
+    }
+
+    if (
+      key.includes("team") ||
+      key.includes("home") ||
+      key.includes("away") ||
+      key.includes("league") ||
+      key.includes("season") ||
+      key.includes("competition") ||
+      key.includes("country") ||
+      key.includes("image") ||
+      key.includes("logo") ||
+      key.includes("badge")
+    ) {
+      groups.times.push(entry);
+      return;
+    }
+
+    if (
+      key.includes("date") ||
+      key.includes("time") ||
+      key.includes("status") ||
+      key.includes("minute") ||
+      key.includes("unix") ||
+      key.includes("timestamp")
+    ) {
+      groups.status.push(entry);
+      return;
+    }
+
+    groups.outros.push(entry);
+  });
+
+  return groups;
+}
+
+function renderApiGroup(title, entries) {
+  if (!entries.length) {
+    return `
+      <article class="api-card">
+        <h3>${escapeHTML(title)}</h3>
+        <div class="api-empty">Nenhum campo encontrado nesta categoria.</div>
+      </article>
+    `;
+  }
+
+  return `
+    <article class="api-card">
+      <h3>${escapeHTML(title)} · ${entries.length}</h3>
+
+      <table class="api-table">
+        <tbody>
+          ${entries.map(function(entry) {
+            return `
+              <tr class="api-row" data-key="${escapeHTML(entry.key.toLowerCase())}" data-value="${escapeHTML(formatApiValue(entry.value).toLowerCase())}">
+                <th>${escapeHTML(entry.key)}</th>
+                <td>${escapeHTML(formatApiValue(entry.value))}</td>
+              </tr>
+            `;
+          }).join("")}
+        </tbody>
+      </table>
+    </article>
+  `;
+}
+
+function formatApiValue(value) {
+  if (value === null) return "null";
+  if (value === undefined) return "undefined";
+  if (typeof value === "object") return JSON.stringify(value);
+  return String(value);
+}
+
+function filterApiRows(query) {
+  const value = String(query || "").toLowerCase().trim();
+  const rows = document.querySelectorAll(".api-row");
+
+  rows.forEach(function(row) {
+    const text = `${row.dataset.key || ""} ${row.dataset.value || ""}`;
+    row.style.display = !value || text.includes(value) ? "" : "none";
+  });
+}
+
 function renderCompletas() {
   const home = getCurrentHomeName();
   const away = getCurrentAwayName();
@@ -766,7 +947,7 @@ function renderCompletas() {
           <div class="ai-icon">🎯</div>
           <div>
             <span>Mercado com mais valor</span>
-            <strong>Over 1.5 Gols · em análise</strong>
+            <strong>Em mapeamento</strong>
           </div>
         </article>
 
@@ -774,23 +955,23 @@ function renderCompletas() {
           <div class="ai-icon">📈</div>
           <div>
             <span>Tendência do jogo</span>
-            <strong>Pré-análise disponível</strong>
+            <strong>Usar aba Dados API</strong>
           </div>
         </article>
 
         <article class="ai-card">
           <div class="ai-icon">⚠️</div>
           <div>
-            <span>Atenção</span>
-            <strong>Dados completos entram na próxima etapa</strong>
+            <span>Status</span>
+            <strong>Conectando campos reais</strong>
           </div>
         </article>
 
         <article class="ai-card">
           <div class="ai-icon">🛡️</div>
           <div>
-            <span>Status</span>
-            <strong>Partida via API</strong>
+            <span>Partida</span>
+            <strong>${escapeHTML(home)} x ${escapeHTML(away)}</strong>
           </div>
         </article>
       </div>
@@ -820,17 +1001,16 @@ function renderCompletas() {
       </article>
 
       <article class="card">
-        <h2>📈 Forma recente</h2>
+        <h2>📈 Próximo passo</h2>
         <p class="small-note">
-          A página inicial já separa a forma do mandante e visitante.
-          Os próximos dados completos entram nos endpoints específicos da partida.
+          Usaremos a aba Dados API para mapear todos os campos reais antes de preencher esta aba.
         </p>
       </article>
 
       <article class="card">
         <h2>🤝 Head to Head</h2>
         <p class="small-note">
-          O histórico entre as equipes será carregado pela API na próxima etapa.
+          O histórico entre as equipes será carregado depois do mapeamento completo.
         </p>
       </article>
     </section>
@@ -892,7 +1072,7 @@ function basicTab(title, description) {
       title,
       description,
       ["Partida", `${escapeHTML(getCurrentHomeName())} x ${escapeHTML(getCurrentAwayName())}`],
-      ["Status", "Aguardando estatísticas"],
+      ["Status", "Aguardando mapeamento"],
       ["Fonte", "API"]
     )}
 
@@ -900,14 +1080,14 @@ function basicTab(title, description) {
       <article class="card">
         <h2>${escapeHTML(title)}</h2>
         <p class="small-note">
-          Esta aba será preenchida com os dados completos da partida na próxima etapa.
+          Esta aba será preenchida depois que conferirmos os campos disponíveis em Dados API.
         </p>
       </article>
 
       <article class="card">
         <h2>📌 Próximo passo</h2>
         <p class="small-note">
-          Conectar os campos específicos da API para esta categoria.
+          Abrir a aba Dados API, pesquisar os campos e mapear para esta categoria.
         </p>
       </article>
     </section>
