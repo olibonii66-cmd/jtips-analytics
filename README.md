@@ -27,4 +27,4 @@ Para usar a logo oficial:
 2. No `index.html`, troque:
 
 ```html
-<img src="assets/logo-jtips.svg" alt="JTIPS">
+<img src="assets/logo-jtips.jpg" alt="JTIPS">
