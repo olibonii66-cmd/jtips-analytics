@@ -1,9 +1,0 @@
-{
-  "name": "jtips-analytics-endpoint-22",
-  "version": "12.16.0",
-  "private": true,
-  "scripts": {
-    "dev": "vercel dev",
-    "start": "vercel dev"
-  }
-}
