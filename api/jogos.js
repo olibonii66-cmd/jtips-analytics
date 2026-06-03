@@ -22,10 +22,7 @@ export default async function handler(req, res) {
     }
 
     const matchesUrl = `https://api.football-data-api.com/todays-matches?${matchParams.toString()}`;
-
-    const leaguesUrl = `https://api.football-data-api.com/league-list?key=${encodeURIComponent(
-      apiKey
-    )}&chosen_leagues_only=true`;
+    const leaguesUrl = `https://api.football-data-api.com/league-list?key=${encodeURIComponent(apiKey)}&chosen_leagues_only=true`;
 
     const [matchesResponse, leaguesResponse] = await Promise.all([
       fetch(matchesUrl),
@@ -53,15 +50,17 @@ export default async function handler(req, res) {
     const rawMatches = extractMatches(matchesData);
 
     const enrichedMatches = rawMatches.map(function(match) {
-      const seasonId =
+      const seasonId = String(
         match.competition_id ||
         match.league_id ||
         match.season_id ||
         match.competitionID ||
         match.leagueID ||
-        match.seasonID;
+        match.seasonID ||
+        ""
+      );
 
-      const leagueInfo = leagueMap[String(seasonId)] || null;
+      const leagueInfo = leagueMap[seasonId] || null;
 
       return {
         ...match,
@@ -106,42 +105,14 @@ function extractMatches(raw) {
 }
 
 function buildLeagueMap(raw) {
-  const list = extractLeagueList(raw);
   const map = {};
+  const rootList = extractLeagueList(raw);
 
-  list.forEach(function(league) {
-    const country = league.country || league.country_name || "";
-    const leagueName =
-      league.league_name ||
-      league.name ||
-      league.competition_name ||
-      "Liga";
-
-    const seasons = Array.isArray(league.season)
-      ? league.season
-      : Array.isArray(league.seasons)
-        ? league.seasons
-        : [];
-
-    seasons.forEach(function(season) {
-      const seasonId =
-        season.id ||
-        season.season_id ||
-        season.competition_id ||
-        season.league_id;
-
-      if (!seasonId) return;
-
-      const seasonYear = season.year || season.season || "";
-
-      map[String(seasonId)] = {
-        id: String(seasonId),
-        name: country ? `${country} › ${leagueName}` : leagueName,
-        league_name: leagueName,
-        country,
-        year: seasonYear
-      };
-    });
+  rootList.forEach(function(item) {
+    walkLeagueNode(item, {
+      country: item.country || item.country_name || "",
+      leagueName: item.league_name || item.name || item.competition_name || ""
+    }, map);
   });
 
   return map;
@@ -159,4 +130,59 @@ function extractLeagueList(raw) {
   }
 
   return [];
+}
+
+function walkLeagueNode(node, context, map) {
+  if (!node || typeof node !== "object") return;
+
+  const country =
+    node.country ||
+    node.country_name ||
+    context.country ||
+    "";
+
+  const leagueName =
+    node.league_name ||
+    node.name ||
+    node.competition_name ||
+    context.leagueName ||
+    "";
+
+  const seasonArrays = [
+    node.season,
+    node.seasons,
+    node.season_details,
+    node.seasonDetail
+  ].filter(Array.isArray);
+
+  seasonArrays.forEach(function(seasons) {
+    seasons.forEach(function(season) {
+      const seasonId =
+        season.id ||
+        season.season_id ||
+        season.competition_id ||
+        season.league_id;
+
+      if (!seasonId) return;
+
+      map[String(seasonId)] = {
+        id: String(seasonId),
+        country,
+        league_name: leagueName,
+        name: country && leagueName ? `${country} › ${leagueName}` : leagueName || `Liga ${seasonId}`
+      };
+    });
+  });
+
+  Object.keys(node).forEach(function(key) {
+    const value = node[key];
+
+    if (Array.isArray(value)) {
+      value.forEach(function(child) {
+        if (child && typeof child === "object") {
+          walkLeagueNode(child, { country, leagueName }, map);
+        }
+      });
+    }
+  });
 }
