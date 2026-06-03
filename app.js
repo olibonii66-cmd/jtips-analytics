@@ -1459,3 +1459,16 @@ function escapeHTML(value) {
 
 initDateNavigation();
 loadMatchesByDate(selectedDate);
+function formatOdd(value) {
+  const number = Number(value);
+
+  if (!Number.isNaN(number) && Number.isFinite(number) && number > 0) {
+    return number.toFixed(2);
+  }
+
+  if (value === null || value === undefined || value === "" || value === -1 || value === "-1") {
+    return "-";
+  }
+
+  return String(value);
+}
