@@ -228,6 +228,8 @@ function normalizeMatch(match) {
     away: awayName,
     homeShort: makeShort(homeName),
     awayShort: makeShort(awayName),
+    homeLogo: getTeamLogo(match, "home"),
+    awayLogo: getTeamLogo(match, "away"),
     score: status === "done" ? `${homeGoals ?? 0} - ${awayGoals ?? 0}` : "vs",
     odds: [
       formatOdd(match.odds_ft_1 || match.odds_1 || match.home_odds),
@@ -251,11 +253,44 @@ function normalizeMatch(match) {
   };
 }
 
+function getTeamLogo(match, side) {
+  if (side === "home") {
+    return (
+      match.home_image ||
+      match.home_logo ||
+      match.homeBadge ||
+      match.home_badge ||
+      match.team_a_image ||
+      match.team_a_logo ||
+      match.team_a_badge ||
+      match.home_url ||
+      ""
+    );
+  }
+
+  return (
+    match.away_image ||
+    match.away_logo ||
+    match.awayBadge ||
+    match.away_badge ||
+    match.team_b_image ||
+    match.team_b_logo ||
+    match.team_b_badge ||
+    match.away_url ||
+    ""
+  );
+}
+
 function getLeagueName(match) {
+  if (match.resolved_league_name) {
+    return match.resolved_league_name;
+  }
+
   const country =
     match.country ||
     match.country_name ||
     match.league_country ||
+    match.resolved_league_country ||
     "";
 
   const league =
@@ -263,32 +298,68 @@ function getLeagueName(match) {
     match.competition_name ||
     match.season_name ||
     match.league ||
-    `Liga ${match.competition_id || match.league_id || match.season_id || ""}`.trim();
+    match.name ||
+    "";
 
-  if (country) {
+  if (league && country) {
     return `${country} › ${league}`;
   }
 
-  return league || "Liga não identificada";
+  if (league) {
+    return league;
+  }
+
+  const leagueId =
+    match.competition_id ||
+    match.league_id ||
+    match.season_id ||
+    match.resolved_league_id ||
+    "";
+
+  return leagueId ? `Liga ${leagueId}` : "Liga não identificada";
 }
 
 function normalizeStatus(status, gameStatus, match) {
-  const value = String(status || gameStatus || "").toLowerCase();
+  const value = String(status || gameStatus || "").toLowerCase().trim();
 
   if (
-    value.includes("complete") ||
-    value.includes("finished") ||
-    value.includes("final") ||
-    value === "ft"
+    value === "incomplete" ||
+    value === "pending" ||
+    value === "not_started" ||
+    value === "not started" ||
+    value === "scheduled" ||
+    value === "pre-match" ||
+    value === "pre match" ||
+    value === ""
+  ) {
+    return "pre";
+  }
+
+  if (
+    value === "complete" ||
+    value === "completed" ||
+    value === "finished" ||
+    value === "final" ||
+    value === "ft" ||
+    value === "full-time" ||
+    value === "full time"
   ) {
     return "done";
   }
 
-  const homeGoals = getNumber(match.homeGoalCount, match.home_goals, match.homeGoals);
-  const awayGoals = getNumber(match.awayGoalCount, match.away_goals, match.awayGoals);
+  const unix =
+    match.date_unix ||
+    match.match_time ||
+    match.timestamp ||
+    match.kickoff_unix;
 
-  if (homeGoals !== null && awayGoals !== null && value.includes("complete")) {
-    return "done";
+  if (unix && Number.isFinite(Number(unix))) {
+    const matchTime = Number(unix) * 1000;
+    const now = Date.now();
+
+    if (matchTime > now) {
+      return "pre";
+    }
   }
 
   return "pre";
@@ -406,6 +477,40 @@ function getFormLabel(item) {
   return "D";
 }
 
+function renderTeamIcon(match, side) {
+  const logo = side === "home" ? match.homeLogo : match.awayLogo;
+  const short = side === "home" ? match.homeShort : match.awayShort;
+
+  if (logo) {
+    return `
+      <img
+        src="${escapeHTML(logo)}"
+        alt="${escapeHTML(short)}"
+        style="width:34px;height:34px;border-radius:10px;object-fit:contain;background:#e8f3ec;border:1px solid #cfe2d5;padding:4px;flex-shrink:0;"
+      >
+    `;
+  }
+
+  return `<span class="team-badge">${escapeHTML(short)}</span>`;
+}
+
+function renderBigTeamIcon(match, side) {
+  const logo = side === "home" ? match.homeLogo : match.awayLogo;
+  const short = side === "home" ? match.homeShort : match.awayShort;
+
+  if (logo) {
+    return `
+      <img
+        src="${escapeHTML(logo)}"
+        alt="${escapeHTML(short)}"
+        style="width:74px;height:74px;border-radius:20px;object-fit:contain;background:#e8f3ec;border:1px solid #cfe2d5;padding:8px;margin:0 auto 8px;display:block;"
+      >
+    `;
+  }
+
+  return `<div class="big-badge">${escapeHTML(short)}</div>`;
+}
+
 function renderMatches() {
   const container = document.getElementById("matchesContainer");
 
@@ -437,14 +542,14 @@ function renderMatches() {
               </div>
 
               <div class="team">
-                <span class="team-badge">${escapeHTML(match.homeShort)}</span>
+                ${renderTeamIcon(match, "home")}
                 <span class="team-name">${escapeHTML(match.home)}</span>
               </div>
 
               <div class="score">${escapeHTML(match.score)}</div>
 
               <div class="team">
-                <span class="team-badge">${escapeHTML(match.awayShort)}</span>
+                ${renderTeamIcon(match, "away")}
                 <span class="team-name">${escapeHTML(match.away)}</span>
               </div>
 
@@ -521,14 +626,14 @@ function updateMatchHeader(match) {
 
     <div class="versus">
       <div>
-        <div class="big-badge">${escapeHTML(match.homeShort)}</div>
+        ${renderBigTeamIcon(match, "home")}
         <strong>${escapeHTML(match.home)}</strong>
       </div>
 
       <div class="vs">${escapeHTML(match.score)}</div>
 
       <div>
-        <div class="big-badge">${escapeHTML(match.awayShort)}</div>
+        ${renderBigTeamIcon(match, "away")}
         <strong>${escapeHTML(match.away)}</strong>
       </div>
     </div>
@@ -692,7 +797,7 @@ function renderCompletas() {
           <div class="ai-icon">🎯</div>
           <div>
             <span>Mercado com mais valor</span>
-            <strong>Over 1.5 Gols · 55%</strong>
+            <strong>Over 1.5 Gols · em análise</strong>
           </div>
         </article>
 
