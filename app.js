@@ -1,25 +1,6 @@
-let leagues = [
-  {
-    name: "🇦🇷 Argentina › Liga Profissional",
-    matches: [
-      {
-        id: "demo-1",
-        time: "18:00",
-        status: "pre",
-        home: "San Lorenzo",
-        away: "Deportivo Riestra",
-        homeShort: "SLO",
-        awayShort: "RIE",
-        score: "vs",
-        odds: ["2.07", "2.99", "4.03"],
-        over25: "30%",
-        btts: "35%",
-        form: ["w", "d", "l", "d", "l"],
-        raw: null
-      }
-    ]
-  }
-];
+let leagues = [];
+let selectedMatch = null;
+let selectedDate = getTodayISO();
 
 const tabButtons = document.querySelectorAll(".tab");
 const tabContent = document.getElementById("tabContent");
@@ -35,57 +16,141 @@ tabButtons.forEach(function(button) {
   });
 });
 
-async function loadRealMatches() {
+function initDateNavigation() {
+  const dateNav = document.querySelector(".date-nav");
+
+  if (!dateNav) return;
+
+  const dates = buildDateOptions(selectedDate);
+
+  dateNav.innerHTML = `
+    <button type="button" onclick="changeSelectedDate(-1)">‹</button>
+
+    ${dates.map(function(item) {
+      return `
+        <button
+          type="button"
+          class="${item.date === selectedDate ? "active" : ""}"
+          onclick="selectDate('${item.date}')"
+        >
+          ${item.label}
+        </button>
+      `;
+    }).join("")}
+
+    <button type="button" onclick="changeSelectedDate(1)">›</button>
+  `;
+}
+
+function buildDateOptions(centerDate) {
+  const base = parseISODate(centerDate);
+  const offsets = [-2, -1, 0, 1, 2, 3, 4];
+
+  return offsets.map(function(offset) {
+    const date = new Date(base);
+    date.setDate(date.getDate() + offset);
+
+    const iso = toISODate(date);
+    const today = getTodayISO();
+
+    let label = formatShortDate(date);
+
+    if (iso === today) {
+      label = "Hoje";
+    }
+
+    if (offset === -1 && centerDate === today) {
+      label = "Ontem";
+    }
+
+    if (offset === 1 && centerDate === today) {
+      label = "Amanhã";
+    }
+
+    return {
+      date: iso,
+      label
+    };
+  });
+}
+
+function selectDate(date) {
+  selectedDate = date;
+  initDateNavigation();
+  loadMatchesByDate(selectedDate);
+}
+
+function changeSelectedDate(days) {
+  const date = parseISODate(selectedDate);
+  date.setDate(date.getDate() + days);
+
+  selectedDate = toISODate(date);
+  initDateNavigation();
+  loadMatchesByDate(selectedDate);
+}
+
+async function loadMatchesByDate(date) {
   const container = document.getElementById("matchesContainer");
+
+  leagues = [];
+  selectedMatch = null;
 
   container.innerHTML = `
     <article class="card">
-      <h2>Carregando jogos reais...</h2>
-      <p class="small-note">Buscando partidas na API da FootyStats.</p>
+      <h2>Carregando jogos...</h2>
+      <p class="small-note">
+        Buscando partidas de ${formatFullDate(parseISODate(date))}.
+      </p>
     </article>
   `;
 
   try {
-    const response = await fetch("/api/jogos");
+    const response = await fetch(`/api/jogos?date=${encodeURIComponent(date)}&timezone=America/Sao_Paulo`);
     const payload = await response.json();
 
     if (!response.ok || !payload.ok) {
-      throw new Error(payload.error || "Erro ao carregar jogos reais.");
+      throw new Error(payload.error || "Erro ao carregar jogos da API.");
     }
 
     const matches = extractMatchesFromApi(payload.raw || payload.data || payload);
 
     if (!matches.length) {
-      renderMatches();
-
-      container.insertAdjacentHTML("afterbegin", `
-        <article class="card" style="margin-bottom: 14px;">
-          <h2>⚠️ Nenhum jogo real retornado hoje</h2>
-          <p class="small-note">
-            A API respondeu corretamente, mas retornou lista vazia.
-            Por enquanto estamos mostrando jogos de demonstração.
-          </p>
-        </article>
-      `);
-
+      showEmptyMatches(date);
       return;
     }
 
     leagues = groupMatchesByLeague(matches);
     renderMatches();
   } catch (error) {
-    renderMatches();
+    leagues = [];
 
-    container.insertAdjacentHTML("afterbegin", `
-      <article class="card" style="margin-bottom: 14px;">
-        <h2>⚠️ Não foi possível carregar os jogos reais</h2>
+    container.innerHTML = `
+      <article class="card">
+        <h2>⚠️ Não foi possível carregar os jogos</h2>
         <p class="small-note">
           ${escapeHTML(error.message)}
-          Mostrando jogos de demonstração por enquanto.
         </p>
       </article>
-    `);
+    `;
   }
+}
+
+function showEmptyMatches(date) {
+  const container = document.getElementById("matchesContainer");
+
+  container.innerHTML = `
+    <article class="card">
+      <h2>📭 Nenhum jogo encontrado</h2>
+      <p class="small-note">
+        Não encontramos partidas disponíveis para
+        <strong>${formatFullDate(parseISODate(date))}</strong>
+        nas ligas liberadas pela sua API.
+      </p>
+      <p class="small-note">
+        Use os botões de data acima para procurar jogos em outro dia.
+      </p>
+    </article>
+  `;
 }
 
 function extractMatchesFromApi(raw) {
@@ -153,10 +218,10 @@ function normalizeMatch(match) {
     match.awayGoals
   );
 
-  const status = normalizeStatus(match.status, match.game_status);
+  const status = normalizeStatus(match.status, match.game_status, match);
 
   return {
-    id: String(match.id || match.match_id || `${homeName}-${awayName}`),
+    id: String(match.id || match.match_id || `${homeName}-${awayName}-${match.date_unix || ""}`),
     time: getMatchTime(match),
     status,
     home: homeName,
@@ -204,10 +269,10 @@ function getLeagueName(match) {
     return `${country} › ${league}`;
   }
 
-  return league;
+  return league || "Liga não identificada";
 }
 
-function normalizeStatus(status, gameStatus) {
+function normalizeStatus(status, gameStatus, match) {
   const value = String(status || gameStatus || "").toLowerCase();
 
   if (
@@ -216,6 +281,13 @@ function normalizeStatus(status, gameStatus) {
     value.includes("final") ||
     value === "ft"
   ) {
+    return "done";
+  }
+
+  const homeGoals = getNumber(match.homeGoalCount, match.home_goals, match.homeGoals);
+  const awayGoals = getNumber(match.awayGoalCount, match.away_goals, match.awayGoals);
+
+  if (homeGoals !== null && awayGoals !== null && value.includes("complete")) {
     return "done";
   }
 
@@ -337,6 +409,11 @@ function getFormLabel(item) {
 function renderMatches() {
   const container = document.getElementById("matchesContainer");
 
+  if (!leagues.length) {
+    showEmptyMatches(selectedDate);
+    return;
+  }
+
   container.innerHTML = leagues.map(function(league) {
     return `
       <article class="league-card">
@@ -386,7 +463,7 @@ function renderMatches() {
               <div class="percent">${escapeHTML(match.over25)}</div>
               <div class="percent">${escapeHTML(match.btts)}</div>
 
-              <button class="stats-btn" type="button" onclick="showStats('${escapeHTML(match.id)}')">
+              <button class="stats-btn" type="button" onclick="showStats('${encodeURIComponent(match.id)}')">
                 Estatísticas
               </button>
             </div>
@@ -397,11 +474,13 @@ function renderMatches() {
   }).join("");
 }
 
-function showStats(matchId) {
-  const selectedMatch = findMatchById(matchId);
+function showStats(encodedMatchId) {
+  const matchId = decodeURIComponent(encodedMatchId);
+  const foundMatch = findMatchById(matchId);
 
-  if (selectedMatch) {
-    updateMatchHeader(selectedMatch);
+  if (foundMatch) {
+    selectedMatch = foundMatch;
+    updateMatchHeader(foundMatch);
   }
 
   document.getElementById("homePage").classList.add("hidden");
@@ -436,7 +515,7 @@ function updateMatchHeader(match) {
   header.innerHTML = `
     <div class="match-meta">
       <strong>Partida selecionada</strong><br>
-      ${escapeHTML(match.time)} · ${match.status === "done" ? "Finalizado" : "Pré-jogo"}<br>
+      ${escapeHTML(formatFullDate(parseISODate(selectedDate)))} · ${escapeHTML(match.time)}<br>
       Dados via API
     </div>
 
@@ -480,6 +559,22 @@ function renderTab(tab) {
   };
 
   tabContent.innerHTML = views[tab]();
+}
+
+function getCurrentHomeName() {
+  return selectedMatch ? selectedMatch.home : "Time A";
+}
+
+function getCurrentAwayName() {
+  return selectedMatch ? selectedMatch.away : "Time B";
+}
+
+function getCurrentHomeShort() {
+  return selectedMatch ? selectedMatch.homeShort : "A";
+}
+
+function getCurrentAwayShort() {
+  return selectedMatch ? selectedMatch.awayShort : "B";
 }
 
 function aiHero(title, description, chip1, chip2, chip3) {
@@ -539,8 +634,8 @@ function marketTable(rows) {
       <thead>
         <tr>
           <th>Mercado</th>
-          <th>San Lorenzo</th>
-          <th>Riestra</th>
+          <th>${escapeHTML(getCurrentHomeShort())}</th>
+          <th>${escapeHTML(getCurrentAwayShort())}</th>
           <th>Média</th>
         </tr>
       </thead>
@@ -555,8 +650,8 @@ function simpleMarketTable(rows) {
       <thead>
         <tr>
           <th>Indicador</th>
-          <th>San Lorenzo</th>
-          <th>Riestra</th>
+          <th>${escapeHTML(getCurrentHomeShort())}</th>
+          <th>${escapeHTML(getCurrentAwayShort())}</th>
         </tr>
       </thead>
       <tbody>${simpleHeatRows(rows)}</tbody>
@@ -567,22 +662,27 @@ function simpleMarketTable(rows) {
 function teamProgress(short, name, value, width, red) {
   return `
     <div class="team-row">
-      <div class="small-badge">${short}</div>
+      <div class="small-badge">${escapeHTML(short)}</div>
 
       <div>
-        <strong>${name}</strong>
+        <strong>${escapeHTML(name)}</strong>
         <div class="progress ${red ? "red" : ""}">
           <span style="width:${width}%;"></span>
         </div>
-        <p class="small-note">${value}</p>
+        <p class="small-note">${escapeHTML(value)}</p>
       </div>
 
-      <b class="${red ? "red" : ""}">${value.includes("%") ? value : width + "%"}</b>
+      <b class="${red ? "red" : ""}">${value.includes("%") ? escapeHTML(value) : width + "%"}</b>
     </div>
   `;
 }
 
 function renderCompletas() {
+  const home = getCurrentHomeName();
+  const away = getCurrentAwayName();
+  const homeShort = getCurrentHomeShort();
+  const awayShort = getCurrentAwayShort();
+
   return `
     <section class="ai-strip">
       <h2 class="section-title">✦ Insights da IA</h2>
@@ -600,7 +700,7 @@ function renderCompletas() {
           <div class="ai-icon">📈</div>
           <div>
             <span>Tendência do jogo</span>
-            <strong>Jogo aberto com chances para ambos</strong>
+            <strong>Pré-análise disponível</strong>
           </div>
         </article>
 
@@ -608,15 +708,15 @@ function renderCompletas() {
           <div class="ai-icon">⚠️</div>
           <div>
             <span>Atenção</span>
-            <strong>Riestra concede muitos chutes</strong>
+            <strong>Dados completos entram na próxima etapa</strong>
           </div>
         </article>
 
         <article class="ai-card">
           <div class="ai-icon">🛡️</div>
           <div>
-            <span>Confiança da IA</span>
-            <strong>Alta · 73%</strong>
+            <span>Status</span>
+            <strong>Partida via API</strong>
           </div>
         </article>
       </div>
@@ -636,14 +736,11 @@ function renderCompletas() {
           </thead>
 
           <tbody>
-            <tr><td>San Lorenzo Vence</td><td>2.07</td><td>20%</td></tr>
-            <tr><td>Deportivo Riestra Vence</td><td>4.03</td><td>20%</td></tr>
-            <tr><td>Empate</td><td>2.99</td><td>45%</td></tr>
-            <tr><td>Over 0.5</td><td>1.08</td><td>75%</td></tr>
-            <tr><td>Over 1.5</td><td>1.56</td><td>55%</td></tr>
-            <tr><td>Over 2.5</td><td>2.70</td><td>30%</td></tr>
-            <tr><td>Over 3.5</td><td>4.35</td><td>15%</td></tr>
-            <tr><td>BTTS</td><td>2.20</td><td>35%</td></tr>
+            <tr><td>${escapeHTML(home)} vence</td><td>${selectedMatch ? selectedMatch.odds[0] : "-"}</td><td>-</td></tr>
+            <tr><td>Empate</td><td>${selectedMatch ? selectedMatch.odds[1] : "-"}</td><td>-</td></tr>
+            <tr><td>${escapeHTML(away)} vence</td><td>${selectedMatch ? selectedMatch.odds[2] : "-"}</td><td>-</td></tr>
+            <tr><td>Over 2.5</td><td>-</td><td>${selectedMatch ? selectedMatch.over25 : "-"}</td></tr>
+            <tr><td>BTTS</td><td>-</td><td>${selectedMatch ? selectedMatch.btts : "-"}</td></tr>
           </tbody>
         </table>
       </article>
@@ -653,105 +750,40 @@ function renderCompletas() {
 
         <div class="form-top">
           <div>
-            <div class="big-badge">SLO</div>
-            <strong>San Lorenzo</strong><br>
-            <span class="rating">1.20</span>
-            <div class="form">
-              <span class="w">V</span>
-              <span class="d">E</span>
-              <span class="l">D</span>
-              <span class="d">E</span>
-              <span class="l">D</span>
-            </div>
+            <div class="big-badge">${escapeHTML(homeShort)}</div>
+            <strong>${escapeHTML(home)}</strong><br>
+            <span class="rating">-</span>
           </div>
 
           <div>
-            <div class="power-bar">
+            <div class="power-bar equal">
               <span></span>
               <span></span>
             </div>
 
             <p class="summary-text">
-              <strong>San Lorenzo é +33% melhor</strong><br>
-              em termos de Pontos por Jogo.
+              Dados reais de forma serão conectados na etapa de estatísticas completas.
             </p>
           </div>
 
           <div>
-            <div class="big-badge">RIE</div>
-            <strong>Deportivo Riestra</strong><br>
-            <span class="rating red">0.90</span>
-
-            <div class="form">
-              <span class="d">E</span>
-              <span class="l">D</span>
-              <span class="l">D</span>
-              <span class="d">E</span>
-              <span class="w">V</span>
-            </div>
+            <div class="big-badge">${escapeHTML(awayShort)}</div>
+            <strong>${escapeHTML(away)}</strong><br>
+            <span class="rating">-</span>
           </div>
         </div>
       </article>
 
       <article class="card">
         <h2>🤝 Head to Head</h2>
-
-        <p style="text-align:center; color: var(--muted);">
-          <strong style="color: var(--text); font-size: 1.4rem;">4</strong><br>
-          partidas disputadas
+        <p class="small-note">
+          O histórico entre as equipes será carregado pela API na próxima etapa.
         </p>
-
-        <div class="h2h-bar">
-          <span>25%</span>
-          <span>50%</span>
-          <span>25%</span>
-        </div>
-
         <div class="tile-grid">
-          <div class="tile">
-            <strong>25%</strong>
-            <span>Over 1.5</span>
-            <small>1 de 4</small>
-          </div>
-
-          <div class="tile">
-            <strong>0%</strong>
-            <span>Over 2.5</span>
-            <small>0 de 4</small>
-          </div>
-
-          <div class="tile">
-            <strong>25%</strong>
-            <span>BTTS</span>
-            <small>1 de 4</small>
-          </div>
+          <div class="tile"><strong>-</strong><span>Over 1.5</span><small>pendente</small></div>
+          <div class="tile"><strong>-</strong><span>Over 2.5</span><small>pendente</small></div>
+          <div class="tile"><strong>-</strong><span>BTTS</span><small>pendente</small></div>
         </div>
-      </article>
-    </section>
-
-    <section class="grid-3">
-      <article class="card">
-        <h2>◎ Prediction Stats</h2>
-
-        <div class="stat-cards">
-          <div class="stat-card"><strong>30%</strong><span>Over 2.5</span><small>Liga: 47%</small></div>
-          <div class="stat-card"><strong>55%</strong><span>Over 1.5</span><small>Liga: 77%</small></div>
-          <div class="stat-card"><strong>35%</strong><span>BTTS</span><small>Liga: 33%</small></div>
-          <div class="stat-card"><strong>2.0</strong><span>Gols por jogo</span><small>Liga: 2.51</small></div>
-          <div class="stat-card"><strong>4.8</strong><span>Cartões</span><small>Liga: 4.29</small></div>
-          <div class="stat-card"><strong>9.9</strong><span>Escanteios</span><small>Liga: 7.26</small></div>
-        </div>
-      </article>
-
-      <article class="card">
-        <h2>🏃 Quem marca primeiro?</h2>
-        ${teamProgress("SLO", "San Lorenzo", "40%", "40")}
-        ${teamProgress("RIE", "Deportivo Riestra", "20%", "20", true)}
-      </article>
-
-      <article class="card">
-        <h2>⏱️ Gols por minuto</h2>
-        ${goalsMinuteTable()}
       </article>
     </section>
   `;
@@ -762,51 +794,26 @@ function renderGols() {
     ${aiHero(
       "Análise de Gols",
       "Leitura focada em gols marcados, gols sofridos, Over/Under, BTTS e distribuição por tempo.",
-      ["Mercado sugerido", "Over 1.5 Gols"],
-      ["Confiança da IA", "Moderada · 73%"],
-      ["Atenção", "Over 2.5 ainda fraco"]
+      ["Mercado sugerido", "Aguardando dados"],
+      ["Over 2.5", selectedMatch ? selectedMatch.over25 : "-"],
+      ["BTTS", selectedMatch ? selectedMatch.btts : "-"]
     )}
-
-    <section class="grid-3">
-      <article class="card">
-        <h2>⚽ Gols Marcados</h2>
-        ${teamProgress("SLO", "San Lorenzo", "0.9 gols / jogo", "90")}
-        ${teamProgress("RIE", "Deportivo Riestra", "0.6 gols / jogo", "60", true)}
-        <div class="conclusion">San Lorenzo é <strong>+50% melhor</strong> em gols marcados.</div>
-      </article>
-
-      <article class="card">
-        <h2>🛡️ Gols Sofridos</h2>
-        ${teamProgress("SLO", "San Lorenzo", "0.8 sofridos / jogo", "44")}
-        ${teamProgress("RIE", "Deportivo Riestra", "1.3 sofridos / jogo", "72", true)}
-        <div class="warning">Riestra sofre mais gols fora. Isso reforça leitura para linhas baixas de gols.</div>
-      </article>
-
-      <article class="card">
-        <h2>🧠 Insight da IA</h2>
-        <div class="conclusion">
-          O melhor encaixe da aba Gols é o mercado <strong>Over 1.5</strong>.
-          O modelo não recomenda agressividade em Over 2.5 ou superior.
-        </div>
-      </article>
-    </section>
 
     <section class="grid-2">
       <article class="card">
-        <h2>📊 Over 2.5 & BTTS Predictions</h2>
-
-        ${marketTable([
-          ["Over 0.5", "70%", "heat-high", "80%", "heat-high", "75%", "heat-high"],
-          ["Over 1.5", "50%", "heat-mid", "60%", "heat-high", "55%", "heat-mid"],
-          ["Over 2.5", "30%", "heat-low", "30%", "heat-low", "30%", "heat-low"],
-          ["Over 3.5", "20%", "heat-low", "10%", "heat-low", "15%", "heat-low"],
-          ["BTTS", "40%", "heat-mid", "30%", "heat-low", "35%", "heat-mid"]
-        ])}
+        <h2>⚽ Gols Marcados</h2>
+        ${teamProgress(getCurrentHomeShort(), getCurrentHomeName(), "Aguardando dados", "50")}
+        ${teamProgress(getCurrentAwayShort(), getCurrentAwayName(), "Aguardando dados", "50")}
       </article>
 
       <article class="card">
-        <h2>🕒 Gols por minuto</h2>
-        ${goalsMinuteTable()}
+        <h2>📊 Over 2.5 & BTTS Predictions</h2>
+        ${marketTable([
+          ["Over 0.5", "-", "heat-mid", "-", "heat-mid", "-", "heat-mid"],
+          ["Over 1.5", "-", "heat-mid", "-", "heat-mid", "-", "heat-mid"],
+          ["Over 2.5", selectedMatch ? selectedMatch.over25 : "-", "heat-mid", "-", "heat-mid", selectedMatch ? selectedMatch.over25 : "-", "heat-mid"],
+          ["BTTS", selectedMatch ? selectedMatch.btts : "-", "heat-mid", "-", "heat-mid", selectedMatch ? selectedMatch.btts : "-", "heat-mid"]
+        ])}
       </article>
     </section>
   `;
@@ -817,55 +824,30 @@ function renderEscanteios() {
     ${aiHero(
       "Análise de Escanteios",
       "Leitura focada em escanteios totais, escanteios por equipe, linhas Over e comportamento por tempo.",
-      ["Média esperada", "9.9 escanteios / jogo"],
-      ["Mercado sugerido", "Over 7.5 escanteios"],
-      ["Confiança da IA", "Moderada · 71%"]
+      ["Média esperada", "Aguardando dados"],
+      ["Mercado sugerido", "Aguardando dados"],
+      ["Status", "API conectada parcialmente"]
     )}
 
     <section class="grid-2">
       <article class="card">
         <h2>🚩 Número de Escanteios</h2>
-
         <div class="corner-summary">
           <div class="corner-icon">⚑</div>
-
           <div>
-            <strong class="corner-big">9.9</strong>
+            <strong class="corner-big">-</strong>
             <b>Escanteios / Partida</b>
-            <p class="small-note">Média combinada entre San Lorenzo e Deportivo Riestra.</p>
+            <p class="small-note">Dados de escanteios serão conectados na próxima etapa.</p>
           </div>
         </div>
       </article>
 
       <article class="card">
-        <h2>🧠 Insight da IA</h2>
-        <div class="conclusion">
-          O jogo tem boa base para escanteios em linhas baixas e médias.
-          A melhor leitura está entre <strong>Over 6.5</strong> e <strong>Over 7.5</strong>.
-        </div>
-      </article>
-    </section>
-
-    <section class="grid-2">
-      <article class="card">
         <h2>📊 Escanteios Totais</h2>
-
         ${marketTable([
-          ["Over 6", "70%", "heat-high", "90%", "heat-high", "80%", "heat-high"],
-          ["Over 7", "60%", "heat-mid", "90%", "heat-high", "75%", "heat-high"],
-          ["Over 8", "30%", "heat-low", "80%", "heat-high", "55%", "heat-mid"],
-          ["Over 9", "30%", "heat-low", "60%", "heat-mid", "45%", "heat-mid"],
-          ["Over 10", "30%", "heat-low", "40%", "heat-low", "35%", "heat-low"]
-        ])}
-      </article>
-
-      <article class="card">
-        <h2>🏳️ Team Corners</h2>
-
-        ${marketTable([
-          ["Corners Earned / Match", "4.40", "heat-mid", "5.50", "heat-high", "4.95", "heat-mid"],
-          ["Corners Against / Match", "3.60", "heat-mid", "4.70", "heat-mid", "4.15", "heat-mid"],
-          ["Over 2.5 Corners For", "80%", "heat-high", "90%", "heat-high", "85%", "heat-high"]
+          ["Over 6", "-", "heat-mid", "-", "heat-mid", "-", "heat-mid"],
+          ["Over 7", "-", "heat-mid", "-", "heat-mid", "-", "heat-mid"],
+          ["Over 8", "-", "heat-mid", "-", "heat-mid", "-", "heat-mid"]
         ])}
       </article>
     </section>
@@ -877,57 +859,33 @@ function renderCartoes() {
     ${aiHero(
       "Análise de Cartões",
       "Leitura focada em cartões totais, cartões por equipe e comportamento por tempo.",
-      ["Média esperada", "4.80 cartões / jogo"],
-      ["Mercado sugerido", "Over 3.5 cartões"],
-      ["Confiança da IA", "Alta · 80%"]
+      ["Média esperada", "Aguardando dados"],
+      ["Mercado sugerido", "Aguardando dados"],
+      ["Status", "API conectada parcialmente"]
     )}
 
     <section class="grid-2">
       <article class="card">
         <h2>🟨🟥 Número de Cartões</h2>
-
         <div class="cards-summary">
           <div class="cards-icon">
             <span class="red-card"></span>
             <span class="yellow-card"></span>
           </div>
-
           <div>
-            <strong class="cards-big">4.80</strong>
+            <strong class="cards-big">-</strong>
             <b>Cartões / Partida</b>
-            <p class="small-note">Média combinada entre as equipes.</p>
+            <p class="small-note">Dados de cartões serão conectados na próxima etapa.</p>
           </div>
         </div>
       </article>
 
       <article class="card">
-        <h2>🧠 Insight da IA</h2>
-        <div class="conclusion">
-          O mercado de cartões tem leitura forte.
-          A melhor base está em <strong>Over 3.5 cartões</strong> e <strong>Over 4.5 cartões</strong>.
-        </div>
-      </article>
-    </section>
-
-    <section class="grid-2">
-      <article class="card">
         <h2>📊 Cartões Totais</h2>
-
         ${marketTable([
-          ["Over 2.5", "100%", "heat-high", "100%", "heat-high", "100%", "heat-high"],
-          ["Over 3.5", "70%", "heat-high", "90%", "heat-high", "80%", "heat-high"],
-          ["Over 4.5", "70%", "heat-high", "70%", "heat-high", "70%", "heat-high"],
-          ["Over 5.5", "40%", "heat-low", "50%", "heat-mid", "45%", "heat-low"]
-        ])}
-      </article>
-
-      <article class="card">
-        <h2>⏱️ 1º Tempo / 2º Tempo</h2>
-
-        ${marketTable([
-          ["1H Cards AVG", "0.8", "heat-high", "0.8", "heat-high", "0.8", "heat-high"],
-          ["2H Cards AVG", "1.4", "heat-high", "1.7", "heat-high", "1.55", "heat-high"],
-          ["2H Had More Cards %", "70%", "heat-high", "70%", "heat-high", "70%", "heat-high"]
+          ["Over 2.5", "-", "heat-mid", "-", "heat-mid", "-", "heat-mid"],
+          ["Over 3.5", "-", "heat-mid", "-", "heat-mid", "-", "heat-mid"],
+          ["Over 4.5", "-", "heat-mid", "-", "heat-mid", "-", "heat-mid"]
         ])}
       </article>
     </section>
@@ -939,56 +897,24 @@ function renderChutes() {
     ${aiHero(
       "Análise de Chutes",
       "Leitura de volume ofensivo, chutes por equipe, chutes no alvo, impedimentos, faltas e posse.",
-      ["Volume médio", "26 chutes / jogo"],
-      ["Mercado sugerido", "Chutes Over 23.5"],
-      ["Confiança da IA", "Boa · 76%"]
+      ["Volume médio", "Aguardando dados"],
+      ["Mercado sugerido", "Aguardando dados"],
+      ["Status", "API conectada parcialmente"]
     )}
-
-    <section class="grid-3">
-      <article class="card">
-        <h2>🎯 Volume por equipe</h2>
-        ${teamProgress("SLO", "San Lorenzo", "15.20 chutes / jogo", "76")}
-        ${teamProgress("RIE", "Deportivo Riestra", "10.80 chutes / jogo", "54")}
-        <div class="conclusion">San Lorenzo apresenta maior volume ofensivo e maior frequência de finalizações.</div>
-      </article>
-
-      <article class="card">
-        <h2>🧠 Insight da IA</h2>
-        <div class="conclusion">
-          A IA identifica vantagem ofensiva do San Lorenzo em chutes totais e chutes no alvo.
-          O mercado de <strong>chutes totais Over 23.5</strong> tem boa leitura.
-        </div>
-      </article>
-
-      <article class="card">
-        <h2>📌 Resumo rápido</h2>
-
-        <div class="stat-cards">
-          <div class="stat-card"><strong>70%</strong><span>Team Shots +10.5</span><small>San Lorenzo</small></div>
-          <div class="stat-card"><strong>90%</strong><span>On Target 3.5+</span><small>San Lorenzo</small></div>
-          <div class="stat-card"><strong>65%</strong><span>Match Shots +23.5</span><small>média geral</small></div>
-        </div>
-      </article>
-    </section>
 
     <section class="grid-2">
       <article class="card">
-        <h2>📊 Chutes por equipe</h2>
-
-        ${marketTable([
-          ["Chutes / Jogo", "15.20", "heat-high", "10.80", "heat-high", "13.00", "heat-high"],
-          ["Chutes no Alvo / Jogo", "5.00", "heat-high", "2.40", "heat-low", "4.00", "heat-mid"],
-          ["Team Shots Over 10.5", "70%", "heat-high", "50%", "heat-mid", "60%", "heat-high"]
-        ])}
+        <h2>🎯 Volume por equipe</h2>
+        ${teamProgress(getCurrentHomeShort(), getCurrentHomeName(), "Aguardando dados", "50")}
+        ${teamProgress(getCurrentAwayShort(), getCurrentAwayName(), "Aguardando dados", "50")}
       </article>
 
       <article class="card">
-        <h2>🚩 Impedimentos e faltas</h2>
-
+        <h2>📊 Chutes por equipe</h2>
         ${marketTable([
-          ["Impedimentos / Jogo", "3.38", "heat-high", "3.20", "heat-high", "3.00", "heat-high"],
-          ["Over 2.5 Impedimentos", "75%", "heat-high", "70%", "heat-high", "73%", "heat-high"],
-          ["Faltas cometidas / jogo", "13.00", "heat-high", "14.70", "heat-high", "14.00", "heat-high"]
+          ["Chutes / Jogo", "-", "heat-mid", "-", "heat-mid", "-", "heat-mid"],
+          ["Chutes no Alvo", "-", "heat-mid", "-", "heat-mid", "-", "heat-mid"],
+          ["Finalizações", "-", "heat-mid", "-", "heat-mid", "-", "heat-mid"]
         ])}
       </article>
     </section>
@@ -1000,51 +926,25 @@ function renderIntervalo() {
     ${aiHero(
       "Análise de Intervalo",
       "Leitura de 1º tempo e 2º tempo com foco em forma HT, cartões por tempo e tendência após o intervalo.",
-      ["Forma HT", "Equilibrada"],
-      ["Melhor tempo", "2º Tempo"],
-      ["Insight da IA", "Mais eventos após o intervalo"]
+      ["Forma HT", "Aguardando dados"],
+      ["Melhor tempo", "Aguardando dados"],
+      ["Status", "API conectada parcialmente"]
     )}
 
     <section class="grid-2">
       <article class="card form-compare">
         <h2>⏱️ First / Second Half WDL</h2>
-
-        <div class="form-top">
-          <div>
-            <div class="big-badge">SLO</div>
-            <strong>San Lorenzo</strong><br>
-            <span class="rating">1.10</span>
-            <p class="summary-text">Half-Time</p>
-          </div>
-
-          <div>
-            <div class="power-bar equal">
-              <span></span>
-              <span></span>
-            </div>
-
-            <p class="summary-text">
-              <strong>Ambas as equipes estão iguais</strong><br>
-              em termos de forma no intervalo.
-            </p>
-          </div>
-
-          <div>
-            <div class="big-badge">RIE</div>
-            <strong>Deportivo Riestra</strong><br>
-            <span class="rating">1.10</span>
-            <p class="summary-text">Half-Time</p>
-          </div>
-        </div>
+        <p class="small-note">
+          Dados de intervalo serão conectados na próxima etapa.
+        </p>
       </article>
 
       <article class="card">
         <h2>📊 Resultado por Tempo</h2>
-
         ${simpleMarketTable([
-          ["Win % 1st Half", "20%", "heat-low", "20%", "heat-low"],
-          ["Draw % 1st Half", "50%", "heat-high", "50%", "heat-high"],
-          ["Draw % 2nd Half", "70%", "heat-high", "50%", "heat-high"]
+          ["Win % 1st Half", "-", "heat-mid", "-", "heat-mid"],
+          ["Draw % 1st Half", "-", "heat-mid", "-", "heat-mid"],
+          ["Draw % 2nd Half", "-", "heat-mid", "-", "heat-mid"]
         ])}
       </article>
     </section>
@@ -1056,64 +956,39 @@ function renderJogadores() {
     ${aiHero(
       "Análise de Jogadores",
       "Leitura individual para jogadores com maior chance de marcar e média de cartões por 90 minutos.",
-      ["Principal goleador", "Alexis Ricardo Cuello"],
-      ["Maior risco de cartão", "Mateo Ramírez"],
-      ["Insight da IA", "Buscar titulares confirmados"]
+      ["Principal jogador", "Aguardando dados"],
+      ["Cartões / 90", "Aguardando dados"],
+      ["Status", "API conectada parcialmente"]
     )}
 
     <section class="grid-2">
       <article class="card">
-        <h2>⚽ Quem pode marcar? — San Lorenzo</h2>
-
-        ${playerList([
-          ["🇦🇷 Alexis Ricardo Cuello", "1", "86"],
-          ["🇦🇷 Guzmán Corujo", "1", "76"],
-          ["🇦🇷 Luciano Vietto", "1", "68"],
-          ["🇦🇷 Matías Reali", "1", "62"],
-          ["🇵🇾 Jhohan Romaña", "0", "18"]
-        ])}
+        <h2>⚽ Quem pode marcar? — ${escapeHTML(getCurrentHomeName())}</h2>
+        <p class="small-note">Dados de jogadores serão conectados na próxima etapa.</p>
       </article>
 
       <article class="card">
-        <h2>🟨 Cartões / 90 — Deportivo Riestra</h2>
-
-        ${playerList([
-          ["Mateo Ramírez Montenegro", "1.3", "92"],
-          ["Facundo Miño", "1.0", "72"],
-          ["Ángel Mario Stringa", "0", "18"],
-          ["Nicolás Caro Torres", "0", "16"]
-        ])}
+        <h2>🟨 Cartões / 90 — ${escapeHTML(getCurrentAwayName())}</h2>
+        <p class="small-note">Dados de jogadores serão conectados na próxima etapa.</p>
       </article>
     </section>
   `;
 }
 
 function renderIA() {
+  const home = getCurrentHomeName();
+  const away = getCurrentAwayName();
+
   return `
     ${aiHero(
       "IA / Tendências",
       "Resumo inteligente da partida, análise complementar, leitura de mercado e tendências individuais das equipes quando disponíveis.",
-      ["Aposta principal", "1X San Lorenzo"],
-      ["Mercado secundário", "Menos de 3.5 gols"],
-      ["Confiança da IA", "Boa · 78%"]
+      ["Partida", `${escapeHTML(home)} x ${escapeHTML(away)}`],
+      ["Status", "Aguardando estatísticas"],
+      ["Fonte", "API"]
     )}
 
     <section id="iaRoot">
-      <section class="toggle-card">
-        <div>
-          <strong>Modo de teste da aba</strong>
-          <p>
-            Alguns jogos trazem resumo, análise complementar e tendências.
-            Outros jogos trazem apenas os dois primeiros blocos.
-          </p>
-        </div>
-
-        <div class="toggle-actions">
-          <button id="fullModeBtn" class="active" type="button" onclick="setIAMode('full')">Com tendências</button>
-          <button id="compactModeBtn" type="button" onclick="setIAMode('compact')">Só resumo + análise</button>
-        </div>
-      </section>
-
       <section class="ia-layout">
         <div class="stack">
           <article class="card">
@@ -1121,47 +996,18 @@ function renderIA() {
               <div>
                 <h2>🧠 Resumo das estatísticas da IA</h2>
                 <p class="card-subtitle">
-                  Leitura geral da partida com mercados, cenário provável, gols, escanteios e resultado.
+                  Esta área será preenchida quando conectarmos os dados completos da partida.
                 </p>
               </div>
-
-              <span class="badge">GPT-5 · Resumo IA</span>
+              <span class="badge">Resumo IA</span>
             </div>
 
             <div class="summary-text">
               <p>
-                <strong>San Lorenzo x Deportivo Riestra.</strong> Status: incompleto.
-                A partida tem início previsto para 4 de junho. O mercado aponta San Lorenzo próximo de
-                <strong>2.00</strong>, empate em <strong>2.85</strong> e Deportivo Riestra em <strong>4.01</strong>.
+                A partida selecionada é <strong>${escapeHTML(home)} x ${escapeHTML(away)}</strong>.
+                A listagem de jogos já vem da API. Agora falta conectar os endpoints específicos
+                de estatísticas, tendências e jogadores.
               </p>
-
-              <p>
-                A expectativa de gols está em uma faixa moderada. A média total de xG entre as equipes gira em torno de
-                <strong>3.25</strong>, com San Lorenzo apresentando vantagem no xG em casa.
-              </p>
-
-              <p>
-                Nos mercados de gols, o cenário mais seguro parece estar nas linhas conservadoras:
-                <strong>Mais de 0.5</strong> e <strong>Menos de 3.5</strong>.
-              </p>
-
-              <p>
-                Em escanteios, o modelo projeta uma partida próxima de <strong>8 a 9 cantos</strong>.
-                Para leitura mais segura, linhas próximas de 7.5 fazem mais sentido.
-              </p>
-
-              <p>
-                O resultado provável favorece levemente o San Lorenzo.
-                A opção mais segura é <strong>vitória ou empate do San Lorenzo</strong>.
-                Placar provável entre <strong>1-0, 1-1 ou 2-1</strong>.
-              </p>
-            </div>
-
-            <div class="key-grid">
-              <div class="key-card"><strong>1X</strong><span>Mercado principal</span><small>San Lorenzo ou empate</small></div>
-              <div class="key-card"><strong>3.5</strong><span>Under gols</span><small>linha conservadora</small></div>
-              <div class="key-card"><strong>8-9</strong><span>Escanteios</span><small>projeção total</small></div>
-              <div class="key-card"><strong>78%</strong><span>Confiança IA</span><small>boa leitura</small></div>
             </div>
           </article>
 
@@ -1170,222 +1016,28 @@ function renderIA() {
               <div>
                 <h2>📋 Análise de acessórios</h2>
                 <p class="card-subtitle">
-                  Resumo complementar com histórico, confronto direto, gols e desempenho casa/fora.
+                  Histórico, confronto direto e dados complementares entram na próxima etapa.
                 </p>
               </div>
-
-              <span class="badge">Análise complementar</span>
+              <span class="badge">Pendente</span>
             </div>
 
-            <div class="accessory-list">
-              <div class="accessory-item">
-                <div class="accessory-icon">🏆</div>
-                <p>
-                  No dia 3 de junho de 2026, <strong>San Lorenzo</strong> e
-                  <strong>Deportivo Riestra</strong> se enfrentam pela Copa Argentina.
-                  O último encontro terminou com vitória do San Lorenzo por <strong>1 x 0</strong>.
-                </p>
-              </div>
-
-              <div class="accessory-item">
-                <div class="accessory-icon">🤝</div>
-                <p>
-                  As equipes se enfrentaram <strong>4 vezes</strong>. San Lorenzo venceu <strong>1</strong>,
-                  Deportivo Riestra venceu <strong>1</strong> e <strong>2 partidas terminaram empatadas</strong>.
-                </p>
-              </div>
-
-              <div class="accessory-item">
-                <div class="accessory-icon">⚽</div>
-                <p>
-                  Os confrontos anteriores tiveram média de <strong>1 gol por jogo</strong>,
-                  com ambas as equipes marcando em apenas <strong>25%</strong> das partidas.
-                </p>
-              </div>
-
-              <div class="accessory-item">
-                <div class="accessory-icon">📈</div>
-                <p>
-                  San Lorenzo tem média de <strong>1 ponto por jogo</strong> em casa,
-                  enquanto Deportivo Riestra possui <strong>0.4 ponto por jogo</strong> fora.
-                </p>
-              </div>
-            </div>
+            <p class="small-note">
+              Nenhuma análise complementar carregada para esta partida ainda.
+            </p>
           </article>
         </div>
 
         <aside class="stack">
           <article class="card">
-            <div class="card-header">
-              <div>
-                <h2>🎯 Opções de aposta</h2>
-                <p class="card-subtitle">Resumo objetivo do que a IA considera mais interessante.</p>
-              </div>
-            </div>
-
-            <div class="recommendation">
-              <div class="rec-item">
-                <div class="rec-icon">🛡️</div>
-                <div>
-                  <span>Aposta principal</span>
-                  <strong>Vitória ou empate do San Lorenzo</strong>
-                </div>
-                <div class="rec-value">1X</div>
-              </div>
-
-              <div class="rec-item">
-                <div class="rec-icon">⚽</div>
-                <div>
-                  <span>Aposta secundária</span>
-                  <strong>Menos de 3.5 gols</strong>
-                </div>
-                <div class="rec-value">Under</div>
-              </div>
-
-              <div class="rec-item">
-                <div class="rec-icon">🚩</div>
-                <div>
-                  <span>Escanteios</span>
-                  <strong>Aproximadamente 8 no total</strong>
-                </div>
-                <div class="rec-value">8</div>
-              </div>
-
-              <div class="rec-item">
-                <div class="rec-icon">⚠️</div>
-                <div>
-                  <span>Atenção</span>
-                  <strong>Mais de 2.5 exige cautela</strong>
-                </div>
-                <div class="rec-value">Risco</div>
-              </div>
-            </div>
-          </article>
-
-          <article class="card">
-            <h2>📌 Perspectiva prevista</h2>
-
-            <div class="summary-text">
-              <p>
-                O jogo deve ser equilibrado, com leve vantagem para o San Lorenzo.
-                A tendência é de placar baixo ou moderado.
-              </p>
-
-              <p>
-                O Deportivo Riestra pode oferecer resistência defensiva,
-                mas o desempenho fora de casa pesa contra a equipe visitante.
-              </p>
-
-              <p>
-                A linha de escanteios pode ficar em torno de 8,
-                com maior valor apenas se a odd compensar.
-              </p>
-            </div>
+            <h2>🎯 Opções de aposta</h2>
+            <p class="small-note">
+              As sugestões serão exibidas depois que conectarmos os dados completos da partida.
+            </p>
           </article>
         </aside>
       </section>
-
-      <section class="empty-state">
-        <strong>Este jogo não possui tendências das equipes.</strong><br>
-        Para este tipo de partida, a API ou o banco de dados retornou apenas o
-        <strong>Resumo da IA</strong> e a <strong>Análise de acessórios</strong>.
-        O layout remove automaticamente os blocos de tendências.
-      </section>
-
-      <section class="team-trends">
-        ${trendCard("SLO", "San Lorenzo", "Mandante", [
-          "Chegando a este jogo, o San Lorenzo soma <strong>10 pontos nos últimos 5 jogos</strong>, tanto em casa quanto fora.",
-          "O San Lorenzo estará confiante para marcar hoje e buscará manter seu histórico de marcar gols em casa.",
-          "É possível vermos gols aqui, já que os últimos jogos indicam boa presença ofensiva.",
-          "O time tentará manter o bom momento hoje contra o Deportivo Riestra.",
-          "Nos últimos 5 jogos, em 3 deles ambas as equipes marcaram."
-        ])}
-
-        ${trendCard("RIE", "Deportivo Riestra", "Visitante", [
-          "Chegando a este jogo, o Deportivo Riestra soma <strong>13 pontos nos últimos 5 jogos</strong>, tanto em casa quanto fora.",
-          "O Deportivo Riestra tem se saído bem recentemente, estando invicto nos últimos jogos.",
-          "A equipe chega para este confronto contra o San Lorenzo invicta nos últimos 5 jogos.",
-          "Nos últimos jogos do Deportivo Riestra, em boa parte deles ambas as equipes marcaram.",
-          "É provável que o Deportivo Riestra marque hoje, já que balançou as redes com frequência."
-        ])}
-      </section>
     </section>
-  `;
-}
-
-function setIAMode(mode) {
-  const root = document.getElementById("iaRoot");
-  const fullModeBtn = document.getElementById("fullModeBtn");
-  const compactModeBtn = document.getElementById("compactModeBtn");
-
-  if (!root || !fullModeBtn || !compactModeBtn) return;
-
-  if (mode === "compact") {
-    root.classList.add("ia-compact");
-    fullModeBtn.classList.remove("active");
-    compactModeBtn.classList.add("active");
-    return;
-  }
-
-  root.classList.remove("ia-compact");
-  compactModeBtn.classList.remove("active");
-  fullModeBtn.classList.add("active");
-}
-
-function trendCard(short, team, type, items) {
-  return `
-    <article class="trend-card">
-      <div class="trend-top">
-        <div class="team-title">
-          <span class="team-mini">${short}</span>
-          <div>
-            ${team}
-            <div class="card-subtitle">Tendências da equipe</div>
-          </div>
-        </div>
-
-        <span class="badge">${type}</span>
-      </div>
-
-      <div class="trend-tabs">
-        <button class="active" type="button">Fortaleza</button>
-        <button type="button">Vitória</button>
-      </div>
-
-      <div class="trend-list">
-        ${items.map(function(item) {
-          return `
-            <div class="trend-item">
-              <div class="trend-icon">↑</div>
-              <p>${item}</p>
-            </div>
-          `;
-        }).join("")}
-      </div>
-    </article>
-  `;
-}
-
-function goalsMinuteTable() {
-  return `
-    <table class="heat-table">
-      <thead>
-        <tr>
-          <th>Intervalo</th>
-          <th>San Lorenzo</th>
-          <th>Riestra</th>
-        </tr>
-      </thead>
-
-      <tbody>
-        <tr><td>0 - 15</td><td class="heat-low">6%</td><td class="heat-mid">16%</td></tr>
-        <tr><td>16 - 30</td><td class="heat-high">18%</td><td class="heat-high">32%</td></tr>
-        <tr><td>31 - 45</td><td class="heat-high">24%</td><td class="heat-mid">11%</td></tr>
-        <tr><td>46 - 60</td><td class="heat-mid">12%</td><td class="heat-mid">16%</td></tr>
-        <tr><td>61 - 75</td><td class="heat-high">24%</td><td class="heat-mid">11%</td></tr>
-        <tr><td>76 - 90+</td><td class="heat-low">6%</td><td class="heat-mid">16%</td></tr>
-      </tbody>
-    </table>
   `;
 }
 
@@ -1398,7 +1050,6 @@ function playerList(players) {
             <div class="player-name" style="--bar:${player[2]}%;">
               <span>${player[0]}</span>
             </div>
-
             <strong>${player[1]}</strong>
           </div>
         `;
@@ -1407,4 +1058,62 @@ function playerList(players) {
   `;
 }
 
-loadRealMatches();
+function goalsMinuteTable() {
+  return `
+    <table class="heat-table">
+      <thead>
+        <tr>
+          <th>Intervalo</th>
+          <th>${escapeHTML(getCurrentHomeShort())}</th>
+          <th>${escapeHTML(getCurrentAwayShort())}</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>0 - 15</td><td class="heat-mid">-</td><td class="heat-mid">-</td></tr>
+        <tr><td>16 - 30</td><td class="heat-mid">-</td><td class="heat-mid">-</td></tr>
+        <tr><td>31 - 45</td><td class="heat-mid">-</td><td class="heat-mid">-</td></tr>
+      </tbody>
+    </table>
+  `;
+}
+
+function getTodayISO() {
+  return toISODate(new Date());
+}
+
+function parseISODate(value) {
+  const parts = String(value).split("-");
+  const year = Number(parts[0]);
+  const month = Number(parts[1]) - 1;
+  const day = Number(parts[2]);
+
+  return new Date(year, month, day);
+}
+
+function toISODate(date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
+}
+
+function formatShortDate(date) {
+  return date.toLocaleDateString("pt-BR", {
+    weekday: "short",
+    day: "2-digit",
+    month: "2-digit"
+  });
+}
+
+function formatFullDate(date) {
+  return date.toLocaleDateString("pt-BR", {
+    weekday: "long",
+    day: "2-digit",
+    month: "long",
+    year: "numeric"
+  });
+}
+
+initDateNavigation();
+loadMatchesByDate(selectedDate);
