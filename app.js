@@ -25,7 +25,6 @@ function initDateNavigation() {
 
   dateNav.innerHTML = `
     <button type="button" onclick="changeSelectedDate(-1)">‹</button>
-
     ${dates.map(function(item) {
       return `
         <button
@@ -37,7 +36,6 @@ function initDateNavigation() {
         </button>
       `;
     }).join("")}
-
     <button type="button" onclick="changeSelectedDate(1)">›</button>
   `;
 }
@@ -52,25 +50,13 @@ function buildDateOptions(centerDate) {
 
     const iso = toISODate(date);
     const today = getTodayISO();
-
     let label = formatShortDate(date);
 
-    if (iso === today) {
-      label = "Hoje";
-    }
+    if (iso === today) label = "Hoje";
+    if (offset === -1 && centerDate === today) label = "Ontem";
+    if (offset === 1 && centerDate === today) label = "Amanhã";
 
-    if (offset === -1 && centerDate === today) {
-      label = "Ontem";
-    }
-
-    if (offset === 1 && centerDate === today) {
-      label = "Amanhã";
-    }
-
-    return {
-      date: iso,
-      label
-    };
+    return { date: iso, label };
   });
 }
 
@@ -98,9 +84,7 @@ async function loadMatchesByDate(date) {
   container.innerHTML = `
     <article class="card">
       <h2>Carregando jogos...</h2>
-      <p class="small-note">
-        Buscando partidas de ${formatFullDate(parseISODate(date))}.
-      </p>
+      <p class="small-note">Buscando partidas de ${formatFullDate(parseISODate(date))}.</p>
     </article>
   `;
 
@@ -127,9 +111,7 @@ async function loadMatchesByDate(date) {
     container.innerHTML = `
       <article class="card">
         <h2>⚠️ Não foi possível carregar os jogos</h2>
-        <p class="small-note">
-          ${escapeHTML(error.message)}
-        </p>
+        <p class="small-note">${escapeHTML(error.message)}</p>
       </article>
     `;
   }
@@ -146,9 +128,7 @@ function showEmptyMatches(date) {
         <strong>${formatFullDate(parseISODate(date))}</strong>
         nas ligas liberadas pela sua API.
       </p>
-      <p class="small-note">
-        Use os botões de data acima para procurar jogos em outro dia.
-      </p>
+      <p class="small-note">Use os botões de data acima para procurar jogos em outro dia.</p>
     </article>
   `;
 }
@@ -160,10 +140,7 @@ function extractMatchesFromApi(raw) {
   if (Array.isArray(raw.data)) return raw.data;
   if (Array.isArray(raw.matches)) return raw.matches;
   if (Array.isArray(raw.fixtures)) return raw.fixtures;
-
-  if (raw.data && Array.isArray(raw.data.matches)) {
-    return raw.data.matches;
-  }
+  if (raw.data && Array.isArray(raw.data.matches)) return raw.data.matches;
 
   return [];
 }
@@ -206,18 +183,8 @@ function normalizeMatch(match) {
     match.away ||
     `Visitante ${match.awayID || ""}`.trim();
 
-  const homeGoals = getNumber(
-    match.homeGoalCount,
-    match.home_goals,
-    match.homeGoals
-  );
-
-  const awayGoals = getNumber(
-    match.awayGoalCount,
-    match.away_goals,
-    match.awayGoals
-  );
-
+  const homeGoals = getNumber(match.homeGoalCount, match.home_goals, match.homeGoals);
+  const awayGoals = getNumber(match.awayGoalCount, match.away_goals, match.awayGoals);
   const status = normalizeStatus(match.status, match.game_status, match);
 
   return {
@@ -233,29 +200,19 @@ function normalizeMatch(match) {
     score: status === "done" ? `${homeGoals ?? 0} - ${awayGoals ?? 0}` : "vs",
     odds: [
       formatOdd(match.odds_ft_1 || match.odds_1 || match.home_odds),
-      formatOdd(match.odds_ft_X || match.odds_x || match.draw_odds),
+      formatOdd(match.odds_ft_x || match.odds_ft_X || match.odds_x || match.draw_odds),
       formatOdd(match.odds_ft_2 || match.odds_2 || match.away_odds)
     ],
-    over25: formatPercent(
-      match.o25_potential ||
-      match.over_25_percentage ||
-      match.over25 ||
-      match.over_2_5_probability
-    ),
-    btts: formatPercent(
-      match.btts_potential ||
-      match.btts_percentage ||
-      match.btts ||
-      match.btts_probability
-    ),
+    over25: formatPercent(match.o25_potential || match.over_25_percentage || match.over25 || match.over_2_5_probability),
+    btts: formatPercent(match.btts_potential || match.btts_percentage || match.btts || match.btts_probability),
     form: ["d", "d", "d", "d", "d"],
     raw: match
   };
 }
 
 function getTeamLogo(match, side) {
-  if (side === "home") {
-    return (
+  const rawLogo = side === "home"
+    ? (
       match.home_image ||
       match.home_logo ||
       match.homeBadge ||
@@ -263,28 +220,58 @@ function getTeamLogo(match, side) {
       match.team_a_image ||
       match.team_a_logo ||
       match.team_a_badge ||
-      match.home_url ||
+      ""
+    )
+    : (
+      match.away_image ||
+      match.away_logo ||
+      match.awayBadge ||
+      match.away_badge ||
+      match.team_b_image ||
+      match.team_b_logo ||
+      match.team_b_badge ||
       ""
     );
+
+  return normalizeImageUrl(rawLogo);
+}
+
+function normalizeImageUrl(value) {
+  if (!value) return "";
+
+  const clean = String(value).trim();
+
+  if (!clean) return "";
+
+  if (clean.startsWith("http://") || clean.startsWith("https://")) {
+    return clean;
   }
 
-  return (
-    match.away_image ||
-    match.away_logo ||
-    match.awayBadge ||
-    match.away_badge ||
-    match.team_b_image ||
-    match.team_b_logo ||
-    match.team_b_badge ||
-    match.away_url ||
-    ""
-  );
+  if (clean.startsWith("//")) {
+    return `https:${clean}`;
+  }
+
+  if (clean.startsWith("/img/")) {
+    return `https://cdn.footystats.org${clean}`;
+  }
+
+  if (clean.startsWith("img/")) {
+    return `https://cdn.footystats.org/${clean}`;
+  }
+
+  if (clean.startsWith("/teams/")) {
+    return `https://cdn.footystats.org/img${clean}`;
+  }
+
+  if (clean.startsWith("teams/")) {
+    return `https://cdn.footystats.org/img/${clean}`;
+  }
+
+  return `https://cdn.footystats.org/img/${clean.replace(/^\/+/, "")}`;
 }
 
 function getLeagueName(match) {
-  if (match.resolved_league_name) {
-    return match.resolved_league_name;
-  }
+  if (match.resolved_league_name) return match.resolved_league_name;
 
   const country =
     match.country ||
@@ -301,13 +288,8 @@ function getLeagueName(match) {
     match.name ||
     "";
 
-  if (league && country) {
-    return `${country} › ${league}`;
-  }
-
-  if (league) {
-    return league;
-  }
+  if (league && country) return `${country} › ${league}`;
+  if (league) return league;
 
   const leagueId =
     match.competition_id ||
@@ -347,30 +329,20 @@ function normalizeStatus(status, gameStatus, match) {
     return "done";
   }
 
-  const unix =
-    match.date_unix ||
-    match.match_time ||
-    match.timestamp ||
-    match.kickoff_unix;
+  const unix = match.date_unix || match.match_time || match.timestamp || match.kickoff_unix;
 
   if (unix && Number.isFinite(Number(unix))) {
     const matchTime = Number(unix) * 1000;
     const now = Date.now();
 
-    if (matchTime > now) {
-      return "pre";
-    }
+    if (matchTime > now) return "pre";
   }
 
   return "pre";
 }
 
 function getMatchTime(match) {
-  const unix =
-    match.date_unix ||
-    match.match_time ||
-    match.timestamp ||
-    match.kickoff_unix;
+  const unix = match.date_unix || match.match_time || match.timestamp || match.kickoff_unix;
 
   if (unix && Number.isFinite(Number(unix))) {
     const date = new Date(Number(unix) * 1000);
@@ -382,11 +354,7 @@ function getMatchTime(match) {
     });
   }
 
-  const rawDate =
-    match.date ||
-    match.kickoff ||
-    match.match_date ||
-    match.time;
+  const rawDate = match.date || match.kickoff || match.match_date || match.time;
 
   if (rawDate) {
     const date = new Date(rawDate);
@@ -411,9 +379,7 @@ function getNumber() {
 
     const number = Number(value);
 
-    if (Number.isFinite(number)) {
-      return number;
-    }
+    if (Number.isFinite(number)) return number;
   }
 
   return null;
@@ -422,17 +388,13 @@ function getNumber() {
 function formatOdd(value) {
   const number = Number(value);
 
-  if (!Number.isFinite(number) || number <= 0) {
-    return "-";
-  }
+  if (!Number.isFinite(number) || number <= 0) return "-";
 
   return number.toFixed(2);
 }
 
 function formatPercent(value) {
-  if (value === null || value === undefined || value === "") {
-    return "-";
-  }
+  if (value === null || value === undefined || value === "") return "-";
 
   const number = Number(value);
 
@@ -441,9 +403,7 @@ function formatPercent(value) {
     return text.includes("%") ? text : "-";
   }
 
-  if (number <= 1) {
-    return `${Math.round(number * 100)}%`;
-  }
+  if (number <= 1) return `${Math.round(number * 100)}%`;
 
   return `${Math.round(number)}%`;
 }
@@ -486,6 +446,7 @@ function renderTeamIcon(match, side) {
       <img
         src="${escapeHTML(logo)}"
         alt="${escapeHTML(short)}"
+        onerror="this.outerHTML='<span class=&quot;team-badge&quot;>${escapeHTML(short)}</span>'"
         style="width:34px;height:34px;border-radius:10px;object-fit:contain;background:#e8f3ec;border:1px solid #cfe2d5;padding:4px;flex-shrink:0;"
       >
     `;
@@ -503,6 +464,7 @@ function renderBigTeamIcon(match, side) {
       <img
         src="${escapeHTML(logo)}"
         alt="${escapeHTML(short)}"
+        onerror="this.outerHTML='<div class=&quot;big-badge&quot;>${escapeHTML(short)}</div>'"
         style="width:74px;height:74px;border-radius:20px;object-fit:contain;background:#e8f3ec;border:1px solid #cfe2d5;padding:8px;margin:0 auto 8px;display:block;"
       >
     `;
@@ -1039,9 +1001,7 @@ function renderIntervalo() {
     <section class="grid-2">
       <article class="card form-compare">
         <h2>⏱️ First / Second Half WDL</h2>
-        <p class="small-note">
-          Dados de intervalo serão conectados na próxima etapa.
-        </p>
+        <p class="small-note">Dados de intervalo serão conectados na próxima etapa.</p>
       </article>
 
       <article class="card">
@@ -1100,9 +1060,7 @@ function renderIA() {
             <div class="card-header">
               <div>
                 <h2>🧠 Resumo das estatísticas da IA</h2>
-                <p class="card-subtitle">
-                  Esta área será preenchida quando conectarmos os dados completos da partida.
-                </p>
+                <p class="card-subtitle">Esta área será preenchida quando conectarmos os dados completos da partida.</p>
               </div>
               <span class="badge">Resumo IA</span>
             </div>
@@ -1120,25 +1078,19 @@ function renderIA() {
             <div class="card-header">
               <div>
                 <h2>📋 Análise de acessórios</h2>
-                <p class="card-subtitle">
-                  Histórico, confronto direto e dados complementares entram na próxima etapa.
-                </p>
+                <p class="card-subtitle">Histórico, confronto direto e dados complementares entram na próxima etapa.</p>
               </div>
               <span class="badge">Pendente</span>
             </div>
 
-            <p class="small-note">
-              Nenhuma análise complementar carregada para esta partida ainda.
-            </p>
+            <p class="small-note">Nenhuma análise complementar carregada para esta partida ainda.</p>
           </article>
         </div>
 
         <aside class="stack">
           <article class="card">
             <h2>🎯 Opções de aposta</h2>
-            <p class="small-note">
-              As sugestões serão exibidas depois que conectarmos os dados completos da partida.
-            </p>
+            <p class="small-note">As sugestões serão exibidas depois que conectarmos os dados completos da partida.</p>
           </article>
         </aside>
       </section>
