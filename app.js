@@ -16,6 +16,10 @@ tabButtons.forEach(function(button) {
   });
 });
 
+/* =========================
+   HOME / DATAS
+========================= */
+
 function initDateNavigation() {
   const dateNav = document.querySelector(".date-nav");
 
@@ -192,13 +196,13 @@ function normalizeMatch(match) {
     match.away ||
     `Visitante ${match.awayID || ""}`.trim();
 
-  const homeGoals = getCleanNumber(
+  const homeGoals = cleanNumber(
     match.homeGoalCount,
     match.home_goals,
     match.homeGoals
   );
 
-  const awayGoals = getCleanNumber(
+  const awayGoals = cleanNumber(
     match.awayGoalCount,
     match.away_goals,
     match.awayGoals
@@ -208,6 +212,14 @@ function normalizeMatch(match) {
 
   return {
     id: String(match.id || match.match_id || `${homeName}-${awayName}-${match.date_unix || ""}`),
+    matchId: String(match.id || match.match_id || ""),
+    seasonId: String(
+      match.competition_id ||
+      match.league_id ||
+      match.season_id ||
+      match.resolved_league_id ||
+      ""
+    ),
     time: getMatchTime(match),
     status,
     home: homeName,
@@ -234,51 +246,9 @@ function normalizeMatch(match) {
       match.btts ||
       match.btts_probability
     ),
-    raw: match
+    raw: match,
+    complete: null
   };
-}
-
-function getTeamLogo(match, side) {
-  const rawLogo = side === "home"
-    ? (
-      match.home_image ||
-      match.home_logo ||
-      match.homeBadge ||
-      match.home_badge ||
-      match.team_a_image ||
-      match.team_a_logo ||
-      match.team_a_badge ||
-      ""
-    )
-    : (
-      match.away_image ||
-      match.away_logo ||
-      match.awayBadge ||
-      match.away_badge ||
-      match.team_b_image ||
-      match.team_b_logo ||
-      match.team_b_badge ||
-      ""
-    );
-
-  return normalizeImageUrl(rawLogo);
-}
-
-function normalizeImageUrl(value) {
-  if (!value) return "";
-
-  const clean = String(value).trim();
-
-  if (!clean) return "";
-
-  if (clean.startsWith("http://") || clean.startsWith("https://")) return clean;
-  if (clean.startsWith("//")) return `https:${clean}`;
-  if (clean.startsWith("/img/")) return `https://cdn.footystats.org${clean}`;
-  if (clean.startsWith("img/")) return `https://cdn.footystats.org/${clean}`;
-  if (clean.startsWith("/teams/")) return `https://cdn.footystats.org/img${clean}`;
-  if (clean.startsWith("teams/")) return `https://cdn.footystats.org/img/${clean}`;
-
-  return `https://cdn.footystats.org/img/${clean.replace(/^\/+/, "")}`;
 }
 
 function getLeagueName(match) {
@@ -316,19 +286,6 @@ function normalizeStatus(status, gameStatus, match) {
   const value = String(status || gameStatus || "").toLowerCase().trim();
 
   if (
-    value === "incomplete" ||
-    value === "pending" ||
-    value === "not_started" ||
-    value === "not started" ||
-    value === "scheduled" ||
-    value === "pre-match" ||
-    value === "pre match" ||
-    value === ""
-  ) {
-    return "pre";
-  }
-
-  if (
     value === "complete" ||
     value === "completed" ||
     value === "finished" ||
@@ -338,20 +295,6 @@ function normalizeStatus(status, gameStatus, match) {
     value === "full time"
   ) {
     return "done";
-  }
-
-  const unix =
-    match.date_unix ||
-    match.match_time ||
-    match.timestamp ||
-    match.kickoff_unix;
-
-  if (unix && Number.isFinite(Number(unix))) {
-    const matchTime = Number(unix) * 1000;
-
-    if (matchTime > Date.now()) {
-      return "pre";
-    }
   }
 
   return "pre";
@@ -397,41 +340,9 @@ function getMatchTime(match) {
   return "--:--";
 }
 
-function renderTeamIcon(match, side) {
-  const logo = side === "home" ? match.homeLogo : match.awayLogo;
-  const short = side === "home" ? match.homeShort : match.awayShort;
-
-  if (logo) {
-    return `
-      <img
-        src="${escapeHTML(logo)}"
-        alt="${escapeHTML(short)}"
-        class="team-logo-inline"
-        onerror="this.outerHTML='<span class=&quot;team-badge&quot;>${escapeHTML(short)}</span>'"
-      >
-    `;
-  }
-
-  return `<span class="team-badge">${escapeHTML(short)}</span>`;
-}
-
-function renderBigTeamIcon(match, side) {
-  const logo = side === "home" ? match.homeLogo : match.awayLogo;
-  const short = side === "home" ? match.homeShort : match.awayShort;
-
-  if (logo) {
-    return `
-      <img
-        src="${escapeHTML(logo)}"
-        alt="${escapeHTML(short)}"
-        class="team-logo-big"
-        onerror="this.outerHTML='<div class=&quot;big-badge&quot;>${escapeHTML(short)}</div>'"
-      >
-    `;
-  }
-
-  return `<div class="big-badge">${escapeHTML(short)}</div>`;
-}
+/* =========================
+   RENDER HOME
+========================= */
 
 function renderMatches() {
   const container = document.getElementById("matchesContainer");
@@ -494,25 +405,71 @@ function renderMatches() {
   }).join("");
 }
 
-function showStats(encodedMatchId) {
+async function showStats(encodedMatchId) {
   const matchId = decodeURIComponent(encodedMatchId);
   const foundMatch = findMatchById(matchId);
 
-  if (foundMatch) {
-    selectedMatch = foundMatch;
-    updateMatchHeader(foundMatch);
-  }
+  if (!foundMatch) return;
+
+  selectedMatch = foundMatch;
 
   document.getElementById("homePage").classList.add("hidden");
   document.getElementById("statsPage").classList.remove("hidden");
-
-  renderTab("completas");
 
   tabButtons.forEach(function(item) {
     item.classList.toggle("active", item.dataset.tab === "completas");
   });
 
+  updateMatchHeader(selectedMatch);
+
+  tabContent.innerHTML = `
+    <article class="card">
+      <h2>Carregando estatísticas completas...</h2>
+      <p class="small-note">
+        Buscando dados de partida, tabela, times, árbitro, odds e estatísticas avançadas.
+      </p>
+    </article>
+  `;
+
   window.scrollTo({ top: 0, behavior: "smooth" });
+
+  try {
+    const seasonId =
+      selectedMatch.seasonId ||
+      selectedMatch.raw.competition_id ||
+      selectedMatch.raw.league_id ||
+      selectedMatch.raw.season_id;
+
+    if (!selectedMatch.matchId || !seasonId) {
+      throw new Error("Não encontramos match_id ou season_id para carregar a partida completa.");
+    }
+
+    const response = await fetch(
+      `/api/partida-completa?match_id=${encodeURIComponent(selectedMatch.matchId)}&season_id=${encodeURIComponent(seasonId)}`
+    );
+
+    const payload = await response.json();
+
+    if (!response.ok || !payload.ok) {
+      throw new Error(payload.error || "Erro ao carregar partida completa.");
+    }
+
+    selectedMatch.complete = payload.data;
+
+    syncSelectedMatchFromComplete();
+    updateMatchHeader(selectedMatch);
+    renderTab("completas");
+  } catch (error) {
+    tabContent.innerHTML = `
+      <article class="card">
+        <h2>⚠️ Não foi possível carregar as estatísticas completas</h2>
+        <p class="small-note">${escapeHTML(error.message)}</p>
+        <p class="small-note">
+          A página continuará usando os dados básicos já carregados na lista de jogos.
+        </p>
+      </article>
+    `;
+  }
 }
 
 function findMatchById(matchId) {
@@ -527,6 +484,34 @@ function findMatchById(matchId) {
   return null;
 }
 
+function syncSelectedMatchFromComplete() {
+  const data = complete();
+
+  if (!data) return;
+
+  selectedMatch.home = data.teams?.home?.name || selectedMatch.home;
+  selectedMatch.away = data.teams?.away?.name || selectedMatch.away;
+  selectedMatch.homeLogo = data.teams?.home?.image || selectedMatch.homeLogo;
+  selectedMatch.awayLogo = data.teams?.away?.image || selectedMatch.awayLogo;
+  selectedMatch.status = data.status?.normalized || selectedMatch.status;
+
+  const hg = data.score?.home_goals;
+  const ag = data.score?.away_goals;
+
+  if (hg !== null && hg !== undefined && ag !== null && ag !== undefined && selectedMatch.status === "done") {
+    selectedMatch.score = `${hg} - ${ag}`;
+  }
+
+  selectedMatch.odds = [
+    fmtOdd(data.odds?.result?.home),
+    fmtOdd(data.odds?.result?.draw),
+    fmtOdd(data.odds?.result?.away)
+  ];
+
+  selectedMatch.over25 = pct(data.potentials?.goals?.over25);
+  selectedMatch.btts = pct(data.potentials?.btts?.full_time);
+}
+
 function updateMatchHeader(match) {
   const header = document.querySelector(".match-header");
 
@@ -536,7 +521,7 @@ function updateMatchHeader(match) {
     <div class="match-meta">
       <strong>Partida selecionada</strong><br>
       ${escapeHTML(formatFullDate(parseISODate(selectedDate)))} · ${escapeHTML(match.time)}<br>
-      Dados via API
+      ${escapeHTML(getLeagueTitle())}
     </div>
 
     <div class="versus">
@@ -566,6 +551,10 @@ function showHome() {
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
+/* =========================
+   ABAS
+========================= */
+
 function renderTab(tab) {
   const views = {
     completas: renderCompletas,
@@ -581,168 +570,579 @@ function renderTab(tab) {
   tabContent.innerHTML = views[tab] ? views[tab]() : renderCompletas();
 }
 
-function raw() {
-  return selectedMatch ? selectedMatch.raw || {} : {};
+function renderCompletas() {
+  const data = complete();
+
+  if (!data) return renderLoadingFallback();
+
+  return `
+    ${aiHero(
+      "Completas",
+      "Resumo geral da partida com placar, xG, odds, escanteios, cartões, finalizações e contexto da tabela.",
+      ["Placar", scoreText()],
+      ["Over 2.5", pct(data.potentials?.goals?.over25)],
+      ["BTTS", pct(data.potentials?.btts?.full_time)]
+    )}
+
+    <section class="ai-strip">
+      <h2 class="section-title">✦ Insights rápidos</h2>
+
+      <div class="ai-grid">
+        ${aiCard("⚽", "Total de gols", val(data.score?.total_goals))}
+        ${aiCard("📈", "xG total", val(data.xg?.actual?.total))}
+        ${aiCard("🚩", "Escanteios", val(data.corners?.full_time?.total))}
+        ${aiCard("🟨", "Cartões", val(data.cards?.full_time?.total))}
+      </div>
+    </section>
+
+    <section class="grid-3">
+      <article class="card">
+        <h2>⚖️ Odds principais</h2>
+        ${dataTable(
+          ["Mercado", "Odd", "Estatística"],
+          [
+            [`${homeName()} vence`, fmtOdd(data.odds?.result?.home), "-"],
+            ["Empate", fmtOdd(data.odds?.result?.draw), "-"],
+            [`${awayName()} vence`, fmtOdd(data.odds?.result?.away), "-"],
+            ["Over 2.5", fmtOdd(data.odds?.goals?.over25), pct(data.potentials?.goals?.over25)],
+            ["BTTS Sim", fmtOdd(data.odds?.btts?.yes), pct(data.potentials?.btts?.full_time)]
+          ]
+        )}
+      </article>
+
+      <article class="card">
+        <h2>⚽ Placar e xG</h2>
+        ${statCards([
+          { label: `${homeName()} gols`, value: val(data.score?.home_goals) },
+          { label: `${awayName()} gols`, value: val(data.score?.away_goals) },
+          { label: "Total gols", value: val(data.score?.total_goals) },
+          { label: `${homeName()} xG`, value: val(data.xg?.actual?.home) },
+          { label: `${awayName()} xG`, value: val(data.xg?.actual?.away) },
+          { label: "xG total", value: val(data.xg?.actual?.total) }
+        ])}
+      </article>
+
+      <article class="card">
+        <h2>📌 Contexto da tabela</h2>
+        ${statCards([
+          { label: `${homeName()} posição`, value: val(data.league_table?.home?.position) },
+          { label: `${awayName()} posição`, value: val(data.league_table?.away?.position) },
+          { label: `${homeName()} pontos`, value: val(data.league_table?.home?.points) },
+          { label: `${awayName()} pontos`, value: val(data.league_table?.away?.points) },
+          { label: `${homeName()} PPG`, value: val(data.teams?.home?.ppg) },
+          { label: `${awayName()} PPG`, value: val(data.teams?.away?.ppg) }
+        ])}
+      </article>
+    </section>
+
+    <section class="grid-2">
+      ${twoTeamTable("📊 Comparativo geral", [
+        ["Gols", val(data.score?.home_goals), val(data.score?.away_goals), val(data.score?.total_goals)],
+        ["xG", val(data.xg?.actual?.home), val(data.xg?.actual?.away), val(data.xg?.actual?.total)],
+        ["Escanteios", val(data.corners?.full_time?.home), val(data.corners?.full_time?.away), val(data.corners?.full_time?.total)],
+        ["Cartões", val(data.cards?.full_time?.home_total), val(data.cards?.full_time?.away_total), val(data.cards?.full_time?.total)],
+        ["Chutes", val(data.shots?.full_time?.home_total), val(data.shots?.full_time?.away_total), val(data.shots?.full_time?.total)]
+      ])}
+
+      <article class="card">
+        <h2>🧠 Leitura automática</h2>
+        <div class="summary-text">
+          <p>
+            <strong>${escapeHTML(homeName())}</strong> x <strong>${escapeHTML(awayName())}</strong>
+            terminou com placar <strong>${escapeHTML(scoreText())}</strong>.
+          </p>
+          <p>
+            O jogo teve <strong>${escapeHTML(val(data.score?.total_goals))}</strong> gols,
+            <strong>${escapeHTML(val(data.corners?.full_time?.total))}</strong> escanteios,
+            <strong>${escapeHTML(val(data.cards?.full_time?.total))}</strong> cartões e
+            <strong>${escapeHTML(val(data.shots?.full_time?.total))}</strong> chutes.
+          </p>
+          <p>
+            Over 2.5: <strong>${escapeHTML(pct(data.potentials?.goals?.over25))}</strong>.
+            BTTS: <strong>${escapeHTML(pct(data.potentials?.btts?.full_time))}</strong>.
+          </p>
+        </div>
+      </article>
+    </section>
+  `;
 }
 
-function getValue(keys, fallback = "-") {
-  const data = raw();
+function renderGols() {
+  const data = complete();
 
-  for (const key of keys) {
-    if (
-      data[key] !== undefined &&
-      data[key] !== null &&
-      data[key] !== "" &&
-      data[key] !== -1 &&
-      data[key] !== "-1"
-    ) {
-      return data[key];
-    }
+  if (!data) return renderLoadingFallback();
+
+  return `
+    ${aiHero(
+      "Gols",
+      "Placar, minutos dos gols, xG, Over/Under, BTTS e odds de gols.",
+      ["Placar", scoreText()],
+      ["xG total", val(data.xg?.actual?.total)],
+      ["Over 2.5", pct(data.potentials?.goals?.over25)]
+    )}
+
+    <section class="grid-3">
+      <article class="card">
+        <h2>⚽ Gols marcados</h2>
+        ${statCards([
+          { label: `${homeName()}`, value: val(data.goals?.full_time?.home) },
+          { label: `${awayName()}`, value: val(data.goals?.full_time?.away) },
+          { label: "Total", value: val(data.goals?.full_time?.total) },
+          { label: "1º tempo", value: val(data.goals?.first_half?.total) },
+          { label: "2º tempo", value: val(data.goals?.second_half?.total) },
+          { label: "BTTS", value: boolText(data.score?.btts) }
+        ])}
+      </article>
+
+      <article class="card">
+        <h2>⏱️ Minutos dos gols</h2>
+        ${dataTable(
+          ["Equipe", "Minutos"],
+          [
+            [homeName(), listValue(data.goals?.timings?.home)],
+            [awayName(), listValue(data.goals?.timings?.away)]
+          ]
+        )}
+      </article>
+
+      <article class="card">
+        <h2>📈 xG</h2>
+        ${statCards([
+          { label: `${homeName()} xG`, value: val(data.xg?.actual?.home) },
+          { label: `${awayName()} xG`, value: val(data.xg?.actual?.away) },
+          { label: "xG total", value: val(data.xg?.actual?.total) },
+          { label: `${homeName()} xG pré`, value: val(data.xg?.prematch?.home) },
+          { label: `${awayName()} xG pré`, value: val(data.xg?.prematch?.away) },
+          { label: "xG pré total", value: val(data.xg?.prematch?.total) }
+        ])}
+      </article>
+    </section>
+
+    <section class="grid-2">
+      <article class="card">
+        <h2>📊 Over / Under</h2>
+        ${dataTable(
+          ["Mercado", "Resultado", "Potencial", "Odd"],
+          [
+            ["Over 0.5", boolText(data.score?.over05), pct(data.potentials?.goals?.over05), fmtOdd(data.odds?.goals?.over05)],
+            ["Over 1.5", boolText(data.score?.over15), pct(data.potentials?.goals?.over15), fmtOdd(data.odds?.goals?.over15)],
+            ["Over 2.5", boolText(data.score?.over25), pct(data.potentials?.goals?.over25), fmtOdd(data.odds?.goals?.over25)],
+            ["Over 3.5", boolText(data.score?.over35), pct(data.potentials?.goals?.over35), fmtOdd(data.odds?.goals?.over35)],
+            ["Over 4.5", boolText(data.score?.over45), pct(data.potentials?.goals?.over45), fmtOdd(data.odds?.goals?.over45)],
+            ["BTTS", boolText(data.score?.btts), pct(data.potentials?.btts?.full_time), fmtOdd(data.odds?.btts?.yes)]
+          ]
+        )}
+      </article>
+
+      <article class="card">
+        <h2>🧠 Insight de gols</h2>
+        <div class="summary-text">
+          <p>
+            O placar teve <strong>${escapeHTML(val(data.score?.total_goals))}</strong> gols.
+            O xG total foi <strong>${escapeHTML(val(data.xg?.actual?.total))}</strong>.
+          </p>
+          <p>
+            Potencial Over 2.5: <strong>${escapeHTML(pct(data.potentials?.goals?.over25))}</strong>.
+            BTTS: <strong>${escapeHTML(pct(data.potentials?.btts?.full_time))}</strong>.
+          </p>
+        </div>
+      </article>
+    </section>
+  `;
+}
+
+function renderEscanteios() {
+  const data = complete();
+
+  if (!data) return renderLoadingFallback();
+
+  return `
+    ${aiHero(
+      "Escanteios",
+      "Escanteios por equipe, por tempo, odds e potenciais de linhas.",
+      ["Total", val(data.corners?.full_time?.total)],
+      [homeName(), val(data.corners?.full_time?.home)],
+      [awayName(), val(data.corners?.full_time?.away)]
+    )}
+
+    <section class="grid-2">
+      <article class="card">
+        <h2>🚩 Número de Escanteios</h2>
+        <div class="corner-summary">
+          <div class="corner-icon">⚑</div>
+          <div>
+            <strong class="corner-big">${escapeHTML(val(data.corners?.full_time?.total))}</strong>
+            <b>Escanteios / Partida</b>
+            <p class="small-note">
+              ${escapeHTML(homeName())}: ${escapeHTML(val(data.corners?.full_time?.home))} ·
+              ${escapeHTML(awayName())}: ${escapeHTML(val(data.corners?.full_time?.away))}
+            </p>
+          </div>
+        </div>
+      </article>
+
+      ${twoTeamTable("📊 Escanteios por tempo", [
+        ["Total", val(data.corners?.full_time?.home), val(data.corners?.full_time?.away), val(data.corners?.full_time?.total)],
+        ["1º tempo", val(data.corners?.first_half?.home), val(data.corners?.first_half?.away), val(data.corners?.first_half?.total)],
+        ["2º tempo", val(data.corners?.second_half?.home), val(data.corners?.second_half?.away), val(data.corners?.second_half?.total)],
+        ["0-10 min", val(data.corners?.timings?.home_0_10), val(data.corners?.timings?.away_0_10), "-"]
+      ])}
+    </section>
+
+    <section class="grid-2">
+      <article class="card">
+        <h2>📈 Odds de escanteios</h2>
+        ${dataTable(
+          ["Mercado", "Odd Over", "Odd Under", "Potencial"],
+          [
+            ["7.5", fmtOdd(data.odds?.corners?.over75), fmtOdd(data.odds?.corners?.under75), "-"],
+            ["8.5", fmtOdd(data.odds?.corners?.over85), fmtOdd(data.odds?.corners?.under85), pct(data.potentials?.corners?.over85)],
+            ["9.5", fmtOdd(data.odds?.corners?.over95), fmtOdd(data.odds?.corners?.under95), pct(data.potentials?.corners?.over95)],
+            ["10.5", fmtOdd(data.odds?.corners?.over105), fmtOdd(data.odds?.corners?.under105), pct(data.potentials?.corners?.over105)],
+            ["11.5", fmtOdd(data.odds?.corners?.over115), fmtOdd(data.odds?.corners?.under115), "-"]
+          ]
+        )}
+      </article>
+
+      <article class="card">
+        <h2>🧠 Insight de escanteios</h2>
+        <div class="summary-text">
+          <p>
+            O jogo teve <strong>${escapeHTML(val(data.corners?.full_time?.total))}</strong> escanteios.
+          </p>
+          <p>
+            ${escapeHTML(homeName())}: <strong>${escapeHTML(val(data.corners?.full_time?.home))}</strong>.
+            ${escapeHTML(awayName())}: <strong>${escapeHTML(val(data.corners?.full_time?.away))}</strong>.
+          </p>
+        </div>
+      </article>
+    </section>
+  `;
+}
+
+function renderCartoes() {
+  const data = complete();
+
+  if (!data) return renderLoadingFallback();
+
+  return `
+    ${aiHero(
+      "Cartões",
+      "Cartões totais, amarelos, vermelhos, cartões por tempo, faltas e árbitro.",
+      ["Total cartões", val(data.cards?.full_time?.total)],
+      [homeName(), val(data.cards?.full_time?.home_total)],
+      [awayName(), val(data.cards?.full_time?.away_total)]
+    )}
+
+    <section class="grid-2">
+      <article class="card">
+        <h2>🟨🟥 Número de Cartões</h2>
+
+        <div class="cards-summary">
+          <div class="cards-icon">
+            <span class="red-card"></span>
+            <span class="yellow-card"></span>
+          </div>
+
+          <div>
+            <strong class="cards-big">${escapeHTML(val(data.cards?.full_time?.total))}</strong>
+            <b>Cartões / Partida</b>
+            <p class="small-note">
+              ${escapeHTML(homeName())}: ${escapeHTML(val(data.cards?.full_time?.home_total))} ·
+              ${escapeHTML(awayName())}: ${escapeHTML(val(data.cards?.full_time?.away_total))}
+            </p>
+          </div>
+        </div>
+      </article>
+
+      ${twoTeamTable("📊 Cartões por equipe", [
+        ["Total", val(data.cards?.full_time?.home_total), val(data.cards?.full_time?.away_total), val(data.cards?.full_time?.total)],
+        ["Amarelos", val(data.cards?.full_time?.home_yellow), val(data.cards?.full_time?.away_yellow), sumDisplay(data.cards?.full_time?.home_yellow, data.cards?.full_time?.away_yellow)],
+        ["Vermelhos", val(data.cards?.full_time?.home_red), val(data.cards?.full_time?.away_red), sumDisplay(data.cards?.full_time?.home_red, data.cards?.full_time?.away_red)],
+        ["1º tempo", val(data.cards?.first_half?.home), val(data.cards?.first_half?.away), val(data.cards?.first_half?.total)],
+        ["2º tempo", val(data.cards?.second_half?.home), val(data.cards?.second_half?.away), val(data.cards?.second_half?.total)]
+      ])}
+    </section>
+
+    <section class="grid-2">
+      <article class="card">
+        <h2>👨‍⚖️ Árbitro</h2>
+        ${statCards([
+          { label: "Nome", value: data.referee?.raw?.known_as || data.referee?.raw?.full_name || "-" },
+          { label: "Jogos", value: val(data.referee?.raw?.appearances_overall) },
+          { label: "Cartões/jogo", value: val(data.referee?.raw?.cards_per_match_overall) },
+          { label: "Amarelos", value: val(data.referee?.raw?.yellow_cards_overall) },
+          { label: "Vermelhos", value: val(data.referee?.raw?.red_cards_overall) },
+          { label: "Over 4.5 cartões", value: pct(data.referee?.raw?.over45_cards_percentage_overall) }
+        ])}
+      </article>
+
+      <article class="card">
+        <h2>📌 Faltas</h2>
+        ${dataTable(
+          ["Indicador", homeName(), awayName(), "Total"],
+          [
+            ["Faltas", val(data.discipline_and_flow?.fouls?.home), val(data.discipline_and_flow?.fouls?.away), val(data.discipline_and_flow?.fouls?.total)],
+            ["Impedimentos", val(data.discipline_and_flow?.offsides?.home), val(data.discipline_and_flow?.offsides?.away), val(data.discipline_and_flow?.offsides?.total)],
+            ["Potencial impedimentos", "-", "-", val(data.discipline_and_flow?.offsides?.potential)]
+          ]
+        )}
+      </article>
+    </section>
+  `;
+}
+
+function renderChutes() {
+  const data = complete();
+
+  if (!data) return renderLoadingFallback();
+
+  return `
+    ${aiHero(
+      "Chutes",
+      "Finalizações, chutes no alvo, posse, ataques perigosos e volume ofensivo.",
+      ["Chutes totais", val(data.shots?.full_time?.total)],
+      [homeName(), val(data.shots?.full_time?.home_total)],
+      [awayName(), val(data.shots?.full_time?.away_total)]
+    )}
+
+    <section class="grid-2">
+      ${twoTeamTable("🎯 Chutes e finalizações", [
+        ["Chutes totais", val(data.shots?.full_time?.home_total), val(data.shots?.full_time?.away_total), val(data.shots?.full_time?.total)],
+        ["Chutes no alvo", val(data.shots?.full_time?.home_on_target), val(data.shots?.full_time?.away_on_target), val(data.shots?.full_time?.total_on_target)],
+        ["Chutes fora", val(data.shots?.full_time?.home_off_target), val(data.shots?.full_time?.away_off_target), val(data.shots?.full_time?.total_off_target)],
+        ["Posse", pct(data.shots?.possession?.home), pct(data.shots?.possession?.away), "-"],
+        ["Ataques", val(data.shots?.attacks?.home_attacks), val(data.shots?.attacks?.away_attacks), sumDisplay(data.shots?.attacks?.home_attacks, data.shots?.attacks?.away_attacks)],
+        ["Ataques perigosos", val(data.shots?.attacks?.home_dangerous), val(data.shots?.attacks?.away_dangerous), sumDisplay(data.shots?.attacks?.home_dangerous, data.shots?.attacks?.away_dangerous)]
+      ])}
+
+      <article class="card">
+        <h2>📌 Resumo ofensivo</h2>
+        ${statCards([
+          { label: `${homeName()} chutes`, value: val(data.shots?.full_time?.home_total) },
+          { label: `${awayName()} chutes`, value: val(data.shots?.full_time?.away_total) },
+          { label: "Total chutes", value: val(data.shots?.full_time?.total) },
+          { label: `${homeName()} no alvo`, value: val(data.shots?.full_time?.home_on_target) },
+          { label: `${awayName()} no alvo`, value: val(data.shots?.full_time?.away_on_target) },
+          { label: "Total no alvo", value: val(data.shots?.full_time?.total_on_target) }
+        ])}
+      </article>
+    </section>
+
+    <section class="grid-2">
+      <article class="card">
+        <h2>📎 Fluxo de jogo</h2>
+        ${dataTable(
+          ["Indicador", homeName(), awayName(), "Total"],
+          [
+            ["Laterais", val(data.discipline_and_flow?.throwins?.home), val(data.discipline_and_flow?.throwins?.away), val(data.discipline_and_flow?.throwins?.total)],
+            ["Faltas cobradas", val(data.discipline_and_flow?.freekicks?.home), val(data.discipline_and_flow?.freekicks?.away), val(data.discipline_and_flow?.freekicks?.total)],
+            ["Tiros de meta", val(data.discipline_and_flow?.goalkicks?.home), val(data.discipline_and_flow?.goalkicks?.away), val(data.discipline_and_flow?.goalkicks?.total)]
+          ]
+        )}
+      </article>
+
+      <article class="card">
+        <h2>🧠 Insight de chutes</h2>
+        <div class="summary-text">
+          <p>
+            O jogo teve <strong>${escapeHTML(val(data.shots?.full_time?.total))}</strong> chutes,
+            sendo <strong>${escapeHTML(val(data.shots?.full_time?.total_on_target))}</strong> no alvo.
+          </p>
+          <p>
+            Posse: ${escapeHTML(homeName())} <strong>${escapeHTML(pct(data.shots?.possession?.home))}</strong> ·
+            ${escapeHTML(awayName())} <strong>${escapeHTML(pct(data.shots?.possession?.away))}</strong>.
+          </p>
+        </div>
+      </article>
+    </section>
+  `;
+}
+
+function renderIntervalo() {
+  const data = complete();
+
+  if (!data) return renderLoadingFallback();
+
+  return `
+    ${aiHero(
+      "Intervalo",
+      "Dados do primeiro tempo, segundo tempo, gols, escanteios, cartões e odds por período.",
+      ["HT", `${val(data.goals?.first_half?.home)} - ${val(data.goals?.first_half?.away)}`],
+      ["Gols HT", val(data.goals?.first_half?.total)],
+      ["FT", scoreText()]
+    )}
+
+    <section class="grid-2">
+      ${twoTeamTable("⏱️ Primeiro tempo", [
+        ["Gols", val(data.goals?.first_half?.home), val(data.goals?.first_half?.away), val(data.goals?.first_half?.total)],
+        ["Escanteios", val(data.corners?.first_half?.home), val(data.corners?.first_half?.away), val(data.corners?.first_half?.total)],
+        ["Cartões", val(data.cards?.first_half?.home), val(data.cards?.first_half?.away), val(data.cards?.first_half?.total)]
+      ])}
+
+      ${twoTeamTable("⏱️ Segundo tempo", [
+        ["Gols", val(data.goals?.second_half?.home), val(data.goals?.second_half?.away), val(data.goals?.second_half?.total)],
+        ["Escanteios", val(data.corners?.second_half?.home), val(data.corners?.second_half?.away), val(data.corners?.second_half?.total)],
+        ["Cartões", val(data.cards?.second_half?.home), val(data.cards?.second_half?.away), val(data.cards?.second_half?.total)]
+      ])}
+    </section>
+
+    <section class="grid-2">
+      <article class="card">
+        <h2>📈 Odds 1º tempo</h2>
+        ${dataTable(
+          ["Mercado", "Casa", "Empate/Under", "Fora/Over"],
+          [
+            ["Resultado HT", fmtOdd(data.odds?.half_time?.result_home), fmtOdd(data.odds?.half_time?.result_draw), fmtOdd(data.odds?.half_time?.result_away)],
+            ["Over 0.5 HT", "-", fmtOdd(data.odds?.half_time?.under05), fmtOdd(data.odds?.half_time?.over05)],
+            ["Over 1.5 HT", "-", fmtOdd(data.odds?.half_time?.under15), fmtOdd(data.odds?.half_time?.over15)],
+            ["Over 2.5 HT", "-", fmtOdd(data.odds?.half_time?.under25), fmtOdd(data.odds?.half_time?.over25)]
+          ]
+        )}
+      </article>
+
+      <article class="card">
+        <h2>📈 Odds 2º tempo</h2>
+        ${dataTable(
+          ["Mercado", "Casa", "Empate/Under", "Fora/Over"],
+          [
+            ["Resultado 2T", fmtOdd(data.odds?.second_half?.result_home), fmtOdd(data.odds?.second_half?.result_draw), fmtOdd(data.odds?.second_half?.result_away)],
+            ["Over 0.5 2T", "-", fmtOdd(data.odds?.second_half?.under05), fmtOdd(data.odds?.second_half?.over05)],
+            ["Over 1.5 2T", "-", fmtOdd(data.odds?.second_half?.under15), fmtOdd(data.odds?.second_half?.over15)],
+            ["Over 2.5 2T", "-", fmtOdd(data.odds?.second_half?.under25), fmtOdd(data.odds?.second_half?.over25)]
+          ]
+        )}
+      </article>
+    </section>
+  `;
+}
+
+function renderJogadores() {
+  const data = complete();
+
+  if (!data) return renderLoadingFallback();
+
+  const homePlayers = data.players?.home || [];
+  const awayPlayers = data.players?.away || [];
+
+  return `
+    ${aiHero(
+      "Jogadores",
+      "Jogadores da temporada, gols, assistências, cartões e minutos quando disponíveis.",
+      ["Mandante", homeName()],
+      ["Visitante", awayName()],
+      ["Jogadores", String(homePlayers.length + awayPlayers.length)]
+    )}
+
+    <section class="grid-2">
+      <article class="card">
+        <h2>⚽ ${escapeHTML(homeName())}</h2>
+        ${renderPlayersTable(homePlayers)}
+      </article>
+
+      <article class="card">
+        <h2>⚽ ${escapeHTML(awayName())}</h2>
+        ${renderPlayersTable(awayPlayers)}
+      </article>
+    </section>
+
+    <section class="grid-2">
+      <article class="card">
+        <h2>📌 Observação</h2>
+        <p class="small-note">
+          Se esta aba aparecer vazia, o endpoint league-players está funcionando, mas precisamos ajustar o filtro dos jogadores por time no backend.
+        </p>
+      </article>
+
+      <article class="card">
+        <h2>🏟️ Times</h2>
+        ${statCards([
+          { label: `${homeName()} fundação`, value: val(data.teams?.home?.raw?.founded) },
+          { label: `${awayName()} fundação`, value: val(data.teams?.away?.raw?.founded) },
+          { label: `${homeName()} risco`, value: val(data.teams?.home?.raw?.risk) },
+          { label: `${awayName()} risco`, value: val(data.teams?.away?.raw?.risk) }
+        ])}
+      </article>
+    </section>
+  `;
+}
+
+function renderIA() {
+  const data = complete();
+
+  if (!data) return renderLoadingFallback();
+
+  const homeXg = Number(data.xg?.actual?.home || 0);
+  const awayXg = Number(data.xg?.actual?.away || 0);
+  const totalShots = Number(data.shots?.full_time?.total || 0);
+  const totalCorners = Number(data.corners?.full_time?.total || 0);
+  const totalCards = Number(data.cards?.full_time?.total || 0);
+
+  let tendencia = "Jogo equilibrado nos principais indicadores.";
+
+  if (homeXg > awayXg + 0.5) {
+    tendencia = `${homeName()} produziu mais xG e volume ofensivo.`;
   }
 
-  return fallback;
-}
-
-function getCleanNumber() {
-  for (const value of arguments) {
-    if (
-      value === null ||
-      value === undefined ||
-      value === "" ||
-      value === -1 ||
-      value === "-1"
-    ) {
-      continue;
-    }
-
-    const number = Number(value);
-
-    if (Number.isFinite(number)) {
-      return number;
-    }
+  if (awayXg > homeXg + 0.5) {
+    tendencia = `${awayName()} produziu mais xG e volume ofensivo.`;
   }
 
-  return null;
+  return `
+    ${aiHero(
+      "IA / Tendências",
+      "Resumo automático com leitura dos dados reais da partida.",
+      ["Placar", scoreText()],
+      ["Over 2.5", pct(data.potentials?.goals?.over25)],
+      ["BTTS", pct(data.potentials?.btts?.full_time)]
+    )}
+
+    <section class="grid-2">
+      <article class="card">
+        <h2>🧠 Resumo automático</h2>
+
+        <div class="summary-text">
+          <p>
+            <strong>${escapeHTML(homeName())}</strong> x <strong>${escapeHTML(awayName())}</strong>
+            terminou em <strong>${escapeHTML(scoreText())}</strong>.
+          </p>
+
+          <p>
+            A partida teve <strong>${escapeHTML(String(totalShots))}</strong> chutes,
+            <strong>${escapeHTML(String(totalCorners))}</strong> escanteios,
+            <strong>${escapeHTML(String(totalCards))}</strong> cartões e
+            xG total de <strong>${escapeHTML(val(data.xg?.actual?.total))}</strong>.
+          </p>
+
+          <p>
+            <strong>Leitura:</strong> ${escapeHTML(tendencia)}
+          </p>
+
+          <p>
+            Over 2.5: <strong>${escapeHTML(pct(data.potentials?.goals?.over25))}</strong>.
+            BTTS: <strong>${escapeHTML(pct(data.potentials?.btts?.full_time))}</strong>.
+          </p>
+        </div>
+      </article>
+
+      <article class="card">
+        <h2>🎯 Leitura de mercado</h2>
+        ${statCards([
+          { label: "Odd casa", value: fmtOdd(data.odds?.result?.home) },
+          { label: "Odd empate", value: fmtOdd(data.odds?.result?.draw) },
+          { label: "Odd fora", value: fmtOdd(data.odds?.result?.away) },
+          { label: "Over 2.5 odd", value: fmtOdd(data.odds?.goals?.over25) },
+          { label: "BTTS odd", value: fmtOdd(data.odds?.btts?.yes) },
+          { label: "Corners 9.5 odd", value: fmtOdd(data.odds?.corners?.over95) }
+        ])}
+      </article>
+    </section>
+  `;
 }
 
-function getActualNumber(keys, fallback = "-") {
-  if (!selectedMatch || selectedMatch.status !== "done") {
-    return fallback;
-  }
-
-  return getMetricNumber(keys, fallback);
-}
-
-function getMetricNumber(keys, fallback = "-") {
-  const value = getValue(keys, fallback);
-
-  if (value === fallback) return fallback;
-
-  const number = Number(value);
-
-  if (!Number.isFinite(number)) return String(value);
-
-  return number % 1 === 0 ? String(number) : number.toFixed(2);
-}
-
-function getPercent(keys, fallback = "-") {
-  const value = getValue(keys, fallback);
-
-  if (value === fallback) return fallback;
-
-  const number = Number(value);
-
-  if (!Number.isFinite(number)) {
-    const text = String(value);
-    return text.includes("%") ? text : text;
-  }
-
-  if (number <= 1) return `${Math.round(number * 100)}%`;
-
-  return `${Math.round(number)}%`;
-}
-
-function getText(keys, fallback = "-") {
-  const value = getValue(keys, fallback);
-
-  if (Array.isArray(value)) return value.join(", ");
-  if (typeof value === "object" && value !== null) return JSON.stringify(value);
-
-  return String(value);
-}
-
-function formatOdd(value) {
-  if (
-    value === null ||
-    value === undefined ||
-    value === "" ||
-    value === -1 ||
-    value === "-1"
-  ) {
-    return "-";
-  }
-
-  const number = Number(value);
-
-  if (!Number.isFinite(number) || number <= 0) {
-    return "-";
-  }
-
-  return number.toFixed(2);
-}
-
-function formatPercent(value) {
-  if (
-    value === null ||
-    value === undefined ||
-    value === "" ||
-    value === -1 ||
-    value === "-1"
-  ) {
-    return "-";
-  }
-
-  const number = Number(value);
-
-  if (!Number.isFinite(number)) {
-    const text = String(value);
-    return text.includes("%") ? text : "-";
-  }
-
-  if (number <= 1) return `${Math.round(number * 100)}%`;
-
-  return `${Math.round(number)}%`;
-}
-
-function getCurrentHomeName() {
-  return selectedMatch ? selectedMatch.home : "Time A";
-}
-
-function getCurrentAwayName() {
-  return selectedMatch ? selectedMatch.away : "Time B";
-}
-
-function getCurrentLeagueName() {
-  const data = raw();
-
-  return (
-    data.resolved_league_name ||
-    data.league_name ||
-    data.competition_name ||
-    data.season_name ||
-    "Liga"
-  );
-}
-
-function getCurrentStatusLabel() {
-  if (!selectedMatch) return "-";
-  return selectedMatch.status === "done" ? "Finalizado" : "Pré-jogo";
-}
-
-function getScoreOrPredictionLabel() {
-  if (!selectedMatch) return "-";
-  return selectedMatch.status === "done" ? selectedMatch.score : "Pré-jogo";
-}
+/* =========================
+   COMPONENTES
+========================= */
 
 function aiHero(title, description, chip1, chip2, chip3) {
   return `
@@ -753,20 +1153,32 @@ function aiHero(title, description, chip1, chip2, chip3) {
       </div>
 
       <div class="hero-chip">
-        <span>${chip1[0]}</span>
-        <strong>${chip1[1]}</strong>
+        <span>${escapeHTML(chip1[0])}</span>
+        <strong>${escapeHTML(chip1[1])}</strong>
       </div>
 
       <div class="hero-chip">
-        <span>${chip2[0]}</span>
-        <strong>${chip2[1]}</strong>
+        <span>${escapeHTML(chip2[0])}</span>
+        <strong>${escapeHTML(chip2[1])}</strong>
       </div>
 
       <div class="hero-chip">
-        <span>${chip3[0]}</span>
-        <strong>${chip3[1]}</strong>
+        <span>${escapeHTML(chip3[0])}</span>
+        <strong>${escapeHTML(chip3[1])}</strong>
       </div>
     </section>
+  `;
+}
+
+function aiCard(icon, label, value) {
+  return `
+    <article class="ai-card">
+      <div class="ai-icon">${icon}</div>
+      <div>
+        <span>${escapeHTML(label)}</span>
+        <strong>${escapeHTML(value)}</strong>
+      </div>
+    </article>
   `;
 }
 
@@ -812,6 +1224,180 @@ function dataTable(headers, rows) {
   `;
 }
 
+function twoTeamTable(title, rows) {
+  return `
+    <article class="card">
+      <h2>${escapeHTML(title)}</h2>
+      ${dataTable(
+        ["Indicador", homeName(), awayName(), "Total/Média"],
+        rows
+      )}
+    </article>
+  `;
+}
+
+function renderPlayersTable(players) {
+  if (!players || !players.length) {
+    return `
+      <div class="empty-data">
+        Nenhum jogador vinculado a este time no retorno atual.
+      </div>
+    `;
+  }
+
+  return dataTable(
+    ["Jogador", "Posição", "Min", "Gols", "Assist.", "Cartões"],
+    players.slice(0, 12).map(function(player) {
+      return [
+        player.name || "-",
+        player.position || "-",
+        val(player.minutes),
+        val(player.goals),
+        val(player.assists),
+        val(player.cards)
+      ];
+    })
+  );
+}
+
+function renderLoadingFallback() {
+  return `
+    <article class="card">
+      <h2>Carregando dados...</h2>
+      <p class="small-note">Aguarde o carregamento da partida completa.</p>
+    </article>
+  `;
+}
+
+/* =========================
+   HELPERS DADOS
+========================= */
+
+function complete() {
+  return selectedMatch ? selectedMatch.complete : null;
+}
+
+function homeName() {
+  return complete()?.teams?.home?.name || selectedMatch?.home || "Mandante";
+}
+
+function awayName() {
+  return complete()?.teams?.away?.name || selectedMatch?.away || "Visitante";
+}
+
+function scoreText() {
+  const data = complete();
+
+  if (!data) return selectedMatch?.score || "-";
+
+  const home = data.score?.home_goals;
+  const away = data.score?.away_goals;
+
+  if (home === null || home === undefined || away === null || away === undefined) {
+    return selectedMatch?.status === "done" ? selectedMatch.score : "Pré-jogo";
+  }
+
+  return `${home} - ${away}`;
+}
+
+function getLeagueTitle() {
+  const data = complete();
+
+  if (data?.league?.competition_id) {
+    return `Liga ${data.league.competition_id}`;
+  }
+
+  return "Dados via API";
+}
+
+function val(value) {
+  if (
+    value === null ||
+    value === undefined ||
+    value === "" ||
+    value === -1 ||
+    value === "-1"
+  ) {
+    return "-";
+  }
+
+  if (typeof value === "number") {
+    return value % 1 === 0 ? String(value) : value.toFixed(2);
+  }
+
+  return String(value);
+}
+
+function pct(value) {
+  if (
+    value === null ||
+    value === undefined ||
+    value === "" ||
+    value === -1 ||
+    value === "-1"
+  ) {
+    return "-";
+  }
+
+  const number = Number(value);
+
+  if (!Number.isFinite(number)) {
+    const text = String(value);
+    return text.includes("%") ? text : text;
+  }
+
+  if (number <= 1) {
+    return `${Math.round(number * 100)}%`;
+  }
+
+  return `${Math.round(number)}%`;
+}
+
+function fmtOdd(value) {
+  if (
+    value === null ||
+    value === undefined ||
+    value === "" ||
+    value === -1 ||
+    value === "-1" ||
+    value === 0 ||
+    value === "0"
+  ) {
+    return "-";
+  }
+
+  const number = Number(value);
+
+  if (!Number.isFinite(number) || number <= 0) {
+    return "-";
+  }
+
+  return number.toFixed(2);
+}
+
+function boolText(value) {
+  if (value === true) return "Sim";
+  if (value === false) return "Não";
+  if (value === 1 || value === "1") return "Sim";
+  if (value === 0 || value === "0") return "Não";
+  return val(value);
+}
+
+function listValue(value) {
+  if (!value) return "-";
+  if (Array.isArray(value)) return value.length ? value.join(", ") : "-";
+  return String(value);
+}
+
+function sumDisplay(a, b) {
+  const first = Number(a || 0);
+  const second = Number(b || 0);
+
+  if (!Number.isFinite(first) && !Number.isFinite(second)) return "-";
+
+  return String(first + second);
+}
+
 function classifyValue(value) {
   const text = String(value).replace("%", "").replace("-", "");
   const number = Number(text);
@@ -822,579 +1408,117 @@ function classifyValue(value) {
   return "heat-low";
 }
 
-function twoTeamTable(title, rows) {
-  return `
-    <article class="card">
-      <h2>${title}</h2>
-      ${dataTable(
-        ["Indicador", getCurrentHomeName(), getCurrentAwayName(), "Total/Média"],
-        rows
-      )}
-    </article>
-  `;
+function cleanNumber() {
+  for (const value of arguments) {
+    if (
+      value === null ||
+      value === undefined ||
+      value === "" ||
+      value === -1 ||
+      value === "-1"
+    ) {
+      continue;
+    }
+
+    const number = Number(value);
+
+    if (Number.isFinite(number)) {
+      return number;
+    }
+  }
+
+  return null;
 }
 
-function renderCompletas() {
-  const home = getCurrentHomeName();
-  const away = getCurrentAwayName();
-
-  const homeGoals = getActualNumber(["homeGoalCount", "home_goals", "homeGoals"]);
-  const awayGoals = getActualNumber(["awayGoalCount", "away_goals", "awayGoals"]);
-  const totalGoals = getActualNumber(["totalGoalCount", "total_goals", "goals_total"]);
-
-  const homeXg = getMetricNumber(["team_a_xg", "home_xg", "xg_home", "homeXG"]);
-  const awayXg = getMetricNumber(["team_b_xg", "away_xg", "xg_away", "awayXG"]);
-  const totalXg = getMetricNumber(["total_xg", "xg_total", "xg"]);
-
-  const homeCorners = getActualNumber(["team_a_corners", "home_corners", "homeCornerCount"]);
-  const awayCorners = getActualNumber(["team_b_corners", "away_corners", "awayCornerCount"]);
-  const totalCorners = getActualNumber(["totalCornerCount", "total_corners", "cornerCount"]);
-
-  const homeCards = getActualNumber(["team_a_cards_num", "home_cards", "homeYellowCards", "home_cards_num"]);
-  const awayCards = getActualNumber(["team_b_cards_num", "away_cards", "awayYellowCards", "away_cards_num"]);
-  const totalCards = getActualNumber(["total_cards", "cards_total", "totalCards"]);
-
-  return `
-    ${aiHero(
-      "Completas",
-      "Resumo geral da partida com odds, gols, xG, escanteios, cartões e leitura inicial.",
-      ["Partida", `${escapeHTML(home)} x ${escapeHTML(away)}`],
-      ["Liga", getCurrentLeagueName()],
-      ["Status", getCurrentStatusLabel()]
-    )}
-
-    <section class="ai-strip">
-      <h2 class="section-title">✦ Insights rápidos</h2>
-
-      <div class="ai-grid">
-        <article class="ai-card">
-          <div class="ai-icon">⚽</div>
-          <div>
-            <span>Total de gols</span>
-            <strong>${escapeHTML(totalGoals)}</strong>
-          </div>
-        </article>
-
-        <article class="ai-card">
-          <div class="ai-icon">📊</div>
-          <div>
-            <span>Over 2.5</span>
-            <strong>${escapeHTML(selectedMatch ? selectedMatch.over25 : "-")}</strong>
-          </div>
-        </article>
-
-        <article class="ai-card">
-          <div class="ai-icon">🤝</div>
-          <div>
-            <span>BTTS</span>
-            <strong>${escapeHTML(selectedMatch ? selectedMatch.btts : "-")}</strong>
-          </div>
-        </article>
-
-        <article class="ai-card">
-          <div class="ai-icon">🚩</div>
-          <div>
-            <span>Escanteios</span>
-            <strong>${escapeHTML(totalCorners)}</strong>
-          </div>
-        </article>
-      </div>
-    </section>
-
-    <section class="grid-3">
-      <article class="card">
-        <h2>⚖️ Odds Market</h2>
-
-        <table class="table">
-          <thead>
-            <tr>
-              <th>Mercado</th>
-              <th>Odds</th>
-              <th>Estat.</th>
-            </tr>
-          </thead>
-
-          <tbody>
-            <tr><td>${escapeHTML(home)} vence</td><td>${selectedMatch ? selectedMatch.odds[0] : "-"}</td><td>-</td></tr>
-            <tr><td>Empate</td><td>${selectedMatch ? selectedMatch.odds[1] : "-"}</td><td>-</td></tr>
-            <tr><td>${escapeHTML(away)} vence</td><td>${selectedMatch ? selectedMatch.odds[2] : "-"}</td><td>-</td></tr>
-            <tr><td>Over 2.5</td><td>${getMetricNumber(["odds_ft_over25", "odds_over_25", "odds_o25"])}</td><td>${selectedMatch ? selectedMatch.over25 : "-"}</td></tr>
-            <tr><td>BTTS</td><td>${getMetricNumber(["odds_btts_yes", "odds_btts", "btts_odds"])}</td><td>${selectedMatch ? selectedMatch.btts : "-"}</td></tr>
-          </tbody>
-        </table>
-      </article>
-
-      <article class="card">
-        <h2>⚽ Placar e xG</h2>
-        ${statCards([
-          { label: `${home} gols`, value: homeGoals },
-          { label: `${away} gols`, value: awayGoals },
-          { label: "Total gols", value: totalGoals },
-          { label: `${home} xG`, value: homeXg },
-          { label: `${away} xG`, value: awayXg },
-          { label: "xG total", value: totalXg }
-        ])}
-      </article>
-
-      <article class="card">
-        <h2>📌 Resumo do jogo</h2>
-        ${statCards([
-          { label: "Escanteios", value: totalCorners },
-          { label: "Cartões", value: totalCards },
-          { label: "Over 2.5", value: selectedMatch ? selectedMatch.over25 : "-" },
-          { label: "BTTS", value: selectedMatch ? selectedMatch.btts : "-" },
-          { label: "Horário", value: selectedMatch ? selectedMatch.time : "-" },
-          { label: "Status", value: getCurrentStatusLabel() }
-        ])}
-      </article>
-    </section>
-
-    <section class="grid-2">
-      ${twoTeamTable("📊 Comparativo geral", [
-        ["Gols", homeGoals, awayGoals, totalGoals],
-        ["xG", homeXg, awayXg, totalXg],
-        ["Escanteios", homeCorners, awayCorners, totalCorners],
-        ["Cartões", homeCards, awayCards, totalCards]
-      ])}
-
-      <article class="card">
-        <h2>🧠 Leitura automática</h2>
-        <div class="summary-text">
-          <p>
-            Partida: <strong>${escapeHTML(home)} x ${escapeHTML(away)}</strong>.
-            Status: <strong>${escapeHTML(getCurrentStatusLabel())}</strong>.
-          </p>
-          <p>
-            Mercado Over 2.5: <strong>${selectedMatch ? selectedMatch.over25 : "-"}</strong>.
-            BTTS: <strong>${selectedMatch ? selectedMatch.btts : "-"}</strong>.
-          </p>
-        </div>
-      </article>
-    </section>
-  `;
+function formatOdd(value) {
+  return fmtOdd(value);
 }
 
-function renderGols() {
-  const home = getCurrentHomeName();
-  const away = getCurrentAwayName();
-
-  const homeGoals = getActualNumber(["homeGoalCount", "home_goals", "homeGoals"]);
-  const awayGoals = getActualNumber(["awayGoalCount", "away_goals", "awayGoals"]);
-  const totalGoals = getActualNumber(["totalGoalCount", "total_goals", "goals_total"]);
-
-  return `
-    ${aiHero(
-      "Gols",
-      "Dados de gols, Over/Under, BTTS, xG e minutos dos gols.",
-      ["Placar", getScoreOrPredictionLabel()],
-      ["Over 2.5", selectedMatch ? selectedMatch.over25 : "-"],
-      ["BTTS", selectedMatch ? selectedMatch.btts : "-"]
-    )}
-
-    <section class="grid-3">
-      <article class="card">
-        <h2>⚽ Gols marcados</h2>
-        ${statCards([
-          { label: `${home}`, value: homeGoals },
-          { label: `${away}`, value: awayGoals },
-          { label: "Total", value: totalGoals }
-        ])}
-      </article>
-
-      <article class="card">
-        <h2>📈 xG</h2>
-        ${statCards([
-          { label: `${home} xG`, value: getMetricNumber(["team_a_xg", "home_xg", "xg_home", "homeXG"]) },
-          { label: `${away} xG`, value: getMetricNumber(["team_b_xg", "away_xg", "xg_away", "awayXG"]) },
-          { label: "xG total", value: getMetricNumber(["total_xg", "xg_total", "xg"]) }
-        ])}
-      </article>
-
-      <article class="card">
-        <h2>⏱️ Minutos dos gols</h2>
-        ${dataTable(
-          ["Equipe", "Minutos"],
-          [
-            [home, getText(["homeGoals", "home_goal_minutes", "home_goal_times"])],
-            [away, getText(["awayGoals", "away_goal_minutes", "away_goal_times"])]
-          ]
-        )}
-      </article>
-    </section>
-
-    <section class="grid-2">
-      <article class="card">
-        <h2>📊 Mercados de gols</h2>
-        ${dataTable(
-          ["Mercado", "Probabilidade"],
-          [
-            ["Over 0.5", getPercent(["o05_potential", "over05_potential", "over_05_percentage"])],
-            ["Over 1.5", getPercent(["o15_potential", "over15_potential", "over_15_percentage"])],
-            ["Over 2.5", selectedMatch ? selectedMatch.over25 : "-"],
-            ["Over 3.5", getPercent(["o35_potential", "over35_potential", "over_35_percentage"])],
-            ["BTTS", selectedMatch ? selectedMatch.btts : "-"]
-          ]
-        )}
-      </article>
-
-      <article class="card">
-        <h2>🧠 Insight de gols</h2>
-        <div class="summary-text">
-          <p>Over 2.5: <strong>${selectedMatch ? selectedMatch.over25 : "-"}</strong>.</p>
-          <p>BTTS: <strong>${selectedMatch ? selectedMatch.btts : "-"}</strong>.</p>
-        </div>
-      </article>
-    </section>
-  `;
+function formatPercent(value) {
+  return pct(value);
 }
 
-function renderEscanteios() {
-  const home = getCurrentHomeName();
-  const away = getCurrentAwayName();
+/* =========================
+   IMAGENS / TEXTO / DATA
+========================= */
 
-  const homeCorners = getActualNumber(["team_a_corners", "home_corners", "homeCornerCount"]);
-  const awayCorners = getActualNumber(["team_b_corners", "away_corners", "awayCornerCount"]);
-  const totalCorners = getActualNumber(["totalCornerCount", "total_corners", "cornerCount"]);
+function getTeamLogo(match, side) {
+  const rawLogo = side === "home"
+    ? (
+      match.home_image ||
+      match.home_logo ||
+      match.homeBadge ||
+      match.home_badge ||
+      match.team_a_image ||
+      match.team_a_logo ||
+      match.team_a_badge ||
+      ""
+    )
+    : (
+      match.away_image ||
+      match.away_logo ||
+      match.awayBadge ||
+      match.away_badge ||
+      match.team_b_image ||
+      match.team_b_logo ||
+      match.team_b_badge ||
+      ""
+    );
 
-  return `
-    ${aiHero(
-      "Escanteios",
-      "Dados de escanteios totais, escanteios por equipe e linhas de mercado.",
-      ["Total", totalCorners],
-      [home, homeCorners],
-      [away, awayCorners]
-    )}
-
-    <section class="grid-2">
-      <article class="card">
-        <h2>🚩 Número de Escanteios</h2>
-        <div class="corner-summary">
-          <div class="corner-icon">⚑</div>
-          <div>
-            <strong class="corner-big">${escapeHTML(totalCorners)}</strong>
-            <b>Escanteios / Partida</b>
-            <p class="small-note">
-              ${escapeHTML(home)}: ${escapeHTML(homeCorners)} ·
-              ${escapeHTML(away)}: ${escapeHTML(awayCorners)}
-            </p>
-          </div>
-        </div>
-      </article>
-
-      ${twoTeamTable("📊 Escanteios por equipe", [
-        ["Escanteios", homeCorners, awayCorners, totalCorners],
-        ["Escanteios HT", getActualNumber(["team_a_corners_ht", "home_corners_ht"]), getActualNumber(["team_b_corners_ht", "away_corners_ht"]), getActualNumber(["corners_ht", "total_corners_ht"])],
-        ["Escanteios 2T", getActualNumber(["team_a_corners_2h", "home_corners_2h"]), getActualNumber(["team_b_corners_2h", "away_corners_2h"]), getActualNumber(["corners_2h", "total_corners_2h"])]
-      ])}
-    </section>
-
-    <section class="grid-2">
-      <article class="card">
-        <h2>📈 Linhas de escanteios</h2>
-        ${dataTable(
-          ["Mercado", "Valor"],
-          [
-            ["Over 6.5", getPercent(["corners_o65_potential", "corner_o65_potential", "over65_corners"])],
-            ["Over 7.5", getPercent(["corners_o75_potential", "corner_o75_potential", "over75_corners"])],
-            ["Over 8.5", getPercent(["corners_o85_potential", "corner_o85_potential", "over85_corners"])],
-            ["Over 9.5", getPercent(["corners_o95_potential", "corner_o95_potential", "over95_corners"])],
-            ["Over 10.5", getPercent(["corners_o105_potential", "corner_o105_potential", "over105_corners"])]
-          ]
-        )}
-      </article>
-
-      <article class="card">
-        <h2>🧠 Insight de escanteios</h2>
-        <div class="summary-text">
-          <p>Total de escanteios: <strong>${escapeHTML(totalCorners)}</strong>.</p>
-          <p>Mandante: <strong>${escapeHTML(homeCorners)}</strong>. Visitante: <strong>${escapeHTML(awayCorners)}</strong>.</p>
-        </div>
-      </article>
-    </section>
-  `;
+  return normalizeImageUrl(rawLogo);
 }
 
-function renderCartoes() {
-  const home = getCurrentHomeName();
-  const away = getCurrentAwayName();
+function normalizeImageUrl(value) {
+  if (!value) return "";
 
-  const homeCards = getActualNumber(["team_a_cards_num", "home_cards", "homeYellowCards", "home_cards_num"]);
-  const awayCards = getActualNumber(["team_b_cards_num", "away_cards", "awayYellowCards", "away_cards_num"]);
-  const totalCards = getActualNumber(["total_cards", "cards_total", "totalCards"]);
+  const clean = String(value).trim();
 
-  return `
-    ${aiHero(
-      "Cartões",
-      "Dados de cartões, faltas e disciplina da partida.",
-      ["Total cartões", totalCards],
-      [home, homeCards],
-      [away, awayCards]
-    )}
+  if (!clean) return "";
 
-    <section class="grid-2">
-      <article class="card">
-        <h2>🟨🟥 Número de Cartões</h2>
+  if (clean.startsWith("http://") || clean.startsWith("https://")) return clean;
+  if (clean.startsWith("//")) return `https:${clean}`;
+  if (clean.startsWith("/img/")) return `https://cdn.footystats.org${clean}`;
+  if (clean.startsWith("img/")) return `https://cdn.footystats.org/${clean}`;
+  if (clean.startsWith("/teams/")) return `https://cdn.footystats.org/img${clean}`;
+  if (clean.startsWith("teams/")) return `https://cdn.footystats.org/img/${clean}`;
 
-        <div class="cards-summary">
-          <div class="cards-icon">
-            <span class="red-card"></span>
-            <span class="yellow-card"></span>
-          </div>
-
-          <div>
-            <strong class="cards-big">${escapeHTML(totalCards)}</strong>
-            <b>Cartões / Partida</b>
-            <p class="small-note">
-              ${escapeHTML(home)}: ${escapeHTML(homeCards)} ·
-              ${escapeHTML(away)}: ${escapeHTML(awayCards)}
-            </p>
-          </div>
-        </div>
-      </article>
-
-      ${twoTeamTable("📊 Cartões por equipe", [
-        ["Cartões", homeCards, awayCards, totalCards],
-        ["Amarelos", getActualNumber(["team_a_yellow_cards", "homeYellowCards"]), getActualNumber(["team_b_yellow_cards", "awayYellowCards"]), getActualNumber(["yellow_cards_total"])],
-        ["Vermelhos", getActualNumber(["team_a_red_cards", "homeRedCards"]), getActualNumber(["team_b_red_cards", "awayRedCards"]), getActualNumber(["red_cards_total"])],
-        ["Faltas", getActualNumber(["team_a_fouls", "home_fouls"]), getActualNumber(["team_b_fouls", "away_fouls"]), getActualNumber(["total_fouls", "fouls_total"])]
-      ])}
-    </section>
-
-    <section class="grid-2">
-      <article class="card">
-        <h2>📈 Linhas de cartões</h2>
-        ${dataTable(
-          ["Mercado", "Valor"],
-          [
-            ["Over 2.5", getPercent(["cards_o25_potential", "over25_cards"])],
-            ["Over 3.5", getPercent(["cards_o35_potential", "over35_cards"])],
-            ["Over 4.5", getPercent(["cards_o45_potential", "over45_cards"])],
-            ["Over 5.5", getPercent(["cards_o55_potential", "over55_cards"])],
-            ["Over 6.5", getPercent(["cards_o65_potential", "over65_cards"])]
-          ]
-        )}
-      </article>
-
-      <article class="card">
-        <h2>🧠 Insight de cartões</h2>
-        <div class="summary-text">
-          <p>Total de cartões: <strong>${escapeHTML(totalCards)}</strong>.</p>
-        </div>
-      </article>
-    </section>
-  `;
+  return `https://cdn.footystats.org/img/${clean.replace(/^\/+/, "")}`;
 }
 
-function renderChutes() {
-  const home = getCurrentHomeName();
-  const away = getCurrentAwayName();
+function renderTeamIcon(match, side) {
+  const logo = side === "home" ? match.homeLogo : match.awayLogo;
+  const short = side === "home" ? match.homeShort : match.awayShort;
 
-  const homeShots = getActualNumber(["team_a_shots", "home_shots", "homeTotalShots"]);
-  const awayShots = getActualNumber(["team_b_shots", "away_shots", "awayTotalShots"]);
-  const totalShots = getActualNumber(["total_shots", "shots_total", "match_shots"]);
+  if (logo) {
+    return `
+      <img
+        src="${escapeHTML(logo)}"
+        alt="${escapeHTML(short)}"
+        class="team-logo-inline"
+        onerror="this.outerHTML='<span class=&quot;team-badge&quot;>${escapeHTML(short)}</span>'"
+      >
+    `;
+  }
 
-  const homeSot = getActualNumber(["team_a_shotsOnTarget", "team_a_shots_on_target", "home_shots_on_target"]);
-  const awaySot = getActualNumber(["team_b_shotsOnTarget", "team_b_shots_on_target", "away_shots_on_target"]);
-  const totalSot = getActualNumber(["shots_on_target_total", "total_shots_on_target"]);
-
-  return `
-    ${aiHero(
-      "Chutes",
-      "Dados de finalizações, chutes no alvo, posse e volume ofensivo.",
-      ["Chutes totais", totalShots],
-      [home, homeShots],
-      [away, awayShots]
-    )}
-
-    <section class="grid-2">
-      ${twoTeamTable("🎯 Chutes e finalizações", [
-        ["Chutes totais", homeShots, awayShots, totalShots],
-        ["Chutes no alvo", homeSot, awaySot, totalSot],
-        ["Chutes fora", getActualNumber(["team_a_shots_off_target", "home_shots_off_target"]), getActualNumber(["team_b_shots_off_target", "away_shots_off_target"]), getActualNumber(["total_shots_off_target"])],
-        ["Ataques perigosos", getActualNumber(["team_a_dangerous_attacks", "home_dangerous_attacks"]), getActualNumber(["team_b_dangerous_attacks", "away_dangerous_attacks"]), "-"],
-        ["Posse", getPercent(["team_a_possession", "home_possession"]), getPercent(["team_b_possession", "away_possession"]), "-"]
-      ])}
-
-      <article class="card">
-        <h2>📌 Resumo ofensivo</h2>
-        ${statCards([
-          { label: `${home} chutes`, value: homeShots },
-          { label: `${away} chutes`, value: awayShots },
-          { label: "Total chutes", value: totalShots },
-          { label: `${home} no alvo`, value: homeSot },
-          { label: `${away} no alvo`, value: awaySot },
-          { label: "Total no alvo", value: totalSot }
-        ])}
-      </article>
-    </section>
-  `;
+  return `<span class="team-badge">${escapeHTML(short)}</span>`;
 }
 
-function renderIntervalo() {
-  const home = getCurrentHomeName();
-  const away = getCurrentAwayName();
+function renderBigTeamIcon(match, side) {
+  const logo = side === "home" ? match.homeLogo : match.awayLogo;
+  const short = side === "home" ? match.homeShort : match.awayShort;
 
-  const htHomeGoals = getActualNumber(["half_time_home_goals", "ht_home_goals", "homeGoalCountHT", "home_goals_ht"]);
-  const htAwayGoals = getActualNumber(["half_time_away_goals", "ht_away_goals", "awayGoalCountHT", "away_goals_ht"]);
-  const htTotalGoals = getActualNumber(["half_time_total_goals", "ht_total_goals", "total_goals_ht"]);
+  if (logo) {
+    return `
+      <img
+        src="${escapeHTML(logo)}"
+        alt="${escapeHTML(short)}"
+        class="team-logo-big"
+        onerror="this.outerHTML='<div class=&quot;big-badge&quot;>${escapeHTML(short)}</div>'"
+      >
+    `;
+  }
 
-  return `
-    ${aiHero(
-      "Intervalo",
-      "Dados do primeiro tempo, segundo tempo, gols por período e placar HT.",
-      ["HT", `${htHomeGoals} - ${htAwayGoals}`],
-      ["Gols HT", htTotalGoals],
-      ["FT", getScoreOrPredictionLabel()]
-    )}
-
-    <section class="grid-2">
-      ${twoTeamTable("⏱️ Primeiro tempo", [
-        ["Gols HT", htHomeGoals, htAwayGoals, htTotalGoals],
-        ["Escanteios HT", getActualNumber(["team_a_corners_ht", "home_corners_ht"]), getActualNumber(["team_b_corners_ht", "away_corners_ht"]), getActualNumber(["total_corners_ht"])],
-        ["Cartões HT", getActualNumber(["team_a_cards_ht", "home_cards_ht"]), getActualNumber(["team_b_cards_ht", "away_cards_ht"]), getActualNumber(["total_cards_ht"])],
-        ["Chutes HT", getActualNumber(["team_a_shots_ht", "home_shots_ht"]), getActualNumber(["team_b_shots_ht", "away_shots_ht"]), getActualNumber(["total_shots_ht"])]
-      ])}
-
-      ${twoTeamTable("⏱️ Segundo tempo", [
-        ["Gols 2T", getActualNumber(["second_half_home_goals", "home_goals_2h"]), getActualNumber(["second_half_away_goals", "away_goals_2h"]), getActualNumber(["second_half_total_goals", "total_goals_2h"])],
-        ["Escanteios 2T", getActualNumber(["team_a_corners_2h", "home_corners_2h"]), getActualNumber(["team_b_corners_2h", "away_corners_2h"]), getActualNumber(["total_corners_2h"])],
-        ["Cartões 2T", getActualNumber(["team_a_cards_2h", "home_cards_2h"]), getActualNumber(["team_b_cards_2h", "away_cards_2h"]), getActualNumber(["total_cards_2h"])],
-        ["Chutes 2T", getActualNumber(["team_a_shots_2h", "home_shots_2h"]), getActualNumber(["team_b_shots_2h", "away_shots_2h"]), getActualNumber(["total_shots_2h"])]
-      ])}
-    </section>
-
-    <section class="grid-2">
-      <article class="card">
-        <h2>⚽ Minutos dos gols</h2>
-        ${dataTable(
-          ["Equipe", "Minutos"],
-          [
-            [home, getText(["homeGoals", "home_goal_minutes", "home_goal_times"])],
-            [away, getText(["awayGoals", "away_goal_minutes", "away_goal_times"])]
-          ]
-        )}
-      </article>
-
-      <article class="card">
-        <h2>🧠 Insight intervalo</h2>
-        <div class="summary-text">
-          <p>Placar no intervalo: <strong>${escapeHTML(htHomeGoals)} - ${escapeHTML(htAwayGoals)}</strong>.</p>
-          <p>Placar final: <strong>${escapeHTML(getScoreOrPredictionLabel())}</strong>.</p>
-        </div>
-      </article>
-    </section>
-  `;
-}
-
-function renderJogadores() {
-  const data = raw();
-
-  const playerEntries = Object.keys(data)
-    .filter(function(key) {
-      const lower = key.toLowerCase();
-
-      return (
-        lower.includes("player") ||
-        lower.includes("scorer") ||
-        lower.includes("assist") ||
-        lower.includes("lineup") ||
-        lower.includes("substitution")
-      );
-    })
-    .map(function(key) {
-      return [key, getText([key])];
-    });
-
-  return `
-    ${aiHero(
-      "Jogadores",
-      "Dados de jogadores, artilheiros, assistências e eventos individuais quando disponíveis.",
-      ["Campos jogadores", String(playerEntries.length)],
-      ["Mandante", getCurrentHomeName()],
-      ["Visitante", getCurrentAwayName()]
-    )}
-
-    <section class="grid-2">
-      <article class="card">
-        <h2>⚽ Jogadores / Artilheiros</h2>
-        ${
-          playerEntries.length
-            ? dataTable(["Campo", "Valor"], playerEntries)
-            : `<p class="small-note">A API não retornou campos de jogadores neste endpoint para esta partida.</p>`
-        }
-      </article>
-
-      <article class="card">
-        <h2>📌 Observação</h2>
-        <p class="small-note">
-          Quando conectarmos endpoint específico de escalações, jogadores e eventos, esta aba receberá dados mais detalhados.
-        </p>
-      </article>
-    </section>
-  `;
-}
-
-function renderIA() {
-  const home = getCurrentHomeName();
-  const away = getCurrentAwayName();
-
-  const totalGoals = getActualNumber(["totalGoalCount", "total_goals", "goals_total"]);
-  const totalCorners = getActualNumber(["totalCornerCount", "total_corners", "cornerCount"]);
-  const totalCards = getActualNumber(["total_cards", "cards_total", "totalCards"]);
-  const totalShots = getActualNumber(["total_shots", "shots_total", "match_shots"]);
-
-  return `
-    ${aiHero(
-      "IA / Tendências",
-      "Resumo automático usando os dados reais retornados pela API.",
-      ["Partida", `${escapeHTML(home)} x ${escapeHTML(away)}`],
-      ["Placar", getScoreOrPredictionLabel()],
-      ["Fonte", "API"]
-    )}
-
-    <section class="grid-2">
-      <article class="card">
-        <h2>🧠 Resumo automático</h2>
-
-        <div class="summary-text">
-          <p>
-            ${escapeHTML(home)} enfrenta ${escapeHTML(away)} pela competição
-            <strong>${escapeHTML(getCurrentLeagueName())}</strong>.
-          </p>
-
-          <p>
-            Status da partida: <strong>${escapeHTML(getCurrentStatusLabel())}</strong>.
-            Placar: <strong>${escapeHTML(getScoreOrPredictionLabel())}</strong>.
-          </p>
-
-          <p>
-            Gols: <strong>${escapeHTML(totalGoals)}</strong>,
-            escanteios: <strong>${escapeHTML(totalCorners)}</strong>,
-            cartões: <strong>${escapeHTML(totalCards)}</strong> e
-            chutes: <strong>${escapeHTML(totalShots)}</strong>, quando disponíveis na API.
-          </p>
-
-          <p>
-            Mercado Over 2.5: <strong>${selectedMatch ? selectedMatch.over25 : "-"}</strong>.
-            BTTS: <strong>${selectedMatch ? selectedMatch.btts : "-"}</strong>.
-          </p>
-        </div>
-      </article>
-
-      <article class="card">
-        <h2>🎯 Leitura de mercado</h2>
-
-        ${statCards([
-          { label: "Over 2.5", value: selectedMatch ? selectedMatch.over25 : "-" },
-          { label: "BTTS", value: selectedMatch ? selectedMatch.btts : "-" },
-          { label: "Odd casa", value: selectedMatch ? selectedMatch.odds[0] : "-" },
-          { label: "Odd empate", value: selectedMatch ? selectedMatch.odds[1] : "-" },
-          { label: "Odd fora", value: selectedMatch ? selectedMatch.odds[2] : "-" },
-          { label: "Status", value: getCurrentStatusLabel() }
-        ])}
-      </article>
-    </section>
-  `;
+  return `<div class="big-badge">${escapeHTML(short)}</div>`;
 }
 
 function getTodayISO() {
