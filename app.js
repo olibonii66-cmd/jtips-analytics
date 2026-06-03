@@ -1,70 +1,9 @@
-const leagues = [
-  {
-    name: "🌍 Mundo › Amistosos Internacionais",
-    matches: [
-      {
-        time: "12:00",
-        status: "pre",
-        home: "China Feminina",
-        away: "Rússia Feminina",
-        homeShort: "CHN",
-        awayShort: "RUS",
-        score: "vs",
-        odds: ["1.40", "3.70", "5.25"],
-        over25: "50%",
-        btts: "25%",
-        form: ["w", "w", "d", "l", "w"]
-      },
-      {
-        time: "13:00",
-        status: "pre",
-        home: "Indonésia Feminina",
-        away: "Singapura Feminina",
-        homeShort: "IDN",
-        awayShort: "SGP",
-        score: "vs",
-        odds: ["1.18", "4.95", "8.00"],
-        over25: "50%",
-        btts: "50%",
-        form: ["l", "l", "w", "l", "w"]
-      }
-    ]
-  },
-  {
-    name: "🇪🇺 Europa › Amistosos Internacionais",
-    matches: [
-      {
-        time: "14:00",
-        status: "pre",
-        home: "Gibraltar",
-        away: "Ilhas Virgens Britânicas",
-        homeShort: "GIB",
-        awayShort: "IVB",
-        score: "vs",
-        odds: ["1.30", "4.70", "7.20"],
-        over25: "25%",
-        btts: "25%",
-        form: ["l", "l", "d", "l", "l"]
-      },
-      {
-        time: "15:45",
-        status: "pre",
-        home: "Holanda",
-        away: "Argélia",
-        homeShort: "HOL",
-        awayShort: "ARG",
-        score: "vs",
-        odds: ["1.29", "5.20", "9.67"],
-        over25: "50%",
-        btts: "50%",
-        form: ["w", "w", "d", "w", "w"]
-      }
-    ]
-  },
+let leagues = [
   {
     name: "🇦🇷 Argentina › Liga Profissional",
     matches: [
       {
+        id: "demo-1",
         time: "18:00",
         status: "pre",
         home: "San Lorenzo",
@@ -75,25 +14,8 @@ const leagues = [
         odds: ["2.07", "2.99", "4.03"],
         over25: "30%",
         btts: "35%",
-        form: ["w", "d", "l", "d", "l"]
-      }
-    ]
-  },
-  {
-    name: "🇮🇹 Itália › Serie C Playoffs",
-    matches: [
-      {
-        time: "Final",
-        status: "done",
-        home: "Union Brescia",
-        away: "Ascoli",
-        homeShort: "BRE",
-        awayShort: "ASC",
-        score: "1 - 0",
-        odds: ["2.62", "2.80", "2.60"],
-        over25: "38%",
-        btts: "25%",
-        form: ["w", "w", "d", "l", "w"]
+        form: ["w", "d", "l", "d", "l"],
+        raw: null
       }
     ]
   }
@@ -113,6 +35,299 @@ tabButtons.forEach(function(button) {
   });
 });
 
+async function loadRealMatches() {
+  const container = document.getElementById("matchesContainer");
+
+  container.innerHTML = `
+    <article class="card">
+      <h2>Carregando jogos reais...</h2>
+      <p class="small-note">Buscando partidas na API da FootyStats.</p>
+    </article>
+  `;
+
+  try {
+    const response = await fetch("/api/jogos");
+    const payload = await response.json();
+
+    if (!response.ok || !payload.ok) {
+      throw new Error(payload.error || "Erro ao carregar jogos reais.");
+    }
+
+    const matches = extractMatchesFromApi(payload.raw || payload.data || payload);
+
+    if (!matches.length) {
+      renderMatches();
+
+      container.insertAdjacentHTML("afterbegin", `
+        <article class="card" style="margin-bottom: 14px;">
+          <h2>⚠️ Nenhum jogo real retornado hoje</h2>
+          <p class="small-note">
+            A API respondeu corretamente, mas retornou lista vazia.
+            Por enquanto estamos mostrando jogos de demonstração.
+          </p>
+        </article>
+      `);
+
+      return;
+    }
+
+    leagues = groupMatchesByLeague(matches);
+    renderMatches();
+  } catch (error) {
+    renderMatches();
+
+    container.insertAdjacentHTML("afterbegin", `
+      <article class="card" style="margin-bottom: 14px;">
+        <h2>⚠️ Não foi possível carregar os jogos reais</h2>
+        <p class="small-note">
+          ${escapeHTML(error.message)}
+          Mostrando jogos de demonstração por enquanto.
+        </p>
+      </article>
+    `);
+  }
+}
+
+function extractMatchesFromApi(raw) {
+  if (!raw) return [];
+
+  if (Array.isArray(raw)) return raw;
+  if (Array.isArray(raw.data)) return raw.data;
+  if (Array.isArray(raw.matches)) return raw.matches;
+  if (Array.isArray(raw.fixtures)) return raw.fixtures;
+
+  if (raw.data && Array.isArray(raw.data.matches)) {
+    return raw.data.matches;
+  }
+
+  return [];
+}
+
+function groupMatchesByLeague(matches) {
+  const groups = new Map();
+
+  matches.forEach(function(match) {
+    const leagueName = getLeagueName(match);
+
+    if (!groups.has(leagueName)) {
+      groups.set(leagueName, {
+        name: leagueName,
+        matches: []
+      });
+    }
+
+    groups.get(leagueName).matches.push(normalizeMatch(match));
+  });
+
+  return Array.from(groups.values());
+}
+
+function normalizeMatch(match) {
+  const homeName =
+    match.home_name ||
+    match.homeName ||
+    match.team_a_name ||
+    match.home_team_name ||
+    match.homeTeam ||
+    match.home ||
+    `Mandante ${match.homeID || ""}`.trim();
+
+  const awayName =
+    match.away_name ||
+    match.awayName ||
+    match.team_b_name ||
+    match.away_team_name ||
+    match.awayTeam ||
+    match.away ||
+    `Visitante ${match.awayID || ""}`.trim();
+
+  const homeGoals = getNumber(
+    match.homeGoalCount,
+    match.home_goals,
+    match.homeGoals
+  );
+
+  const awayGoals = getNumber(
+    match.awayGoalCount,
+    match.away_goals,
+    match.awayGoals
+  );
+
+  const status = normalizeStatus(match.status, match.game_status);
+
+  return {
+    id: String(match.id || match.match_id || `${homeName}-${awayName}`),
+    time: getMatchTime(match),
+    status,
+    home: homeName,
+    away: awayName,
+    homeShort: makeShort(homeName),
+    awayShort: makeShort(awayName),
+    score: status === "done" ? `${homeGoals ?? 0} - ${awayGoals ?? 0}` : "vs",
+    odds: [
+      formatOdd(match.odds_ft_1 || match.odds_1 || match.home_odds),
+      formatOdd(match.odds_ft_X || match.odds_x || match.draw_odds),
+      formatOdd(match.odds_ft_2 || match.odds_2 || match.away_odds)
+    ],
+    over25: formatPercent(
+      match.o25_potential ||
+      match.over_25_percentage ||
+      match.over25 ||
+      match.over_2_5_probability
+    ),
+    btts: formatPercent(
+      match.btts_potential ||
+      match.btts_percentage ||
+      match.btts ||
+      match.btts_probability
+    ),
+    form: ["d", "d", "d", "d", "d"],
+    raw: match
+  };
+}
+
+function getLeagueName(match) {
+  const country =
+    match.country ||
+    match.country_name ||
+    match.league_country ||
+    "";
+
+  const league =
+    match.league_name ||
+    match.competition_name ||
+    match.season_name ||
+    match.league ||
+    `Liga ${match.competition_id || match.league_id || match.season_id || ""}`.trim();
+
+  if (country) {
+    return `${country} › ${league}`;
+  }
+
+  return league;
+}
+
+function normalizeStatus(status, gameStatus) {
+  const value = String(status || gameStatus || "").toLowerCase();
+
+  if (
+    value.includes("complete") ||
+    value.includes("finished") ||
+    value.includes("final") ||
+    value === "ft"
+  ) {
+    return "done";
+  }
+
+  return "pre";
+}
+
+function getMatchTime(match) {
+  const unix =
+    match.date_unix ||
+    match.match_time ||
+    match.timestamp ||
+    match.kickoff_unix;
+
+  if (unix && Number.isFinite(Number(unix))) {
+    const date = new Date(Number(unix) * 1000);
+
+    return date.toLocaleTimeString("pt-BR", {
+      hour: "2-digit",
+      minute: "2-digit",
+      timeZone: "America/Sao_Paulo"
+    });
+  }
+
+  const rawDate =
+    match.date ||
+    match.kickoff ||
+    match.match_date ||
+    match.time;
+
+  if (rawDate) {
+    const date = new Date(rawDate);
+
+    if (!Number.isNaN(date.getTime())) {
+      return date.toLocaleTimeString("pt-BR", {
+        hour: "2-digit",
+        minute: "2-digit",
+        timeZone: "America/Sao_Paulo"
+      });
+    }
+
+    return String(rawDate).slice(0, 5);
+  }
+
+  return "--:--";
+}
+
+function getNumber() {
+  for (const value of arguments) {
+    if (value === null || value === undefined || value === "") continue;
+
+    const number = Number(value);
+
+    if (Number.isFinite(number)) {
+      return number;
+    }
+  }
+
+  return null;
+}
+
+function formatOdd(value) {
+  const number = Number(value);
+
+  if (!Number.isFinite(number) || number <= 0) {
+    return "-";
+  }
+
+  return number.toFixed(2);
+}
+
+function formatPercent(value) {
+  if (value === null || value === undefined || value === "") {
+    return "-";
+  }
+
+  const number = Number(value);
+
+  if (!Number.isFinite(number)) {
+    const text = String(value);
+    return text.includes("%") ? text : "-";
+  }
+
+  if (number <= 1) {
+    return `${Math.round(number * 100)}%`;
+  }
+
+  return `${Math.round(number)}%`;
+}
+
+function makeShort(name) {
+  return String(name)
+    .replace(/[^a-zA-ZÀ-ÿ\s]/g, "")
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 3)
+    .map(function(part) {
+      return part[0];
+    })
+    .join("")
+    .toUpperCase()
+    .slice(0, 3) || "T";
+}
+
+function escapeHTML(value) {
+  return String(value)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
 function getFormLabel(item) {
   if (item === "w") return "V";
   if (item === "d") return "E";
@@ -126,7 +341,7 @@ function renderMatches() {
     return `
       <article class="league-card">
         <header class="league-header">
-          <div class="league-name">${league.name}</div>
+          <div class="league-name">${escapeHTML(league.name)}</div>
           <div class="col-label">Forma</div>
           <div class="col-label">Odds<br>1 · X · 2</div>
           <div class="col-label">+2.5</div>
@@ -140,20 +355,20 @@ function renderMatches() {
               <div class="time">
                 ${match.status === "done"
                   ? '<span class="status status-done">Finalizado</span>'
-                  : match.time + '<br><span class="status status-pre">Pré-jogo</span>'
+                  : `${escapeHTML(match.time)}<br><span class="status status-pre">Pré-jogo</span>`
                 }
               </div>
 
               <div class="team">
-                <span class="team-badge">${match.homeShort}</span>
-                <span class="team-name">${match.home}</span>
+                <span class="team-badge">${escapeHTML(match.homeShort)}</span>
+                <span class="team-name">${escapeHTML(match.home)}</span>
               </div>
 
-              <div class="score">${match.score}</div>
+              <div class="score">${escapeHTML(match.score)}</div>
 
               <div class="team">
-                <span class="team-badge">${match.awayShort}</span>
-                <span class="team-name">${match.away}</span>
+                <span class="team-badge">${escapeHTML(match.awayShort)}</span>
+                <span class="team-name">${escapeHTML(match.away)}</span>
               </div>
 
               <div class="form">
@@ -164,14 +379,14 @@ function renderMatches() {
 
               <div class="odds">
                 ${match.odds.map(function(odd) {
-                  return `<span>${odd}</span>`;
+                  return `<span>${escapeHTML(odd)}</span>`;
                 }).join("")}
               </div>
 
-              <div class="percent">${match.over25}</div>
-              <div class="percent">${match.btts}</div>
+              <div class="percent">${escapeHTML(match.over25)}</div>
+              <div class="percent">${escapeHTML(match.btts)}</div>
 
-              <button class="stats-btn" type="button" onclick="showStats()">
+              <button class="stats-btn" type="button" onclick="showStats('${escapeHTML(match.id)}')">
                 Estatísticas
               </button>
             </div>
@@ -182,7 +397,13 @@ function renderMatches() {
   }).join("");
 }
 
-function showStats() {
+function showStats(matchId) {
+  const selectedMatch = findMatchById(matchId);
+
+  if (selectedMatch) {
+    updateMatchHeader(selectedMatch);
+  }
+
   document.getElementById("homePage").classList.add("hidden");
   document.getElementById("statsPage").classList.remove("hidden");
 
@@ -193,6 +414,50 @@ function showStats() {
   });
 
   window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+function findMatchById(matchId) {
+  for (const league of leagues) {
+    const match = league.matches.find(function(item) {
+      return String(item.id) === String(matchId);
+    });
+
+    if (match) return match;
+  }
+
+  return null;
+}
+
+function updateMatchHeader(match) {
+  const header = document.querySelector(".match-header");
+
+  if (!header) return;
+
+  header.innerHTML = `
+    <div class="match-meta">
+      <strong>Partida selecionada</strong><br>
+      ${escapeHTML(match.time)} · ${match.status === "done" ? "Finalizado" : "Pré-jogo"}<br>
+      Dados via API
+    </div>
+
+    <div class="versus">
+      <div>
+        <div class="big-badge">${escapeHTML(match.homeShort)}</div>
+        <strong>${escapeHTML(match.home)}</strong>
+      </div>
+
+      <div class="vs">${escapeHTML(match.score)}</div>
+
+      <div>
+        <div class="big-badge">${escapeHTML(match.awayShort)}</div>
+        <strong>${escapeHTML(match.away)}</strong>
+      </div>
+    </div>
+
+    <div class="pre-badge">
+      ${match.status === "done" ? "✅ FINALIZADO" : "📅 PRÉ-JOGO"}
+    </div>
+  `;
 }
 
 function showHome() {
@@ -1142,4 +1407,4 @@ function playerList(players) {
   `;
 }
 
-renderMatches();
+loadRealMatches();
