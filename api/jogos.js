@@ -9,27 +9,44 @@ export default async function handler(req, res) {
   }
 
   try {
-    const leagueId = req.query.league_id || "1625";
-    const seasonId = req.query.season_id || "2018";
+    const date = req.query.date || "";
+    const timezone = req.query.timezone || "America/Sao_Paulo";
+    const page = req.query.page || "1";
 
-    const url = `https://api.football-data-api.com/league-matches?key=${apiKey}&league_id=${leagueId}&season_id=${seasonId}`;
+    const params = new URLSearchParams({
+      key: apiKey,
+      timezone,
+      page
+    });
+
+    if (date) {
+      params.set("date", date);
+    }
+
+    const url = `https://api.football-data-api.com/todays-matches?${params.toString()}`;
 
     const response = await fetch(url);
+
+    const data = await response.json().catch(function() {
+      return null;
+    });
 
     if (!response.ok) {
       return res.status(response.status).json({
         ok: false,
-        error: "Erro ao buscar jogos na API externa.",
-        status: response.status
+        error: "Erro ao buscar jogos na FootyStats.",
+        status: response.status,
+        data
       });
     }
 
-    const data = await response.json();
-
     return res.status(200).json({
       ok: true,
-      source: "football-data-api",
-      data
+      source: "footystats",
+      endpoint: "todays-matches",
+      date: date || "today",
+      timezone,
+      raw: data
     });
   } catch (error) {
     return res.status(500).json({
