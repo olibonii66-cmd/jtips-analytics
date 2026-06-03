@@ -50,6 +50,7 @@ function buildDateOptions(centerDate) {
 
     const iso = toISODate(date);
     const today = getTodayISO();
+
     let label = formatShortDate(date);
 
     if (iso === today) label = "Hoje";
@@ -205,9 +206,98 @@ function normalizeMatch(match) {
     ],
     over25: formatPercent(match.o25_potential || match.over_25_percentage || match.over25 || match.over_2_5_probability),
     btts: formatPercent(match.btts_potential || match.btts_percentage || match.btts || match.btts_probability),
-    form: ["d", "d", "d", "d", "d"],
+    homeForm: getTeamForm(match, "home", homeGoals, awayGoals, status),
+    awayForm: getTeamForm(match, "away", homeGoals, awayGoals, status),
     raw: match
   };
+}
+
+function getTeamForm(match, side, homeGoals, awayGoals, status) {
+  const raw =
+    side === "home"
+      ? (
+        match.home_form ||
+        match.homeForm ||
+        match.team_a_form ||
+        match.teamAForm ||
+        match.team_a_recent_form ||
+        match.home_recent_form ||
+        match.form_home ||
+        ""
+      )
+      : (
+        match.away_form ||
+        match.awayForm ||
+        match.team_b_form ||
+        match.teamBForm ||
+        match.team_b_recent_form ||
+        match.away_recent_form ||
+        match.form_away ||
+        ""
+      );
+
+  const parsed = parseForm(raw);
+
+  if (parsed.length) {
+    return padForm(parsed);
+  }
+
+  if (status === "done" && homeGoals !== null && awayGoals !== null) {
+    if (homeGoals === awayGoals) return padForm(["d"]);
+    if (side === "home") return padForm([homeGoals > awayGoals ? "w" : "l"]);
+    return padForm([awayGoals > homeGoals ? "w" : "l"]);
+  }
+
+  return ["n", "n", "n", "n", "n"];
+}
+
+function parseForm(value) {
+  if (!value) return [];
+
+  if (Array.isArray(value)) {
+    return value
+      .map(normalizeFormItem)
+      .filter(Boolean)
+      .slice(0, 5);
+  }
+
+  const text = String(value).trim();
+
+  if (!text) return [];
+
+  if (text.includes(",") || text.includes("-") || text.includes(" ")) {
+    return text
+      .split(/[,\-\s]+/)
+      .map(normalizeFormItem)
+      .filter(Boolean)
+      .slice(0, 5);
+  }
+
+  return text
+    .split("")
+    .map(normalizeFormItem)
+    .filter(Boolean)
+    .slice(0, 5);
+}
+
+function normalizeFormItem(value) {
+  const item = String(value).toLowerCase().trim();
+
+  if (["w", "v", "win", "victory", "won", "1"].includes(item)) return "w";
+  if (["d", "e", "draw", "empate", "0"].includes(item)) return "d";
+  if (["l", "dft", "loss", "lost", "derrota", "-1"].includes(item)) return "l";
+
+  return "";
+}
+
+function padForm(items) {
+  const output = items.slice(0, 5);
+
+  while (output.length < 5) {
+    output.push("n");
+  }
+
+  return output;
 }
 
 function getTeamLogo(match, side) {
@@ -243,29 +333,12 @@ function normalizeImageUrl(value) {
 
   if (!clean) return "";
 
-  if (clean.startsWith("http://") || clean.startsWith("https://")) {
-    return clean;
-  }
-
-  if (clean.startsWith("//")) {
-    return `https:${clean}`;
-  }
-
-  if (clean.startsWith("/img/")) {
-    return `https://cdn.footystats.org${clean}`;
-  }
-
-  if (clean.startsWith("img/")) {
-    return `https://cdn.footystats.org/${clean}`;
-  }
-
-  if (clean.startsWith("/teams/")) {
-    return `https://cdn.footystats.org/img${clean}`;
-  }
-
-  if (clean.startsWith("teams/")) {
-    return `https://cdn.footystats.org/img/${clean}`;
-  }
+  if (clean.startsWith("http://") || clean.startsWith("https://")) return clean;
+  if (clean.startsWith("//")) return `https:${clean}`;
+  if (clean.startsWith("/img/")) return `https://cdn.footystats.org${clean}`;
+  if (clean.startsWith("img/")) return `https://cdn.footystats.org/${clean}`;
+  if (clean.startsWith("/teams/")) return `https://cdn.footystats.org/img${clean}`;
+  if (clean.startsWith("teams/")) return `https://cdn.footystats.org/img/${clean}`;
 
   return `https://cdn.footystats.org/img/${clean.replace(/^\/+/, "")}`;
 }
@@ -434,7 +507,18 @@ function escapeHTML(value) {
 function getFormLabel(item) {
   if (item === "w") return "V";
   if (item === "d") return "E";
-  return "D";
+  if (item === "l") return "D";
+  return "–";
+}
+
+function renderFormLine(items) {
+  return `
+    <div class="form-line">
+      ${items.map(function(item) {
+        return `<span class="${escapeHTML(item)}">${getFormLabel(item)}</span>`;
+      }).join("")}
+    </div>
+  `;
 }
 
 function renderTeamIcon(match, side) {
@@ -446,8 +530,8 @@ function renderTeamIcon(match, side) {
       <img
         src="${escapeHTML(logo)}"
         alt="${escapeHTML(short)}"
+        class="team-logo-inline"
         onerror="this.outerHTML='<span class=&quot;team-badge&quot;>${escapeHTML(short)}</span>'"
-        style="width:34px;height:34px;border-radius:10px;object-fit:contain;background:#e8f3ec;border:1px solid #cfe2d5;padding:4px;flex-shrink:0;"
       >
     `;
   }
@@ -464,8 +548,8 @@ function renderBigTeamIcon(match, side) {
       <img
         src="${escapeHTML(logo)}"
         alt="${escapeHTML(short)}"
+        class="team-logo-big"
         onerror="this.outerHTML='<div class=&quot;big-badge&quot;>${escapeHTML(short)}</div>'"
-        style="width:74px;height:74px;border-radius:20px;object-fit:contain;background:#e8f3ec;border:1px solid #cfe2d5;padding:8px;margin:0 auto 8px;display:block;"
       >
     `;
   }
@@ -503,22 +587,21 @@ function renderMatches() {
                 }
               </div>
 
-              <div class="team">
-                ${renderTeamIcon(match, "home")}
+              <div class="team home-team">
                 <span class="team-name">${escapeHTML(match.home)}</span>
+                ${renderTeamIcon(match, "home")}
               </div>
 
               <div class="score">${escapeHTML(match.score)}</div>
 
-              <div class="team">
+              <div class="team away-team">
                 ${renderTeamIcon(match, "away")}
                 <span class="team-name">${escapeHTML(match.away)}</span>
               </div>
 
-              <div class="form">
-                ${match.form.map(function(item) {
-                  return `<span class="${item}">${getFormLabel(item)}</span>`;
-                }).join("")}
+              <div class="form-cell">
+                ${renderFormLine(match.homeForm)}
+                ${renderFormLine(match.awayForm)}
               </div>
 
               <div class="odds">
@@ -670,85 +753,9 @@ function aiHero(title, description, chip1, chip2, chip3) {
   `;
 }
 
-function heatRows(rows) {
-  return rows.map(function(row) {
-    return `
-      <tr>
-        <td>${row[0]}</td>
-        <td class="${row[2]}">${row[1]}</td>
-        <td class="${row[4]}">${row[3]}</td>
-        <td class="${row[6] || row[4]}">${row[5] || "-"}</td>
-      </tr>
-    `;
-  }).join("");
-}
-
-function simpleHeatRows(rows) {
-  return rows.map(function(row) {
-    return `
-      <tr>
-        <td>${row[0]}</td>
-        <td class="${row[2]}">${row[1]}</td>
-        <td class="${row[4]}">${row[3]}</td>
-      </tr>
-    `;
-  }).join("");
-}
-
-function marketTable(rows) {
-  return `
-    <table class="heat-table">
-      <thead>
-        <tr>
-          <th>Mercado</th>
-          <th>${escapeHTML(getCurrentHomeShort())}</th>
-          <th>${escapeHTML(getCurrentAwayShort())}</th>
-          <th>Média</th>
-        </tr>
-      </thead>
-      <tbody>${heatRows(rows)}</tbody>
-    </table>
-  `;
-}
-
-function simpleMarketTable(rows) {
-  return `
-    <table class="heat-table">
-      <thead>
-        <tr>
-          <th>Indicador</th>
-          <th>${escapeHTML(getCurrentHomeShort())}</th>
-          <th>${escapeHTML(getCurrentAwayShort())}</th>
-        </tr>
-      </thead>
-      <tbody>${simpleHeatRows(rows)}</tbody>
-    </table>
-  `;
-}
-
-function teamProgress(short, name, value, width, red) {
-  return `
-    <div class="team-row">
-      <div class="small-badge">${escapeHTML(short)}</div>
-
-      <div>
-        <strong>${escapeHTML(name)}</strong>
-        <div class="progress ${red ? "red" : ""}">
-          <span style="width:${width}%;"></span>
-        </div>
-        <p class="small-note">${escapeHTML(value)}</p>
-      </div>
-
-      <b class="${red ? "red" : ""}">${value.includes("%") ? escapeHTML(value) : width + "%"}</b>
-    </div>
-  `;
-}
-
 function renderCompletas() {
   const home = getCurrentHomeName();
   const away = getCurrentAwayName();
-  const homeShort = getCurrentHomeShort();
-  const awayShort = getCurrentAwayShort();
 
   return `
     <section class="ai-strip">
@@ -812,33 +819,12 @@ function renderCompletas() {
         </table>
       </article>
 
-      <article class="card form-compare">
-        <h2>📈 Forma Atual — Quem vence?</h2>
-
-        <div class="form-top">
-          <div>
-            <div class="big-badge">${escapeHTML(homeShort)}</div>
-            <strong>${escapeHTML(home)}</strong><br>
-            <span class="rating">-</span>
-          </div>
-
-          <div>
-            <div class="power-bar equal">
-              <span></span>
-              <span></span>
-            </div>
-
-            <p class="summary-text">
-              Dados reais de forma serão conectados na etapa de estatísticas completas.
-            </p>
-          </div>
-
-          <div>
-            <div class="big-badge">${escapeHTML(awayShort)}</div>
-            <strong>${escapeHTML(away)}</strong><br>
-            <span class="rating">-</span>
-          </div>
-        </div>
+      <article class="card">
+        <h2>📈 Forma recente</h2>
+        <p class="small-note">
+          A página inicial já separa a forma do mandante e visitante.
+          Os próximos dados completos entram nos endpoints específicos da partida.
+        </p>
       </article>
 
       <article class="card">
@@ -846,291 +832,85 @@ function renderCompletas() {
         <p class="small-note">
           O histórico entre as equipes será carregado pela API na próxima etapa.
         </p>
-        <div class="tile-grid">
-          <div class="tile"><strong>-</strong><span>Over 1.5</span><small>pendente</small></div>
-          <div class="tile"><strong>-</strong><span>Over 2.5</span><small>pendente</small></div>
-          <div class="tile"><strong>-</strong><span>BTTS</span><small>pendente</small></div>
-        </div>
       </article>
     </section>
   `;
 }
 
 function renderGols() {
-  return `
-    ${aiHero(
-      "Análise de Gols",
-      "Leitura focada em gols marcados, gols sofridos, Over/Under, BTTS e distribuição por tempo.",
-      ["Mercado sugerido", "Aguardando dados"],
-      ["Over 2.5", selectedMatch ? selectedMatch.over25 : "-"],
-      ["BTTS", selectedMatch ? selectedMatch.btts : "-"]
-    )}
-
-    <section class="grid-2">
-      <article class="card">
-        <h2>⚽ Gols Marcados</h2>
-        ${teamProgress(getCurrentHomeShort(), getCurrentHomeName(), "Aguardando dados", "50")}
-        ${teamProgress(getCurrentAwayShort(), getCurrentAwayName(), "Aguardando dados", "50")}
-      </article>
-
-      <article class="card">
-        <h2>📊 Over 2.5 & BTTS Predictions</h2>
-        ${marketTable([
-          ["Over 0.5", "-", "heat-mid", "-", "heat-mid", "-", "heat-mid"],
-          ["Over 1.5", "-", "heat-mid", "-", "heat-mid", "-", "heat-mid"],
-          ["Over 2.5", selectedMatch ? selectedMatch.over25 : "-", "heat-mid", "-", "heat-mid", selectedMatch ? selectedMatch.over25 : "-", "heat-mid"],
-          ["BTTS", selectedMatch ? selectedMatch.btts : "-", "heat-mid", "-", "heat-mid", selectedMatch ? selectedMatch.btts : "-", "heat-mid"]
-        ])}
-      </article>
-    </section>
-  `;
+  return basicTab(
+    "Análise de Gols",
+    "Leitura focada em gols marcados, gols sofridos, Over/Under, BTTS e distribuição por tempo."
+  );
 }
 
 function renderEscanteios() {
-  return `
-    ${aiHero(
-      "Análise de Escanteios",
-      "Leitura focada em escanteios totais, escanteios por equipe, linhas Over e comportamento por tempo.",
-      ["Média esperada", "Aguardando dados"],
-      ["Mercado sugerido", "Aguardando dados"],
-      ["Status", "API conectada parcialmente"]
-    )}
-
-    <section class="grid-2">
-      <article class="card">
-        <h2>🚩 Número de Escanteios</h2>
-        <div class="corner-summary">
-          <div class="corner-icon">⚑</div>
-          <div>
-            <strong class="corner-big">-</strong>
-            <b>Escanteios / Partida</b>
-            <p class="small-note">Dados de escanteios serão conectados na próxima etapa.</p>
-          </div>
-        </div>
-      </article>
-
-      <article class="card">
-        <h2>📊 Escanteios Totais</h2>
-        ${marketTable([
-          ["Over 6", "-", "heat-mid", "-", "heat-mid", "-", "heat-mid"],
-          ["Over 7", "-", "heat-mid", "-", "heat-mid", "-", "heat-mid"],
-          ["Over 8", "-", "heat-mid", "-", "heat-mid", "-", "heat-mid"]
-        ])}
-      </article>
-    </section>
-  `;
+  return basicTab(
+    "Análise de Escanteios",
+    "Leitura focada em escanteios totais, escanteios por equipe, linhas Over e comportamento por tempo."
+  );
 }
 
 function renderCartoes() {
-  return `
-    ${aiHero(
-      "Análise de Cartões",
-      "Leitura focada em cartões totais, cartões por equipe e comportamento por tempo.",
-      ["Média esperada", "Aguardando dados"],
-      ["Mercado sugerido", "Aguardando dados"],
-      ["Status", "API conectada parcialmente"]
-    )}
-
-    <section class="grid-2">
-      <article class="card">
-        <h2>🟨🟥 Número de Cartões</h2>
-        <div class="cards-summary">
-          <div class="cards-icon">
-            <span class="red-card"></span>
-            <span class="yellow-card"></span>
-          </div>
-          <div>
-            <strong class="cards-big">-</strong>
-            <b>Cartões / Partida</b>
-            <p class="small-note">Dados de cartões serão conectados na próxima etapa.</p>
-          </div>
-        </div>
-      </article>
-
-      <article class="card">
-        <h2>📊 Cartões Totais</h2>
-        ${marketTable([
-          ["Over 2.5", "-", "heat-mid", "-", "heat-mid", "-", "heat-mid"],
-          ["Over 3.5", "-", "heat-mid", "-", "heat-mid", "-", "heat-mid"],
-          ["Over 4.5", "-", "heat-mid", "-", "heat-mid", "-", "heat-mid"]
-        ])}
-      </article>
-    </section>
-  `;
+  return basicTab(
+    "Análise de Cartões",
+    "Leitura focada em cartões totais, cartões por equipe e comportamento por tempo."
+  );
 }
 
 function renderChutes() {
-  return `
-    ${aiHero(
-      "Análise de Chutes",
-      "Leitura de volume ofensivo, chutes por equipe, chutes no alvo, impedimentos, faltas e posse.",
-      ["Volume médio", "Aguardando dados"],
-      ["Mercado sugerido", "Aguardando dados"],
-      ["Status", "API conectada parcialmente"]
-    )}
-
-    <section class="grid-2">
-      <article class="card">
-        <h2>🎯 Volume por equipe</h2>
-        ${teamProgress(getCurrentHomeShort(), getCurrentHomeName(), "Aguardando dados", "50")}
-        ${teamProgress(getCurrentAwayShort(), getCurrentAwayName(), "Aguardando dados", "50")}
-      </article>
-
-      <article class="card">
-        <h2>📊 Chutes por equipe</h2>
-        ${marketTable([
-          ["Chutes / Jogo", "-", "heat-mid", "-", "heat-mid", "-", "heat-mid"],
-          ["Chutes no Alvo", "-", "heat-mid", "-", "heat-mid", "-", "heat-mid"],
-          ["Finalizações", "-", "heat-mid", "-", "heat-mid", "-", "heat-mid"]
-        ])}
-      </article>
-    </section>
-  `;
+  return basicTab(
+    "Análise de Chutes",
+    "Leitura de volume ofensivo, chutes por equipe, chutes no alvo, impedimentos, faltas e posse."
+  );
 }
 
 function renderIntervalo() {
-  return `
-    ${aiHero(
-      "Análise de Intervalo",
-      "Leitura de 1º tempo e 2º tempo com foco em forma HT, cartões por tempo e tendência após o intervalo.",
-      ["Forma HT", "Aguardando dados"],
-      ["Melhor tempo", "Aguardando dados"],
-      ["Status", "API conectada parcialmente"]
-    )}
-
-    <section class="grid-2">
-      <article class="card form-compare">
-        <h2>⏱️ First / Second Half WDL</h2>
-        <p class="small-note">Dados de intervalo serão conectados na próxima etapa.</p>
-      </article>
-
-      <article class="card">
-        <h2>📊 Resultado por Tempo</h2>
-        ${simpleMarketTable([
-          ["Win % 1st Half", "-", "heat-mid", "-", "heat-mid"],
-          ["Draw % 1st Half", "-", "heat-mid", "-", "heat-mid"],
-          ["Draw % 2nd Half", "-", "heat-mid", "-", "heat-mid"]
-        ])}
-      </article>
-    </section>
-  `;
+  return basicTab(
+    "Análise de Intervalo",
+    "Leitura de 1º tempo e 2º tempo com foco em forma HT, cartões por tempo e tendência após o intervalo."
+  );
 }
 
 function renderJogadores() {
-  return `
-    ${aiHero(
-      "Análise de Jogadores",
-      "Leitura individual para jogadores com maior chance de marcar e média de cartões por 90 minutos.",
-      ["Principal jogador", "Aguardando dados"],
-      ["Cartões / 90", "Aguardando dados"],
-      ["Status", "API conectada parcialmente"]
-    )}
-
-    <section class="grid-2">
-      <article class="card">
-        <h2>⚽ Quem pode marcar? — ${escapeHTML(getCurrentHomeName())}</h2>
-        <p class="small-note">Dados de jogadores serão conectados na próxima etapa.</p>
-      </article>
-
-      <article class="card">
-        <h2>🟨 Cartões / 90 — ${escapeHTML(getCurrentAwayName())}</h2>
-        <p class="small-note">Dados de jogadores serão conectados na próxima etapa.</p>
-      </article>
-    </section>
-  `;
+  return basicTab(
+    "Análise de Jogadores",
+    "Leitura individual para jogadores com maior chance de marcar e média de cartões por 90 minutos."
+  );
 }
 
 function renderIA() {
-  const home = getCurrentHomeName();
-  const away = getCurrentAwayName();
+  return basicTab(
+    "IA / Tendências",
+    "Resumo inteligente da partida, análise complementar, leitura de mercado e tendências individuais das equipes."
+  );
+}
 
+function basicTab(title, description) {
   return `
     ${aiHero(
-      "IA / Tendências",
-      "Resumo inteligente da partida, análise complementar, leitura de mercado e tendências individuais das equipes quando disponíveis.",
-      ["Partida", `${escapeHTML(home)} x ${escapeHTML(away)}`],
+      title,
+      description,
+      ["Partida", `${escapeHTML(getCurrentHomeName())} x ${escapeHTML(getCurrentAwayName())}`],
       ["Status", "Aguardando estatísticas"],
       ["Fonte", "API"]
     )}
 
-    <section id="iaRoot">
-      <section class="ia-layout">
-        <div class="stack">
-          <article class="card">
-            <div class="card-header">
-              <div>
-                <h2>🧠 Resumo das estatísticas da IA</h2>
-                <p class="card-subtitle">Esta área será preenchida quando conectarmos os dados completos da partida.</p>
-              </div>
-              <span class="badge">Resumo IA</span>
-            </div>
+    <section class="grid-2">
+      <article class="card">
+        <h2>${escapeHTML(title)}</h2>
+        <p class="small-note">
+          Esta aba será preenchida com os dados completos da partida na próxima etapa.
+        </p>
+      </article>
 
-            <div class="summary-text">
-              <p>
-                A partida selecionada é <strong>${escapeHTML(home)} x ${escapeHTML(away)}</strong>.
-                A listagem de jogos já vem da API. Agora falta conectar os endpoints específicos
-                de estatísticas, tendências e jogadores.
-              </p>
-            </div>
-          </article>
-
-          <article class="card">
-            <div class="card-header">
-              <div>
-                <h2>📋 Análise de acessórios</h2>
-                <p class="card-subtitle">Histórico, confronto direto e dados complementares entram na próxima etapa.</p>
-              </div>
-              <span class="badge">Pendente</span>
-            </div>
-
-            <p class="small-note">Nenhuma análise complementar carregada para esta partida ainda.</p>
-          </article>
-        </div>
-
-        <aside class="stack">
-          <article class="card">
-            <h2>🎯 Opções de aposta</h2>
-            <p class="small-note">As sugestões serão exibidas depois que conectarmos os dados completos da partida.</p>
-          </article>
-        </aside>
-      </section>
+      <article class="card">
+        <h2>📌 Próximo passo</h2>
+        <p class="small-note">
+          Conectar os campos específicos da API para esta categoria.
+        </p>
+      </article>
     </section>
-  `;
-}
-
-function playerList(players) {
-  return `
-    <div class="player-list">
-      ${players.map(function(player) {
-        return `
-          <div class="player-row">
-            <div class="player-name" style="--bar:${player[2]}%;">
-              <span>${player[0]}</span>
-            </div>
-            <strong>${player[1]}</strong>
-          </div>
-        `;
-      }).join("")}
-    </div>
-  `;
-}
-
-function goalsMinuteTable() {
-  return `
-    <table class="heat-table">
-      <thead>
-        <tr>
-          <th>Intervalo</th>
-          <th>${escapeHTML(getCurrentHomeShort())}</th>
-          <th>${escapeHTML(getCurrentAwayShort())}</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr><td>0 - 15</td><td class="heat-mid">-</td><td class="heat-mid">-</td></tr>
-        <tr><td>16 - 30</td><td class="heat-mid">-</td><td class="heat-mid">-</td></tr>
-        <tr><td>31 - 45</td><td class="heat-mid">-</td><td class="heat-mid">-</td></tr>
-      </tbody>
-    </table>
   `;
 }
 
