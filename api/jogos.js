@@ -11,34 +11,70 @@ export default async function handler(req, res) {
   try {
     const date = req.query.date || "";
     const timezone = req.query.timezone || "America/Sao_Paulo";
-    const page = req.query.page || "1";
 
-    const params = new URLSearchParams({
+    const matchParams = new URLSearchParams({
       key: apiKey,
-      timezone,
-      page
+      timezone
     });
 
     if (date) {
-      params.set("date", date);
+      matchParams.set("date", date);
     }
 
-    const url = `https://api.football-data-api.com/todays-matches?${params.toString()}`;
+    const matchesUrl = `https://api.football-data-api.com/todays-matches?${matchParams.toString()}`;
 
-    const response = await fetch(url);
+    const leaguesUrl = `https://api.football-data-api.com/league-list?key=${encodeURIComponent(
+      apiKey
+    )}&chosen_leagues_only=true`;
 
-    const data = await response.json().catch(function() {
+    const [matchesResponse, leaguesResponse] = await Promise.all([
+      fetch(matchesUrl),
+      fetch(leaguesUrl)
+    ]);
+
+    const matchesData = await matchesResponse.json().catch(function() {
       return null;
     });
 
-    if (!response.ok) {
-      return res.status(response.status).json({
+    const leaguesData = await leaguesResponse.json().catch(function() {
+      return null;
+    });
+
+    if (!matchesResponse.ok) {
+      return res.status(matchesResponse.status).json({
         ok: false,
         error: "Erro ao buscar jogos na FootyStats.",
-        status: response.status,
-        data
+        status: matchesResponse.status,
+        data: matchesData
       });
     }
+
+    const leagueMap = buildLeagueMap(leaguesData);
+    const rawMatches = extractMatches(matchesData);
+
+    const enrichedMatches = rawMatches.map(function(match) {
+      const seasonId =
+        match.competition_id ||
+        match.league_id ||
+        match.season_id ||
+        match.competitionID ||
+        match.leagueID ||
+        match.seasonID;
+
+      const leagueInfo = leagueMap[String(seasonId)] || null;
+
+      return {
+        ...match,
+        resolved_league_id: seasonId || null,
+        resolved_league_name: leagueInfo ? leagueInfo.name : null,
+        resolved_league_country: leagueInfo ? leagueInfo.country : null
+      };
+    });
+
+    const enrichedData = {
+      ...(matchesData || {}),
+      data: enrichedMatches
+    };
 
     return res.status(200).json({
       ok: true,
@@ -46,7 +82,8 @@ export default async function handler(req, res) {
       endpoint: "todays-matches",
       date: date || "today",
       timezone,
-      raw: data
+      raw: enrichedData,
+      leagues_loaded: Object.keys(leagueMap).length
     });
   } catch (error) {
     return res.status(500).json({
@@ -55,4 +92,71 @@ export default async function handler(req, res) {
       detail: error.message
     });
   }
+}
+
+function extractMatches(raw) {
+  if (!raw) return [];
+
+  if (Array.isArray(raw)) return raw;
+  if (Array.isArray(raw.data)) return raw.data;
+  if (Array.isArray(raw.matches)) return raw.matches;
+  if (Array.isArray(raw.fixtures)) return raw.fixtures;
+
+  return [];
+}
+
+function buildLeagueMap(raw) {
+  const list = extractLeagueList(raw);
+  const map = {};
+
+  list.forEach(function(league) {
+    const country = league.country || league.country_name || "";
+    const leagueName =
+      league.league_name ||
+      league.name ||
+      league.competition_name ||
+      "Liga";
+
+    const seasons = Array.isArray(league.season)
+      ? league.season
+      : Array.isArray(league.seasons)
+        ? league.seasons
+        : [];
+
+    seasons.forEach(function(season) {
+      const seasonId =
+        season.id ||
+        season.season_id ||
+        season.competition_id ||
+        season.league_id;
+
+      if (!seasonId) return;
+
+      const seasonYear = season.year || season.season || "";
+
+      map[String(seasonId)] = {
+        id: String(seasonId),
+        name: country ? `${country} › ${leagueName}` : leagueName,
+        league_name: leagueName,
+        country,
+        year: seasonYear
+      };
+    });
+  });
+
+  return map;
+}
+
+function extractLeagueList(raw) {
+  if (!raw) return [];
+
+  if (Array.isArray(raw)) return raw;
+  if (Array.isArray(raw.data)) return raw.data;
+  if (Array.isArray(raw.leagues)) return raw.leagues;
+
+  if (raw.data && Array.isArray(raw.data.leagues)) {
+    return raw.data.leagues;
+  }
+
+  return [];
 }
