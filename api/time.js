@@ -83,7 +83,7 @@ export default async function handler(req, res) {
     const refresh = req.query.refresh === '1' || req.query.refresh === 'true';
     if (!teamId) return res.status(400).json({ ok: false, error: 'team_id obrigatório.' });
 
-    const cacheKey = `time:footystats_exact_competition:v23_2:${teamId}:${competitionId}`;
+    const cacheKey = `time:footystats_api_first_fallback:v23_2_fix_goals:${teamId}:${competitionId}`;
     const cached = cache.get(cacheKey);
     if (!refresh && cached && Date.now() - cached.ts < TTL) {
       res.setHeader('Cache-Control', 's-maxage=600, stale-while-revalidate=1200');
@@ -130,16 +130,20 @@ export default async function handler(req, res) {
     const team = exactRows[0] || sorted[0];
     const selectedCompetitionId = rowCompetitionId(team);
     const exactCompetitionMatch = !competitionId || !!exactRows.length;
-    const stats = exactCompetitionMatch ? parseStats(team?.stats) : {};
+    // API-first: se a API não devolver a competição exata, ainda usamos a melhor linha retornada pela própria API
+    // como fallback controlado. Isso evita cair no lastx/trends no front e mostrar percentuais errados.
+    const stats = parseStats(team?.stats);
+    const fallbackUsed = !!(competitionId && !exactCompetitionMatch);
 
     const payload = {
-      ok: exactCompetitionMatch,
-      fonte: exactCompetitionMatch ? 'footystats_team_exact_competition' : 'footystats_team_no_exact_competition',
+      ok: true,
+      fonte: exactCompetitionMatch ? 'footystats_team_exact_competition' : 'footystats_team_api_fallback_best_available',
       team_id: teamId,
       requested_competition_id: competitionId || null,
       selected_competition_id: selectedCompetitionId || null,
       exact_competition_match: exactCompetitionMatch,
-      warning: competitionId && !exactCompetitionMatch ? 'A API não retornou estatística para a competição exata. Dados principais bloqueados para evitar número incorreto.' : null,
+      warning: fallbackUsed ? 'A API não retornou estatística para a competição exata. Usando melhor linha disponível da própria API como fallback controlado.' : null,
+      fallback_used: fallbackUsed,
       team,
       stats,
       debug_corner_values: {

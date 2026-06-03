@@ -5158,10 +5158,16 @@ window.setEInner=function(k,v){ES.inner[k]=v;renderTab();};
 function gi(k,d){return ES.inner[k]||d;}
 
 // DADOS
-function hStats(m){return(m&&m.footySeasonStats&&m.footySeasonStats.home&&m.footySeasonStats.home.stats)||
-  (typeof v128StatsObj==='function'?v128StatsObj(m,'home'):{})||{};}
-function aStats(m){return(m&&m.footySeasonStats&&m.footySeasonStats.away&&m.footySeasonStats.away.stats)||
-  (typeof v128StatsObj==='function'?v128StatsObj(m,'away'):{})||{};}
+function hasStatKeys(o){return !!(o&&typeof o==='object'&&Object.keys(o).length);}
+function officialSideStats(m,side){
+  var fs=m&&m.footySeasonStats&&m.footySeasonStats[side]&&m.footySeasonStats[side].stats;
+  if(hasStatKeys(fs))return fs;
+  var js=m&&m.__jtipsSeasonStats&&m.__jtipsSeasonStats[side];
+  if(hasStatKeys(js))return js;
+  return {};
+}
+function hStats(m){return officialSideStats(m,'home');}
+function aStats(m){return officialSideStats(m,'away');}
 
 function sv(s,k,def){
   if(def===undefined)def=null;
@@ -5783,8 +5789,10 @@ window.v128Header=v128Header=function(m){
 // ═══════════════════════════════════════════════════════════
 // 3. HELPERS
 // ═══════════════════════════════════════════════════════════
-function _hS(m){return(m&&m.footySeasonStats&&m.footySeasonStats.home&&m.footySeasonStats.home.stats)||(typeof v128StatsObj==='function'?v128StatsObj(m,'home'):{})||{};}
-function _aS(m){return(m&&m.footySeasonStats&&m.footySeasonStats.away&&m.footySeasonStats.away.stats)||(typeof v128StatsObj==='function'?v128StatsObj(m,'away'):{})||{};}
+function _hasStatKeys(o){return !!(o&&typeof o==='object'&&Object.keys(o).length);}
+function _officialSideStats(m,side){var fs=m&&m.footySeasonStats&&m.footySeasonStats[side]&&m.footySeasonStats[side].stats;if(_hasStatKeys(fs))return fs;var js=m&&m.__jtipsSeasonStats&&m.__jtipsSeasonStats[side];if(_hasStatKeys(js))return js;return {};}
+function _hS(m){return _officialSideStats(m,'home');}
+function _aS(m){return _officialSideStats(m,'away');}
 function _sv(s,k){if(!s)return null;var v=s[k];if(v==null&&s.additional_info)v=s.additional_info[k];var n=Number(v);return Number.isFinite(n)?n:null;}
 function _d1(v){if(v==null)return'—';var n=Number(v);return Number.isFinite(n)?n.toFixed(1):'—';}
 function _d2(v){if(v==null)return'—';var n=Number(v);return Number.isFinite(n)?n.toFixed(2):'—';}
