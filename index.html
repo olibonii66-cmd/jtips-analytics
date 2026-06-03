@@ -5164,8 +5164,7 @@ function aStats(m){return (m&&m.footySeasonStats&&m.footySeasonStats.away&&m.foo
 function sv(s,k,def){
   if(def===undefined)def=null;
   if(!s)return def;
-  var v=s[k];
-  if(v==null&&s.additional_info)v=s.additional_info[k];
+  var v=(s.additional_info&&s.additional_info[k]!=null)?s.additional_info[k]:s[k];
   var n=Number(v);
   return Number.isFinite(n)?n:def;
 }
@@ -5783,7 +5782,7 @@ window.v128Header=v128Header=function(m){
 // ═══════════════════════════════════════════════════════════
 function _hS(m){return(m&&m.footySeasonStats&&m.footySeasonStats.home&&m.footySeasonStats.home.stats)||(typeof v128StatsObj==='function'?v128StatsObj(m,'home'):{})||{};}
 function _aS(m){return(m&&m.footySeasonStats&&m.footySeasonStats.away&&m.footySeasonStats.away.stats)||(typeof v128StatsObj==='function'?v128StatsObj(m,'away'):{})||{};}
-function _sv(s,k){if(!s)return null;var v=s[k];if(v==null&&s.additional_info)v=s.additional_info[k];var n=Number(v);return Number.isFinite(n)?n:null;}
+function _sv(s,k){if(!s)return null;var v=(s.additional_info&&s.additional_info[k]!=null)?s.additional_info[k]:s[k];var n=Number(v);return Number.isFinite(n)?n:null;}
 function _d1(v){if(v==null)return'—';var n=Number(v);return Number.isFinite(n)?n.toFixed(1):'—';}
 function _d2(v){if(v==null)return'—';var n=Number(v);return Number.isFinite(n)?n.toFixed(2):'—';}
 function _pct(v){if(v==null)return'—';return Math.round(Number(v))+'%';}

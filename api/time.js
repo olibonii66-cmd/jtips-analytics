@@ -17,7 +17,7 @@ function parseStats(v) {
   if (typeof v === 'object') obj = v;
   else { try { obj = JSON.parse(v); } catch (e) { obj = {}; } }
   if (obj && typeof obj === 'object' && obj.additional_info && typeof obj.additional_info === 'object') {
-    obj = { ...obj.additional_info, ...obj, additional_info: obj.additional_info };
+    obj = { ...obj, ...obj.additional_info, additional_info: obj.additional_info };
   }
   return obj;
 }
@@ -88,7 +88,7 @@ export default async function handler(req, res) {
     const refresh = req.query.refresh === '1' || req.query.refresh === 'true';
     if (!teamId) return res.status(400).json({ ok: false, error: 'team_id obrigatório.' });
 
-    const cacheKey = `time:footystats_exact_competition:v23_2:${teamId}:${competitionId}`;
+    const cacheKey = `time:footystats_exact_competition:v23_2_ai_fields_v2:${teamId}:${competitionId}`;
     const cached = cache.get(cacheKey);
     if (!refresh && cached && Date.now() - cached.ts < TTL) {
       res.setHeader('Cache-Control', 's-maxage=600, stale-while-revalidate=1200');
