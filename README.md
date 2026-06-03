@@ -4,7 +4,9 @@ Projeto novo do JTIPS Analytics no formato GitHub + Vercel.
 
 ## Estrutura
 
-- `index.html`: site completo em HTML, CSS e JavaScript puro.
+- `index.html`: estrutura HTML principal.
+- `styles.css`: visual completo do site.
+- `app.js`: dados mockados, navegação e renderização das abas.
 - `assets/logo-jtips.svg`: logo temporária no padrão verde/dourado.
 - `api/health.js`: endpoint simples para testar se a Vercel está online.
 - `vercel.json`: configuração básica para Vercel.
@@ -12,13 +14,14 @@ Projeto novo do JTIPS Analytics no formato GitHub + Vercel.
 
 ## Como publicar
 
-1. Suba esta pasta para um repositório GitHub.
-2. Importe o repositório na Vercel.
-3. Deploy automático.
+1. Crie um repositório no GitHub.
+2. Envie todos os arquivos desta pasta.
+3. Importe o repositório na Vercel.
+4. Publique.
 
-## Logo
+## Logo oficial
 
-A logo atual é SVG temporária. Para usar sua logo oficial:
+Para usar a logo oficial:
 
 1. Salve sua imagem em `assets/logo-jtips.jpg`.
 2. No `index.html`, troque:
