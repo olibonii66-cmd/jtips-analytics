@@ -88,7 +88,7 @@ export default async function handler(req, res) {
     const refresh = req.query.refresh === '1' || req.query.refresh === 'true';
     if (!teamId) return res.status(400).json({ ok: false, error: 'team_id obrigatório.' });
 
-    const cacheKey = `time:footystats_exact_competition:v23_2_official_priority_v4:${teamId}:${competitionId}`;
+    const cacheKey = `time:footystats_exact_competition:v23_2_all_context_v6:${teamId}:${competitionId}`;
     const cached = cache.get(cacheKey);
     if (!refresh && cached && Date.now() - cached.ts < TTL) {
       res.setHeader('Cache-Control', 's-maxage=600, stale-while-revalidate=1200');
@@ -99,29 +99,18 @@ export default async function handler(req, res) {
     const attempts = [];
     let allRows = [];
 
-    // Prioridade correta para reproduzir a página da FootyStats:
-    // 1) usar primeiro a resposta filtrada pela própria API com league_id;
-    // 2) se não vier, tentar season_id;
-    // 3) se não vier, tentar competition_id;
-    // 4) só depois usar melhor linha disponível.
-    // Antes o código misturava as respostas e reordenava tudo; em algumas partidas isso escolhia outra temporada/competição.
-    const rowsByMode = [];
     for (const mode of modes) {
       const a = await callTeam(key, teamId, competitionId, mode);
       attempts.push({ mode: a.mode, status: a.status, ok: a.ok, success: a.success, message: a.message, total_rows: a.rows.length, url: a.url });
       if (a.rows.length) {
-        const tagged = a.rows.map(r => ({ ...r, __request_mode: mode }));
-        rowsByMode.push({ mode, rows: tagged });
-        allRows = allRows.concat(tagged);
-        // Se a chamada filtrada trouxe linhas com stats, essa é a fonte que deve prevalecer.
-        if (tagged.some(r => statsCount(r) > 0)) break;
+        allRows = allRows.concat(a.rows.map(r => ({ ...r, __request_mode: mode })));
       }
     }
 
-    // Remove duplicados por competição/id, mantendo primeira ocorrência, ou seja, a ordem de prioridade da chamada.
+    // Remove duplicados por modo+competição/id, mantendo a chance de comparar league_id/season_id/competition_id.
     const seen = new Set();
     allRows = allRows.filter(r => {
-      const k = `${r.__request_mode}:${rowCompetitionId(r)}:${norm(r.id)}:${norm(r.name)}`;
+      const k = `${r.__request_mode || ''}:${rowCompetitionId(r)}:${norm(r.id)}:${norm(r.name)}`;
       if (seen.has(k)) return false;
       seen.add(k);
       return true;
@@ -139,19 +128,13 @@ export default async function handler(req, res) {
       });
     }
 
-    const modeRank = { league_id: 0, season_id: 1, competition_id: 2, none: 3 };
-    const sorted = [...allRows].sort((a, b) => {
-      const ra = modeRank[a.__request_mode] ?? 9;
-      const rb = modeRank[b.__request_mode] ?? 9;
-      if (ra !== rb) return ra - rb;
-      return statsCount(b) - statsCount(a);
-    });
+    const sorted = [...allRows].sort((a, b) => scoreRow(b, competitionId) - scoreRow(a, competitionId));
     const exactRows = competitionId ? sorted.filter(r => rowCompetitionId(r) === competitionId || norm(r.competition_id) === competitionId || norm(r.league_id) === competitionId || norm(r.season_id) === competitionId) : sorted;
-    // Se a API já retornou stats na chamada filtrada, usar essa linha mesmo quando o objeto não carrega competition_id corretamente.
-    const filteredRowsWithStats = sorted.filter(r => r.__request_mode !== 'none' && statsCount(r) > 0);
-    const team = exactRows[0] || filteredRowsWithStats[0] || sorted[0];
+    const exactWithStats = exactRows.filter(r => statsCount(r) > 0).sort((a,b)=>statsCount(b)-statsCount(a));
+    const anyWithStats = sorted.filter(r => statsCount(r) > 0);
+    const team = exactWithStats[0] || exactRows[0] || anyWithStats[0] || sorted[0];
     const selectedCompetitionId = rowCompetitionId(team);
-    const exactCompetitionMatch = !competitionId || !!exactRows.length || !!filteredRowsWithStats.length;
+    const exactCompetitionMatch = !competitionId || !!exactRows.length;
     const stats = parseStats(team?.stats);
 
     const payload = {
