@@ -6305,4 +6305,358 @@ document.head.appendChild(css);
 })();
 </script>
 
+
+
+<!-- V24 — Estrutura estatística estilo FootyStats dentro do layout JTIPS -->
+<script>
+(function(){
+'use strict';
+
+// Esta camada não troca o layout do site. Ela reorganiza a aba Estatísticas para seguir a estrutura de leitura do FootyStats.
+function v24N(v){
+  if(v===undefined||v===null||v===''||v===-1||v==='-1')return null;
+  var n=Number(String(v).replace(',','.'));
+  return Number.isFinite(n)?n:null;
+}
+function v24RawStats(m,side){
+  var s=(m&&m.footySeasonStats&&m.footySeasonStats[side]&&m.footySeasonStats[side].stats)||{};
+  if(s&&Object.keys(s).length)return s;
+  s=(m&&m.teamTrends&&m.teamTrends[side]&&m.teamTrends[side].stats)||{};
+  if(s&&Object.keys(s).length)return s;
+  if(typeof v128StatsObj==='function')return v128StatsObj(m,side)||{};
+  return {};
+}
+function v24Get(obj,keys){
+  if(!obj)return null;
+  if(!Array.isArray(keys))keys=[keys];
+  for(var i=0;i<keys.length;i++){
+    var k=keys[i];
+    var v=obj[k];
+    if((v===undefined||v===null||v==='')&&obj.additional_info)v=obj.additional_info[k];
+    var n=v24N(v);
+    if(n!==null)return n;
+  }
+  return null;
+}
+function v24First(obj,keys){
+  if(!obj)return null;
+  if(!Array.isArray(keys))keys=[keys];
+  for(var i=0;i<keys.length;i++){
+    var k=keys[i];
+    var v=obj[k];
+    if((v===undefined||v===null||v==='')&&obj.additional_info)v=obj.additional_info[k];
+    if(v!==undefined&&v!==null&&v!==''&&v!==-1&&v!=='-1')return v;
+  }
+  return null;
+}
+function v24Avg(a,b){
+  a=v24N(a);b=v24N(b);
+  if(a===null&&b===null)return null;
+  if(a===null)return Math.round(b);
+  if(b===null)return Math.round(a);
+  return Math.round((a+b)/2);
+}
+function v24D(v,dec){
+  var n=v24N(v); if(n===null)return '—';
+  var d=dec===undefined?1:dec;
+  return n.toFixed(d).replace('.',',');
+}
+function v24P(v){var n=v24N(v);return n===null?'—':Math.round(n)+'%';}
+function v24Color(v){var n=v24N(v);if(n===null)return 'none';return n>=68?'good':n>=45?'mid':'bad';}
+function v24Badge(v){var n=v24N(v),c=v24Color(n);return '<span class="v24-badge '+c+'">'+(n===null?'—':Math.round(n)+'%')+'</span>';}
+function v24CellPct(v){return '<td class="v24-td pct">'+v24Badge(v)+'</td>';}
+function v24CellNum(v,dec){return '<td class="v24-td num">'+v24D(v,dec)+'</td>';}
+function v24CellRaw(v){return '<td class="v24-td num">'+(v===null||v===undefined||v===''?'—':String(v))+'</td>';}
+function v24Subhead(t){return '<tr><td class="v24-subhead" colspan="4">'+t+'</td></tr>';}
+function v24Table(title,subtitle,body,cols){
+  cols=cols||['Métrica','Casa','Visitante','Jogo'];
+  return '<div class="v24-panel"><div class="v24-head"><div><h3>'+title+'</h3>'+(subtitle?'<small>'+subtitle+'</small>':'')+'</div></div><table class="v24-table"><thead><tr>'+cols.map(function(c,i){return '<th class="'+(i===0?'left':'')+'">'+c+'</th>';}).join('')+'</tr></thead><tbody>'+body+'</tbody></table></div>';
+}
+function v24PctRow(label,hv,av,gv){if(gv===undefined)gv=v24Avg(hv,av);return '<tr><td class="v24-label">'+label+'</td>'+v24CellPct(hv)+v24CellPct(av)+v24CellPct(gv)+'</tr>';}
+function v24NumRow(label,hv,av,gv,dec){return '<tr><td class="v24-label">'+label+'</td>'+v24CellNum(hv,dec)+v24CellNum(av,dec)+(gv===undefined?'<td class="v24-td muted">—</td>':v24CellNum(gv,dec))+'</tr>';}
+function v24RawRow(label,hv,av,gv){return '<tr><td class="v24-label">'+label+'</td>'+v24CellRaw(hv)+v24CellRaw(av)+v24CellRaw(gv)+'</tr>';}
+function v24Panel(title,body,sub){return '<div class="v24-panel"><div class="v24-head"><div><h3>'+title+'</h3>'+(sub?'<small>'+sub+'</small>':'')+'</div></div>'+body+'</div>';}
+function v24Btn(items,key,def){
+  var cur=(window.ES&&ES.inner&&ES.inner[key])||def;
+  return '<div class="v24-switch">'+items.map(function(t){return '<button class="v24-pill '+(cur===t[0]?'active':'')+'" onclick="setEInner(\''+key+'\',\''+t[0]+'\')">'+t[1]+'</button>';}).join('')+'</div>';
+}
+function v24FormBadges(f){
+  var s=String(f||'').toLowerCase().slice(-5);
+  if(!s)return '<span class="v24-muted">—</span>';
+  return s.split('').map(function(c){
+    var lab=c==='w'?'V':c==='l'?'D':c==='d'?'E':c.toUpperCase();
+    var cls=c==='w'?'win':c==='l'?'loss':c==='d'?'draw':'none';
+    return '<span class="v24-form '+cls+'">'+lab+'</span>';
+  }).join('');
+}
+function v24Logo(src,name){
+  if(src)return '<img src="'+src+'" class="v24-logo" alt="'+String(name||'time')+'">';
+  return '<span class="v24-logo-fb">'+String(name||'?').slice(0,2).toUpperCase()+'</span>';
+}
+function v24WinProbFromOdd(o,k){
+  var x=v24N(o&&o[k]);
+  if(!x||x<=1)return null;
+  return Math.round(100/x);
+}
+function v24Ctx(m){
+  var h=m&&m.home||'Casa',a=m&&m.away||'Visitante',o=m&&m.odds||{};
+  var hs=v24RawStats(m,'home'),as=v24RawStats(m,'away');
+  return {h:h,a:a,o:o,hs:hs,as:as};
+}
+function v24Val(s,bases,ctx){
+  // bases pode ser string sem sufixo. Tenta contexto e overall.
+  var arr=[];
+  (Array.isArray(bases)?bases:[bases]).forEach(function(b){
+    arr.push(b+'_'+ctx,b);
+    if(ctx==='home')arr.push(b+'_overall');
+    if(ctx==='away')arr.push(b+'_overall');
+  });
+  return v24Get(s,arr);
+}
+function v24Under(over){var n=v24N(over);return n===null?null:Math.max(0,Math.min(100,100-n));}
+function v24SourceNote(m){
+  var hsrc=m&&m.footySeasonStats&&m.footySeasonStats.home&&m.footySeasonStats.home.raw&&m.footySeasonStats.home.raw.source;
+  var asrc=m&&m.footySeasonStats&&m.footySeasonStats.away&&m.footySeasonStats.away.raw&&m.footySeasonStats.away.raw.source;
+  var fb=(m&&m.footySeasonStats&&((m.footySeasonStats.home&&m.footySeasonStats.home.raw&&m.footySeasonStats.home.raw.fallback_used)||(m.footySeasonStats.away&&m.footySeasonStats.away.raw&&m.footySeasonStats.away.raw.fallback_used)));
+  return '<div class="v24-note">Fonte: API FootyStats primeiro. Quando o campo não vem pronto, o site usa fallback com os próprios dados da API.'+(fb?' <b>Algum fallback foi usado.</b>':'')+'</div>';
+}
+
+function v24Overview(m){
+  var c=v24Ctx(m),o=c.o,hs=c.hs,as=c.as;
+  var hWin=v24Get(hs,['winPercentage_home','seasonWinPercentage_home','winsPercentage_home']);
+  var aWin=v24Get(as,['winPercentage_away','seasonWinPercentage_away','winsPercentage_away']);
+  var draw=v24Avg(v24Get(hs,['drawPercentage_home']),v24Get(as,['drawPercentage_away']));
+  if(hWin===null)hWin=v24WinProbFromOdd(o,'odds_ft_1');
+  if(aWin===null)aWin=v24WinProbFromOdd(o,'odds_ft_2');
+  if(draw===null)draw=v24WinProbFromOdd(o,'odds_ft_x');
+  var formH=v24First(hs,['formRun_home','formRun_overall'])||(m.teamTrends&&m.teamTrends.home&&m.teamTrends.home.form)||'';
+  var formA=v24First(as,['formRun_away','formRun_overall'])||(m.teamTrends&&m.teamTrends.away&&m.teamTrends.away.form)||'';
+  var ind=(m.h2hData&&m.h2hData.indicadores)||{};
+  var top=[['Casa',hWin],['Empate',draw],['Visitante',aWin]].sort(function(x,y){return (v24N(y[1])||0)-(v24N(x[1])||0);})[0];
+  var body='<div class="v24-hero-grid"><div class="v24-win-card"><h3>Quem vai vencer?</h3><div class="v24-win-line"><span>'+c.h+'</span>'+v24Badge(hWin)+'</div><div class="v24-win-line"><span>Empate</span>'+v24Badge(draw)+'</div><div class="v24-win-line"><span>'+c.a+'</span>'+v24Badge(aWin)+'</div><div class="v24-mini">Maior leitura atual: <b>'+top[0]+'</b></div></div>'+ 
+    '<div class="v24-win-card"><h3>'+c.h+'</h3><div>'+v24Logo(m.logoHome,c.h)+'</div><div class="v24-form-row">'+v24FormBadges(formH)+'</div><div class="v24-mini">PPG casa: <b>'+v24D(v24Get(hs,['seasonPPG_home','ppg_home']),2)+'</b></div></div>'+ 
+    '<div class="v24-win-card"><h3>'+c.a+'</h3><div>'+v24Logo(m.logoAway,c.a)+'</div><div class="v24-form-row">'+v24FormBadges(formA)+'</div><div class="v24-mini">PPG fora: <b>'+v24D(v24Get(as,['seasonPPG_away','ppg_away']),2)+'</b></div></div></div>';
+  body+=v24Table('Resumo rápido','Estrutura principal no padrão FootyStats',
+    v24PctRow('Mais de 1,5 gols',v24Get(hs,['seasonOver15Percentage_home']),v24Get(as,['seasonOver15Percentage_away']),v24N(o.o15_potential))+
+    v24PctRow('Mais de 2,5 gols',v24Get(hs,['seasonOver25Percentage_home']),v24Get(as,['seasonOver25Percentage_away']),v24N(o.o25_potential))+
+    v24PctRow('Ambas Marcam',v24Get(hs,['seasonBTTSPercentage_home']),v24Get(as,['seasonBTTSPercentage_away']),v24N(o.btts_potential))+
+    v24NumRow('Escanteios / jogo',v24Get(hs,['cornersAVG_home','cornersTotalAVG_home']),v24Get(as,['cornersAVG_away','cornersTotalAVG_away']),v24N(o.corners_potential),1)+
+    v24NumRow('Cartões / jogo',v24Get(hs,['cardsAVG_home','cardsTotalAVG_home']),v24Get(as,['cardsAVG_away','cardsTotalAVG_away']),v24N(o.cards_potential),1)
+  );
+  if(ind.total_confrontos){
+    body+=v24Panel(c.h+' vs '+c.a,'<div class="v24-h2h-kpis"><div><b>'+ind.total_confrontos+'</b><span>confrontos</span></div><div><b>'+v24P(ind.mais_2_5_gols)+'</b><span>Mais de 2,5</span></div><div><b>'+v24P(ind.ambas_marcam)+'</b><span>Ambas Marcam</span></div><div><b>'+v24D(ind.media_gols,2)+'</b><span>gols/jogo</span></div></div>','Confronto direto carregado pela API / fallback H2H.');
+  }
+  return body+v24SourceNote(m);
+}
+function v24Winner(m){
+  var c=v24Ctx(m),o=c.o,hs=c.hs,as=c.as;
+  var body='';
+  body+=v24Table('Quem vai vencer?','Resultado final e chance dupla',
+    v24PctRow(c.h+' vence',v24Get(hs,['winPercentage_home']),null,v24WinProbFromOdd(o,'odds_ft_1'))+
+    v24PctRow('Empate',v24Get(hs,['drawPercentage_home']),v24Get(as,['drawPercentage_away']),v24WinProbFromOdd(o,'odds_ft_x'))+
+    v24PctRow(c.a+' vence',null,v24Get(as,['winPercentage_away']),v24WinProbFromOdd(o,'odds_ft_2'))+
+    v24PctRow('1X',null,null,v24WinProbFromOdd(o,'odds_doublechance_1x'))+
+    v24PctRow('12',null,null,v24WinProbFromOdd(o,'odds_doublechance_12'))+
+    v24PctRow('X2',null,null,v24WinProbFromOdd(o,'odds_doublechance_x2'))
+  );
+  return body+v24SourceNote(m);
+}
+function v24GoalsScored(m){
+  var c=v24Ctx(m),hs=c.hs,as=c.as;
+  var body=v24Btn([['ft','Jogo Inteiro']], 'v24gs', 'ft');
+  body+=v24Table('Gols Marcados','Produção ofensiva por recorte casa/fora',
+    v24NumRow('Gols marcados / jogo',v24Get(hs,['seasonScoredAVG_home','scoredAVG_home','goals_scored_avg_home','seasonScoredNum_home']),v24Get(as,['seasonScoredAVG_away','scoredAVG_away','goals_scored_avg_away','seasonScoredNum_away']),undefined,2)+
+    v24PctRow('Marcou 1+ gol',v24Under(v24Get(hs,['seasonFTSPercentage_home','ftsPercentage_home'])),v24Under(v24Get(as,['seasonFTSPercentage_away','ftsPercentage_away'])))+
+    v24PctRow('Mais de 0,5 gol do time',v24Get(hs,['teamScoredOver05Percentage_home','over05TeamGoalsForPercentage_home','over05GoalsForPercentage_home']),v24Get(as,['teamScoredOver05Percentage_away','over05TeamGoalsForPercentage_away','over05GoalsForPercentage_away']))+
+    v24PctRow('Mais de 1,5 gols do time',v24Get(hs,['teamScoredOver15Percentage_home','over15TeamGoalsForPercentage_home','over15GoalsForPercentage_home']),v24Get(as,['teamScoredOver15Percentage_away','over15TeamGoalsForPercentage_away','over15GoalsForPercentage_away']))+
+    v24PctRow('Não marcou',v24Get(hs,['seasonFTSPercentage_home','ftsPercentage_home']),v24Get(as,['seasonFTSPercentage_away','ftsPercentage_away']))
+  );
+  return body+v24SourceNote(m);
+}
+function v24GoalsConceded(m){
+  var c=v24Ctx(m),hs=c.hs,as=c.as;
+  var body=v24Btn([['ft','Jogo Inteiro']], 'v24gc', 'ft');
+  body+=v24Table('Gols Sofridos','Fragilidade defensiva por recorte casa/fora',
+    v24NumRow('Gols sofridos / jogo',v24Get(hs,['seasonConcededAVG_home','concededAVG_home','goals_conceded_avg_home','seasonConcededNum_home']),v24Get(as,['seasonConcededAVG_away','concededAVG_away','goals_conceded_avg_away','seasonConcededNum_away']),undefined,2)+
+    v24PctRow('Sofreu 1+ gol',v24Under(v24Get(hs,['seasonCSPercentage_home','cleanSheetPercentage_home'])),v24Under(v24Get(as,['seasonCSPercentage_away','cleanSheetPercentage_away'])))+
+    v24PctRow('Sem sofrer gol',v24Get(hs,['seasonCSPercentage_home','cleanSheetPercentage_home']),v24Get(as,['seasonCSPercentage_away','cleanSheetPercentage_away']))+
+    v24PctRow('Sofreu Mais de 1,5',v24Get(hs,['over15TeamGoalsAgainstPercentage_home','teamConcededOver15Percentage_home']),v24Get(as,['over15TeamGoalsAgainstPercentage_away','teamConcededOver15Percentage_away']))+
+    v24PctRow('Sofreu Mais de 2,5',v24Get(hs,['over25TeamGoalsAgainstPercentage_home','teamConcededOver25Percentage_home']),v24Get(as,['over25TeamGoalsAgainstPercentage_away','teamConcededOver25Percentage_away']))
+  );
+  return body+v24SourceNote(m);
+}
+function v24GoalsBtts(m){
+  var c=v24Ctx(m),o=c.o,hs=c.hs,as=c.as;
+  var body=v24Table('Mais de 2,5 & Ambas Marcam','Linhas de gols e BTTS',
+    v24Subhead('Mais/Menos Gols')+
+    v24PctRow('Mais de 0,5',v24Get(hs,['seasonOver05Percentage_home']),v24Get(as,['seasonOver05Percentage_away']),v24N(o.o05_potential))+
+    v24PctRow('Mais de 1,5',v24Get(hs,['seasonOver15Percentage_home']),v24Get(as,['seasonOver15Percentage_away']),v24N(o.o15_potential))+
+    v24PctRow('Mais de 2,5',v24Get(hs,['seasonOver25Percentage_home']),v24Get(as,['seasonOver25Percentage_away']),v24N(o.o25_potential))+
+    v24PctRow('Mais de 3,5',v24Get(hs,['seasonOver35Percentage_home']),v24Get(as,['seasonOver35Percentage_away']),v24N(o.o35_potential))+
+    v24PctRow('Menos de 3,5',v24Under(v24Get(hs,['seasonOver35Percentage_home'])),v24Under(v24Get(as,['seasonOver35Percentage_away'])),v24Under(v24N(o.o35_potential)))+
+    v24PctRow('Menos de 2,5',v24Under(v24Get(hs,['seasonOver25Percentage_home'])),v24Under(v24Get(as,['seasonOver25Percentage_away'])),v24Under(v24N(o.o25_potential)))+
+    v24Subhead('Ambas Marcam')+
+    v24PctRow('Ambas Marcam — Sim',v24Get(hs,['seasonBTTSPercentage_home','bttsPercentage_home']),v24Get(as,['seasonBTTSPercentage_away','bttsPercentage_away']),v24N(o.btts_potential))+
+    v24PctRow('Ambas Marcam — Não',v24Under(v24Get(hs,['seasonBTTSPercentage_home','bttsPercentage_home'])),v24Under(v24Get(as,['seasonBTTSPercentage_away','bttsPercentage_away'])),v24Under(v24N(o.btts_potential)))+
+    v24PctRow('Mais de 2,5 & Ambas Marcam',v24Get(hs,['over25_and_btts_percentage_home','over25BTTSPercentage_home']),v24Get(as,['over25_and_btts_percentage_away','over25BTTSPercentage_away']))
+  );
+  return body+v24SourceNote(m);
+}
+function v24Corners(m){
+  var c=v24Ctx(m),o=c.o,hs=c.hs,as=c.as;
+  var mode=(ES.inner&&ES.inner.v24corners)||'total';
+  var rows='';
+  if(mode==='total'){
+    rows+=v24Subhead('Total de Escanteios');
+    [['Mais de 6,5','over65CornersPercentage'],['Mais de 7,5','over75CornersPercentage'],['Mais de 8,5','over85CornersPercentage'],['Mais de 9,5','over95CornersPercentage'],['Mais de 10,5','over105CornersPercentage'],['Mais de 11,5','over115CornersPercentage'],['Mais de 12,5','over125CornersPercentage'],['Menos de 12,5','under125CornersPercentage']].forEach(function(r){
+      var h=v24Get(hs,[r[1]+'_home',r[1]+'_overall']),a=v24Get(as,[r[1]+'_away',r[1]+'_overall']);
+      var g=r[0].indexOf('8,5')>0?v24N(o.corners_o85_potential):r[0].indexOf('9,5')>0?v24N(o.corners_o95_potential):r[0].indexOf('10,5')>0?v24N(o.corners_o105_potential):undefined;
+      if(r[0].indexOf('Menos')===0){h=v24Under(v24Get(hs,['over125CornersPercentage_home','over125CornersPercentage_overall']));a=v24Under(v24Get(as,['over125CornersPercentage_away','over125CornersPercentage_overall']));}
+      rows+=v24PctRow(r[0],h,a,g);
+    });
+    rows+=v24NumRow('Média total estimada',v24Get(hs,['cornersTotalAVG_home','cornersAVG_home']),v24Get(as,['cornersTotalAVG_away','cornersAVG_away']),v24N(o.corners_potential),1);
+  }else{
+    rows+=v24Subhead('Individuais por Time');
+    rows+=v24NumRow('Escanteios conquistados / jogo',v24Get(hs,['cornersAVG_home','cornersForAVG_home']),v24Get(as,['cornersAVG_away','cornersForAVG_away']),undefined,1);
+    rows+=v24NumRow('Escanteios sofridos / jogo',v24Get(hs,['cornersAgainstAVG_home']),v24Get(as,['cornersAgainstAVG_away']),undefined,1);
+    rows+=v24PctRow('Time Mais de 3,5 escanteios',v24Get(hs,['over35CornersForPercentage_home','teamCornersOver35Percentage_home']),v24Get(as,['over35CornersForPercentage_away','teamCornersOver35Percentage_away']));
+    rows+=v24PctRow('Time Mais de 4,5 escanteios',v24Get(hs,['over45CornersForPercentage_home','teamCornersOver45Percentage_home']),v24Get(as,['over45CornersForPercentage_away','teamCornersOver45Percentage_away']));
+    rows+=v24PctRow('Time Mais de 5,5 escanteios',v24Get(hs,['over55CornersForPercentage_home','teamCornersOver55Percentage_home']),v24Get(as,['over55CornersForPercentage_away','teamCornersOver55Percentage_away']));
+  }
+  return v24Btn([['total','Total de Escanteios'],['team','Individuais por Time']],'v24corners','total')+v24Table(mode==='total'?'Número de Escanteios':'Individuais por Time',mode==='total'?'Linhas totais da partida':'Produção e concessão por equipe',rows)+v24SourceNote(m);
+}
+function v24Cards(m){
+  var c=v24Ctx(m),o=c.o,hs=c.hs,as=c.as;
+  var mode=(ES.inner&&ES.inner.v24cards)||'total';
+  var rows='';
+  if(mode==='total'){
+    rows+=v24Subhead('Total de Cartões');
+    [['Mais de 2,5','over25CardsPercentage','over25CartoesPercentage'],['Mais de 3,5','over35CardsPercentage','over35CartoesPercentage'],['Mais de 4,5','over45CardsPercentage','over45CartoesPercentage'],['Mais de 5,5','over55CardsPercentage','over55CartoesPercentage'],['Mais de 6,5','over65CardsPercentage','over65CartoesPercentage']].forEach(function(r){
+      rows+=v24PctRow(r[0],v24Get(hs,[r[1]+'_home',r[2]+'_home',r[1]+'_overall',r[2]+'_overall']),v24Get(as,[r[1]+'_away',r[2]+'_away',r[1]+'_overall',r[2]+'_overall']));
+    });
+    rows+=v24NumRow('Média total estimada',v24Get(hs,['cardsTotalAVG_home','cardsAVG_home']),v24Get(as,['cardsTotalAVG_away','cardsAVG_away']),v24N(o.cards_potential),1);
+  }else{
+    rows+=v24Subhead('Cartões por Time');
+    rows+=v24NumRow('Cartões recebidos / jogo',v24Get(hs,['cardsAVG_home','cardsForAVG_home']),v24Get(as,['cardsAVG_away','cardsForAVG_away']),undefined,1);
+    rows+=v24NumRow('Cartões contra / jogo',v24Get(hs,['cardsAgainstAVG_home']),v24Get(as,['cardsAgainstAVG_away']),undefined,1);
+    rows+=v24PctRow('Time Mais de 0,5 cartões',v24Get(hs,['over05CardsForPercentage_home','over05CartoesForPercentage_home']),v24Get(as,['over05CardsForPercentage_away','over05CartoesForPercentage_away']));
+    rows+=v24PctRow('Time Mais de 1,5 cartões',v24Get(hs,['over15CardsForPercentage_home','over15CartoesForPercentage_home']),v24Get(as,['over15CardsForPercentage_away','over15CartoesForPercentage_away']));
+    rows+=v24PctRow('Time Mais de 2,5 cartões',v24Get(hs,['over25CardsForPercentage_home','over25CartoesForPercentage_home']),v24Get(as,['over25CardsForPercentage_away','over25CartoesForPercentage_away']));
+  }
+  return v24Btn([['total','Total de Cartões'],['team','Cartões por Time']],'v24cards','total')+v24Table(mode==='total'?'Número de Cartões':'Cartões por Time',mode==='total'?'Linhas totais da partida':'Disciplina por equipe',rows)+v24SourceNote(m);
+}
+function v24Halves(m){
+  var c=v24Ctx(m),hs=c.hs,as=c.as,o=c.o;
+  var rows=v24Subhead('Primeiro Tempo')+
+    v24PctRow('Vitória 1ºT',v24Get(hs,['winHTPercentage_home','HTWinPercentage_home']),v24Get(as,['winHTPercentage_away','HTWinPercentage_away']),v24WinProbFromOdd(o,'odds_1st_half_result_1'))+
+    v24PctRow('Empate 1ºT',v24Get(hs,['drawHTPercentage_home','HTDrawPercentage_home']),v24Get(as,['drawHTPercentage_away','HTDrawPercentage_away']),v24WinProbFromOdd(o,'odds_1st_half_result_x'))+
+    v24PctRow('Mais de 0,5 gol 1ºT',v24Get(hs,['over05HTPercentage_home','over05FirstHalfGoalsPercentage_home']),v24Get(as,['over05HTPercentage_away','over05FirstHalfGoalsPercentage_away']),v24N(o.o05HT_potential))+
+    v24PctRow('Mais de 1,5 gols 1ºT',v24Get(hs,['over15HTPercentage_home','over15FirstHalfGoalsPercentage_home']),v24Get(as,['over15HTPercentage_away','over15FirstHalfGoalsPercentage_away']),v24N(o.o15HT_potential))+
+    v24Subhead('Segundo Tempo')+
+    v24PctRow('Mais de 0,5 gol 2ºT',v24Get(hs,['over05_2HGPercentage_home','over05SecondHalfGoalsPercentage_home']),v24Get(as,['over05_2HGPercentage_away','over05SecondHalfGoalsPercentage_away']))+
+    v24PctRow('Mais de 1,5 gols 2ºT',v24Get(hs,['over15_2HGPercentage_home','over15SecondHalfGoalsPercentage_home']),v24Get(as,['over15_2HGPercentage_away','over15SecondHalfGoalsPercentage_away']))+
+    v24Subhead('Cartões por Tempo')+
+    v24NumRow('Cartões a favor 1ºT',v24Get(hs,['cards_fh_avg_home','cards1HAVG_home']),v24Get(as,['cards_fh_avg_away','cards1HAVG_away']),undefined,1)+
+    v24NumRow('Cartões a favor 2ºT',v24Get(hs,['cards_2h_avg_home','cards2HAVG_home']),v24Get(as,['cards_2h_avg_away','cards2HAVG_away']),undefined,1);
+  return v24Table('Primeiro/Segundo Tempo','Gols, resultado parcial e cartões por etapa',rows)+v24SourceNote(m);
+}
+function v24Shots(m){
+  var c=v24Ctx(m),hs=c.hs,as=c.as;
+  var rows=v24NumRow('Chutes / partida',v24Get(hs,['shotsAVG_home','shotsAVG_overall']),v24Get(as,['shotsAVG_away','shotsAVG_overall']),undefined,1)+
+    v24NumRow('NO GOL / partida',v24Get(hs,['shotsOnTargetAVG_home','shotsOnTargetAVG_overall']),v24Get(as,['shotsOnTargetAVG_away','shotsOnTargetAVG_overall']),undefined,1)+
+    v24NumRow('Fora / partida',v24Get(hs,['shotsOffTargetAVG_home','shotsOffTargetAVG_overall']),v24Get(as,['shotsOffTargetAVG_away','shotsOffTargetAVG_overall']),undefined,1)+
+    v24PctRow('Chutes do time Mais de 10,5',v24Get(hs,['team_shots_over105_percentage_home']),v24Get(as,['team_shots_over105_percentage_away']))+
+    v24PctRow('Chutes do time Mais de 12,5',v24Get(hs,['team_shots_over125_percentage_home']),v24Get(as,['team_shots_over125_percentage_away']))+
+    v24PctRow('NO GOL Mais de 3,5',v24Get(hs,['team_shots_on_target_over35_percentage_home']),v24Get(as,['team_shots_on_target_over35_percentage_away']))+
+    v24PctRow('NO GOL Mais de 4,5',v24Get(hs,['team_shots_on_target_over45_percentage_home']),v24Get(as,['team_shots_on_target_over45_percentage_away']))+
+    v24NumRow('Impedimentos / partida',v24Get(hs,['offsidesAVG_home']),v24Get(as,['offsidesAVG_away']),undefined,1)+
+    v24NumRow('Faltas cometidas / jogo',v24Get(hs,['foulsAVG_home']),v24Get(as,['foulsAVG_away']),undefined,1);
+  return v24Table('Chutes e NO GOL','Finalizações, finalizações certas e eventos auxiliares',rows)+v24SourceNote(m);
+}
+function v24TopPlayers(players,sortKey,valKey){
+  var arr=(players||[]).slice().sort(function(a,b){return (v24N(b[sortKey])||0)-(v24N(a[sortKey])||0);}).filter(function(p){return (v24N(p[sortKey])||0)>0;}).slice(0,5);
+  if(!arr.length)return '<div class="v24-empty">Sem dados de jogadores.</div>';
+  var mx=v24N(arr[0][sortKey])||1;
+  return arr.map(function(p){var name=p.known_as||p.full_name||p.shorthand||'Jogador';var val=v24N(p[valKey||sortKey])||0;var pct=Math.max(6,Math.round(((v24N(p[sortKey])||0)/mx)*100));return '<div class="v24-player"><span>'+name+'</span><div><i style="width:'+pct+'%"></i></div><b>'+String(val).replace('.',',')+'</b></div>';}).join('');
+}
+function v24Players(m){
+  var jd=m.jogadoresData||{},hp=jd.home_players||[],ap=jd.away_players||[];
+  function block(title,sortKey,valKey){return '<div class="v24-player-grid"><div>'+v24Panel(title+' — '+(m.home||'Casa'),v24TopPlayers(hp,sortKey,valKey))+'</div><div>'+v24Panel(title+' — '+(m.away||'Visitante'),v24TopPlayers(ap,sortKey,valKey))+'</div></div>';}
+  return block('Quais jogadores marcarão?','goals_overall','goals_overall')+block('Jogador para Tomar Cartão','cards_overall','cards_overall')+block('Média de Cartões','cards_per_90_overall','cards_per_90_overall')+v24SourceNote(m);
+}
+function v24H2HForm(m){
+  var c=v24Ctx(m),hs=c.hs,as=c.as,ind=(m.h2hData&&m.h2hData.indicadores)||{},ult=(m.h2hData&&m.h2hData.ultimos)||[];
+  var rows='';
+  if(ind.total_confrontos){
+    rows+=v24RawRow('Confrontos',ind.vitorias_mandante_atual+' vitória(s)',ind.vitorias_visitante_atual+' vitória(s)',ind.empates+' empate(s)');
+    rows+=v24PctRow('Mais de 1,5 gols H2H',null,null,ind.mais_1_5_gols);
+    rows+=v24PctRow('Mais de 2,5 gols H2H',null,null,ind.mais_2_5_gols);
+    rows+=v24PctRow('Ambas Marcam H2H',null,null,ind.ambas_marcam);
+    rows+=v24NumRow('Média de gols H2H',null,null,ind.media_gols,2);
+  }else rows+='<tr><td class="v24-label" colspan="4">Sem H2H carregado para esta partida.</td></tr>';
+  var lastHtml='';
+  if(ult.length){
+    lastHtml='<div class="v24-last-list">'+ult.slice(0,8).map(function(x){return '<div><small>'+(x.data_formatada||'')+'</small><b>'+((x.home_name||'Casa')+' '+(x.homeGoalCount??'')+' x '+(x.awayGoalCount??'')+' '+(x.away_name||'Visitante'))+'</b></div>';}).join('')+'</div>';
+  }
+  var form='<div class="v24-hero-grid"><div class="v24-win-card"><h3>'+c.h+'</h3><div class="v24-form-row">'+v24FormBadges(v24First(hs,['formRun_home','formRun_overall']))+'</div></div><div class="v24-win-card"><h3>'+c.a+'</h3><div class="v24-form-row">'+v24FormBadges(v24First(as,['formRun_away','formRun_overall']))+'</div></div></div>';
+  return v24Table(c.h+' vs '+c.a,'Confronto direto e forma recente',rows)+v24Panel('Últimos confrontos',lastHtml||'<div class="v24-empty">Sem confrontos anteriores carregados.</div>')+v24Panel('Forma recente',form)+v24SourceNote(m);
+}
+function v24SetPieces(m){
+  var c=v24Ctx(m),hs=c.hs,as=c.as;
+  var rows=v24NumRow('Cobranças de falta totais',v24Get(hs,['freekicks_total_avg_home']),v24Get(as,['freekicks_total_avg_away']),undefined,1)+
+    v24PctRow('Faltas — total Mais de 22,5',v24Get(hs,['freekicks_total_over225_home']),v24Get(as,['freekicks_total_over225_away']))+
+    v24NumRow('Tiros de meta totais',v24Get(hs,['goal_kicks_total_avg_home']),v24Get(as,['goal_kicks_total_avg_away']),undefined,1)+
+    v24PctRow('Tiros de meta Mais de 10,5',v24Get(hs,['goal_kicks_total_over105_home']),v24Get(as,['goal_kicks_total_over105_away']))+
+    v24NumRow('Laterais totais',v24Get(hs,['throwins_total_avg_home']),v24Get(as,['throwins_total_avg_away']),undefined,1)+
+    v24PctRow('Laterais Mais de 40,5',v24Get(hs,['throwins_total_over405_home']),v24Get(as,['throwins_total_over405_away']));
+  return v24Table('Bolas Paradas','Cobranças de falta, tiros de meta e laterais',rows)+v24SourceNote(m);
+}
+
+window.ESTAT_SUBTABS=[
+  ['v24_overview','Visão Geral'],
+  ['v24_winner','Quem vence'],
+  ['v24_gf','Gols Marcados'],
+  ['v24_ga','Gols Sofridos'],
+  ['v24_goals','Mais/Menos & AM'],
+  ['v24_corners','Escanteios'],
+  ['v24_cards','Cartões'],
+  ['v24_halves','1º/2º Tempo'],
+  ['v24_shots','Chutes/NO GOL'],
+  ['v24_players','Jogadores'],
+  ['v24_h2h','H2H/Forma'],
+  ['v24_setpieces','Bolas Paradas']
+];
+window.estatMain=function(m){
+  if(!m)return '<div class="v24-empty">Nenhum jogo selecionado.</div>';
+  if(!window.ES)window.ES={sub:'v24_overview',inner:{}};
+  if(!ES.sub||ES.sub==='completas'||ES.sub==='gols'||ES.sub==='escanteios'||ES.sub==='cartoes'||ES.sub==='portempo'||ES.sub==='jogadores'||ES.sub==='chutes'||ES.sub==='bolasparadas')ES.sub='v24_overview';
+  var map={
+    v24_overview:v24Overview,
+    v24_winner:v24Winner,
+    v24_gf:v24GoalsScored,
+    v24_ga:v24GoalsConceded,
+    v24_goals:v24GoalsBtts,
+    v24_corners:v24Corners,
+    v24_cards:v24Cards,
+    v24_halves:v24Halves,
+    v24_shots:v24Shots,
+    v24_players:v24Players,
+    v24_h2h:v24H2HForm,
+    v24_setpieces:v24SetPieces
+  };
+  var content=(map[ES.sub]||v24Overview)(m);
+  return '<div class="v24-shell"><div class="stats-subtabs v24-main-tabs">'+ESTAT_SUBTABS.map(function(t){return '<button class="stats-subtab'+(ES.sub===t[0]?' active':'')+'" onclick="setESub(\''+t[0]+'\')">'+t[1]+'</button>';}).join('')+'</div>'+content+'</div>';
+};
+var __v24SetESub=window.setESub;
+window.setESub=function(s){if(!window.ES)window.ES={sub:'v24_overview',inner:{}};ES.sub=s;if(typeof renderTab==='function')renderTab();};
+var __v24Open=typeof openAnalysis==='function'?openAnalysis:null;
+if(__v24Open){window.openAnalysis=openAnalysis=async function(id){if(window.ES){ES.sub='v24_overview';ES.inner=ES.inner||{};}return __v24Open(id);};}
+
+var css=document.createElement('style');
+css.textContent=`
+.v24-shell{width:100%}.v24-main-tabs{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px}.v24-panel{background:linear-gradient(180deg,rgba(20,43,31,.92),rgba(8,19,13,.94));border:1px solid rgba(216,184,107,.22);border-radius:16px;padding:16px;margin-bottom:14px}.v24-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:12px}.v24-head h3{margin:0;color:#f6eed8;font-size:16px;font-weight:950}.v24-head small{display:block;margin-top:4px;color:#cfc3a4;font-size:12px}.v24-table{width:100%;border-collapse:collapse;font-size:13px}.v24-table th{padding:9px 10px;border-bottom:1px solid rgba(216,184,107,.2);color:#f2d58b;text-transform:uppercase;font-size:10px;letter-spacing:.04em;text-align:center}.v24-table th.left{text-align:left}.v24-label{padding:10px;color:#e7dcc0;text-align:left;border-bottom:1px solid rgba(216,184,107,.1)}.v24-td{padding:10px;text-align:center;border-bottom:1px solid rgba(216,184,107,.1);font-weight:900}.v24-td.muted{color:#9f9274}.v24-td.num{color:#fff3d6}.v24-subhead{padding:8px 10px;background:rgba(216,184,107,.07);color:#f2d58b;font-size:10px;font-weight:950;text-transform:uppercase;border-bottom:1px solid rgba(216,184,107,.11)}.v24-badge{display:inline-flex;align-items:center;justify-content:center;min-width:46px;border-radius:999px;padding:4px 8px;font-weight:1000;font-size:12px;border:1px solid rgba(216,184,107,.2);background:rgba(216,184,107,.08);color:#cfc3a4}.v24-badge.good{background:rgba(55,232,137,.12);border-color:rgba(55,232,137,.35);color:#37e889}.v24-badge.mid{background:rgba(255,213,63,.11);border-color:rgba(255,213,63,.35);color:#ffd53f}.v24-badge.bad{background:rgba(255,95,119,.1);border-color:rgba(255,95,119,.32);color:#ff7890}.v24-hero-grid{display:grid;grid-template-columns:1.25fr 1fr 1fr;gap:12px;margin-bottom:14px}.v24-win-card{background:rgba(8,19,13,.82);border:1px solid rgba(216,184,107,.18);border-radius:14px;padding:14px;text-align:center}.v24-win-card h3{margin:0 0 10px;color:#f6eed8;font-size:15px}.v24-win-line{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 0;border-bottom:1px solid rgba(216,184,107,.1);font-size:13px;color:#e7dcc0}.v24-win-line:last-child{border-bottom:0}.v24-mini{font-size:12px;color:#cfc3a4;margin-top:9px}.v24-form-row{display:flex;align-items:center;justify-content:center;gap:6px;margin-top:10px}.v24-form{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:7px;font-size:12px;font-weight:1000;color:#111}.v24-form.win{background:#37e889}.v24-form.draw{background:#ffd53f}.v24-form.loss{background:#ff5f77}.v24-form.none{background:#6e756c;color:#fff}.v24-logo{width:38px;height:38px;border-radius:999px;object-fit:cover;border:1px solid rgba(216,184,107,.3)}.v24-logo-fb{display:inline-flex;width:38px;height:38px;border-radius:999px;background:#142b1f;color:#f2d58b;align-items:center;justify-content:center;font-weight:950;border:1px solid rgba(216,184,107,.3)}.v24-switch{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 14px}.v24-pill{border:1px solid rgba(216,184,107,.32);background:rgba(8,19,13,.85);color:#e6d4a8;border-radius:999px;padding:9px 14px;font-weight:900;cursor:pointer}.v24-pill.active{background:linear-gradient(135deg,#f2d58b,#b99142);color:#151008;border-color:rgba(255,232,165,.62)}.v24-h2h-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}.v24-h2h-kpis>div{background:rgba(8,19,13,.82);border:1px solid rgba(216,184,107,.16);border-radius:12px;padding:12px;text-align:center}.v24-h2h-kpis b{display:block;color:#f2d58b;font-size:20px}.v24-h2h-kpis span{font-size:11px;color:#cfc3a4}.v24-note{font-size:11px;color:rgba(216,207,180,.65);border:1px solid rgba(216,184,107,.16);background:rgba(216,184,107,.05);padding:10px;border-radius:12px;margin-top:10px}.v24-empty{color:#cfc3a4;font-size:13px;padding:8px}.v24-player-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}.v24-player{display:grid;grid-template-columns:minmax(90px,1fr) 90px 42px;align-items:center;gap:8px;margin:8px 0;font-size:12px;color:#e7dcc0}.v24-player>div{height:7px;background:rgba(216,184,107,.12);border-radius:999px;overflow:hidden}.v24-player i{display:block;height:100%;background:#f2d58b;border-radius:999px}.v24-player b{text-align:right;color:#f2d58b}.v24-last-list{display:grid;gap:8px}.v24-last-list>div{display:flex;justify-content:space-between;gap:12px;background:rgba(8,19,13,.72);border:1px solid rgba(216,184,107,.12);border-radius:10px;padding:9px 11px}.v24-last-list small{color:#cfc3a4}.v24-last-list b{color:#f6eed8;font-size:12px}@media(max-width:850px){.v24-hero-grid,.v24-player-grid,.v24-h2h-kpis{grid-template-columns:1fr}.v24-table{font-size:12px}.v24-label,.v24-td{padding:8px 6px}.v24-player{grid-template-columns:1fr 80px 36px}.v24-last-list>div{display:block}}
+`;
+document.head.appendChild(css);
+})();
+</script>
 </body></html>
