@@ -29,6 +29,9 @@
     "api/cartoes.js": {
       "maxDuration": 20
     },
+    "api/chutes.js": {
+      "maxDuration": 20
+    },
     "api/partida-completa.js": {
       "maxDuration": 30
     }
