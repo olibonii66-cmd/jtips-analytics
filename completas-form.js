@@ -113,16 +113,6 @@
     return "home";
   }
 
-  function formatDate(value) {
-    if (!hasValue(value)) return "-";
-    const date = Number.isFinite(Number(value))
-      ? new Date(Number(value) * 1000)
-      : new Date(value);
-
-    if (Number.isNaN(date.getTime())) return String(value).slice(0, 12);
-    return date.toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" });
-  }
-
   function score(row) {
     if (hasValue(row.homeGoalCount) && hasValue(row.awayGoalCount)) {
       return `${row.homeGoalCount} - ${row.awayGoalCount}`;
@@ -139,7 +129,6 @@
     return rows.map(function(row) {
       return `
         <div class="complete-form-row detailed">
-          <small>${escape(formatDate(row.date_unix))}</small>
           <strong>${escape(row.home_name || "Mandante")}</strong>
           <span>${escape(score(row))}</span>
           <em>${escape(row.away_name || "Visitante")}</em>
