@@ -48,7 +48,7 @@
 
   function needsDetails(data) {
     const raw = getRawMatch(data);
-    return !raw.h2h && !raw.trends && !data._completasDetailsLoading && !data._completasDetailsLoaded;
+    return !raw.h2h && !raw.trends && !data._completasDetailsLoading && !data._completasDetailsLoaded && !data._completasDetailsError;
   }
 
   async function loadFootyStatsDetails(data) {
@@ -61,7 +61,7 @@
       const payload = await response.json();
 
       if (!response.ok || !payload.ok || !payload.data) {
-        throw new Error(payload.error || "Detalhes indisponiveis.");
+        throw new Error(payload.error || "Detalhes indisponíveis.");
       }
 
       data.raw = data.raw || {};
@@ -85,7 +85,7 @@
       "raw.match.resolved_league_name",
       "raw.match.season_name",
       "raw.match.league",
-      function() { return getLeagueTitle(); }
+      function() { return selectedMatch?.league; }
     ], raw.league || "Liga");
   }
 
@@ -113,9 +113,9 @@
   function normalizeFormItem(item) {
     const text = String(item || "").trim().toUpperCase();
     if (!text) return "-";
-    if (["W", "V", "WIN", "VITORIA"].includes(text)) return "W";
-    if (["D", "E", "DRAW", "EMPATE"].includes(text)) return "D";
-    if (["L", "P", "LOSS", "DERROTA"].includes(text)) return "L";
+    if (["W", "V", "WIN", "VITORIA", "VITÓRIA"].includes(text)) return "V";
+    if (["D", "E", "DRAW", "EMPATE"].includes(text)) return "E";
+    if (["L", "P", "LOSS", "DERROTA"].includes(text)) return "D";
     return text[0] || "-";
   }
 
@@ -141,7 +141,6 @@
     ];
 
     const value = pickValue(data, paths, "");
-
     if (Array.isArray(value)) return value.slice(0, 5).map(normalizeFormItem);
 
     const clean = String(value || "").replace(/[^A-Za-zVvEePp]/g, "");
@@ -152,7 +151,7 @@
     if (!items.length) return `<span class="form-empty">Sem forma</span>`;
 
     return items.map(function(item) {
-      const klass = item === "W" ? "w" : item === "D" ? "d" : item === "L" ? "l" : "d";
+      const klass = item === "V" ? "w" : item === "E" ? "d" : item === "D" ? "l" : "d";
       return `<span class="${klass}">${escapeHTML(item)}</span>`;
     }).join("");
   }
@@ -205,13 +204,13 @@
   function renderRecentRows(data, side) {
     const rows = findRecentMatches(data, side);
 
-    if (!rows.length) return `<div class="complete-empty-mini">Ultimos jogos nao disponiveis na API.</div>`;
+    if (!rows.length) return `<div class="complete-empty-mini">Últimos jogos não disponíveis na API.</div>`;
 
     return rows.map(function(row) {
       const team = readTeamNameFromMatch(row, side, side === "home" ? homeName() : awayName());
       const opponent = side === "home"
-        ? readTeamNameFromMatch(row, "away", "Adversario")
-        : readTeamNameFromMatch(row, "home", "Adversario");
+        ? readTeamNameFromMatch(row, "away", "Adversário")
+        : readTeamNameFromMatch(row, "home", "Adversário");
 
       return `
         <div class="complete-form-row">
@@ -231,46 +230,57 @@
       : pickValue(data, ["teams.away.ppg", "teams.away.pre_match_ppg", "teams.away.overall_pre_match_ppg", function() { return raw.away_ppg; }, function() { return raw.pre_match_away_ppg; }], null);
   }
 
-  function renderCurrentForm(data) {
-    const homePpg = getPpg(data, "home");
-    const awayPpg = getPpg(data, "away");
-    const homeNumber = Number(homePpg || 0);
-    const awayNumber = Number(awayPpg || 0);
-    const homeWidth = numberValue(homePpg) === null && numberValue(awayPpg) === null
+  function getBalance(data) {
+    const homeNumber = numberValue(getPpg(data, "home")) || 0;
+    const awayNumber = numberValue(getPpg(data, "away")) || 0;
+    const homeWidth = numberValue(getPpg(data, "home")) === null && numberValue(getPpg(data, "away")) === null
       ? 50
       : Math.max(8, Math.min(92, (homeNumber / Math.max(homeNumber + awayNumber, 0.01)) * 100));
-    const better = homeNumber >= awayNumber ? homeName() : awayName();
-    const diff = Math.abs(homeNumber - awayNumber);
-    const betterText = diff ? `${better} esta ${displayDecimal(diff, " PPG")} melhor em Points Per Game.` : "Equilibrio nos pontos por jogo.";
+
+    return {
+      homeNumber,
+      awayNumber,
+      homeWidth,
+      awayWidth: 100 - homeWidth,
+      diff: Math.abs(homeNumber - awayNumber),
+      better: homeNumber >= awayNumber ? homeName() : awayName()
+    };
+  }
+
+  function renderCurrentForm(data) {
+    const balance = getBalance(data);
+    const homePpg = getPpg(data, "home");
+    const awayPpg = getPpg(data, "away");
+    const betterText = balance.diff
+      ? `${balance.better} está ${displayDecimal(balance.diff, " PPG")} melhor em pontos por jogo.`
+      : "Equilíbrio nos pontos por jogo.";
 
     return `
-      <section class="card complete-form-card">
-        <div class="complete-section-title"><span>Current Form</span><strong>Who Will Win?</strong></div>
-        <div class="complete-form-layout">
-          <div class="complete-form-team">
-            <h3>Form - Home</h3>
-            <div class="complete-team-line">
-              ${renderLogo("home")}
-              <div><strong>${escapeHTML(displayDecimal(homePpg))}</strong><div class="form">${renderFormBadges(getFormSequence(data, "home"))}</div></div>
-            </div>
-            <div class="complete-form-tabs"><span>All</span><b>Home</b><span>Away</span></div>
-            <div class="complete-form-list">${renderRecentRows(data, "home")}</div>
+      <div class="complete-section-title"><span>Forma Atual</span><strong>Quem Vai Vencer?</strong></div>
+      <div class="complete-form-layout">
+        <div class="complete-form-team">
+          <h3>Forma - Mandante</h3>
+          <div class="complete-team-line">
+            ${renderLogo("home")}
+            <div><strong>${escapeHTML(displayDecimal(homePpg))}</strong><div class="form">${renderFormBadges(getFormSequence(data, "home"))}</div></div>
           </div>
-          <div class="complete-form-center">
-            <div class="complete-balance-bar" style="--home:${homeWidth}%; --away:${100 - homeWidth}%"><span></span><i></i></div>
-            <p>${escapeHTML(betterText)}</p>
-          </div>
-          <div class="complete-form-team away">
-            <h3>Form - Away</h3>
-            <div class="complete-team-line reverse">
-              <div><strong>${escapeHTML(displayDecimal(awayPpg))}</strong><div class="form">${renderFormBadges(getFormSequence(data, "away"))}</div></div>
-              ${renderLogo("away")}
-            </div>
-            <div class="complete-form-tabs"><span>All</span><span>Home</span><b>Away</b></div>
-            <div class="complete-form-list">${renderRecentRows(data, "away")}</div>
-          </div>
+          <div class="complete-form-tabs"><span>Todos</span><b>Mandante</b><span>Visitante</span></div>
+          <div class="complete-form-list">${renderRecentRows(data, "home")}</div>
         </div>
-      </section>
+        <div class="complete-form-center">
+          <div class="complete-balance-bar" style="--home:${balance.homeWidth}%; --away:${balance.awayWidth}%"><span></span><i></i></div>
+          <p>${escapeHTML(betterText)}</p>
+        </div>
+        <div class="complete-form-team away">
+          <h3>Forma - Visitante</h3>
+          <div class="complete-team-line reverse">
+            <div><strong>${escapeHTML(displayDecimal(awayPpg))}</strong><div class="form">${renderFormBadges(getFormSequence(data, "away"))}</div></div>
+            ${renderLogo("away")}
+          </div>
+          <div class="complete-form-tabs"><span>Todos</span><span>Mandante</span><b>Visitante</b></div>
+          <div class="complete-form-list">${renderRecentRows(data, "away")}</div>
+        </div>
+      </div>
     `;
   }
 
@@ -281,7 +291,7 @@
     return `
       <article class="complete-pred-card ${tone || metricTone(value)}">
         <strong>${escapeHTML(display)}</strong><span>${escapeHTML(label)}</span>
-        <small>${escapeHTML(getLeagueNameFromData(data))} Average: ${escapeHTML(avg)}</small>
+        <small>Média da ${escapeHTML(getLeagueNameFromData(data))}: ${escapeHTML(avg)}</small>
       </article>
     `;
   }
@@ -290,17 +300,16 @@
     const raw = getRawMatch(data);
 
     return `
-      <section class="complete-block">
-        <div class="complete-section-title compact"><span>Prediction Stats</span><strong>${escapeHTML(homeName())} v ${escapeHTML(awayName())}</strong></div>
-        <div class="complete-pred-grid">
-          ${renderPredictionCard(data, "Over 2.5", data.potentials?.goals?.over25, raw.league_o25 || raw.over_25_league_average, metricTone(data.potentials?.goals?.over25))}
-          ${renderPredictionCard(data, "Over 1.5", data.potentials?.goals?.over15, raw.league_o15 || raw.over_15_league_average, metricTone(data.potentials?.goals?.over15))}
-          ${renderPredictionCard(data, "BTTS", data.potentials?.btts?.full_time, raw.league_btts || raw.btts_league_average, metricTone(data.potentials?.btts?.full_time))}
-          ${renderPredictionCard(data, "Goals / Match", data.potentials?.goals?.avg || data.score?.total_goals, raw.league_avg_goals || raw.average_goals, "mid", "decimal")}
-          ${renderPredictionCard(data, "Cards", data.potentials?.cards?.total || data.cards?.full_time?.total, raw.league_cards_avg || raw.cards_potential, "mid", "decimal")}
-          ${renderPredictionCard(data, "Corners", data.potentials?.corners?.total || data.corners?.full_time?.total, raw.league_corners_avg || raw.corners_potential, "good", "decimal")}
-        </div>
-      </section>
+      <div class="complete-unified-divider"></div>
+      <div class="complete-section-title compact"><span>Estatísticas de Previsão</span><strong>${escapeHTML(homeName())} x ${escapeHTML(awayName())}</strong></div>
+      <div class="complete-pred-grid">
+        ${renderPredictionCard(data, "Mais de 2.5", data.potentials?.goals?.over25, raw.league_o25 || raw.over_25_league_average, metricTone(data.potentials?.goals?.over25))}
+        ${renderPredictionCard(data, "Mais de 1.5", data.potentials?.goals?.over15, raw.league_o15 || raw.over_15_league_average, metricTone(data.potentials?.goals?.over15))}
+        ${renderPredictionCard(data, "Ambas Marcam", data.potentials?.btts?.full_time, raw.league_btts || raw.btts_league_average, metricTone(data.potentials?.btts?.full_time))}
+        ${renderPredictionCard(data, "Gols / Jogo", data.potentials?.goals?.avg || data.score?.total_goals, raw.league_avg_goals || raw.average_goals, "mid", "decimal")}
+        ${renderPredictionCard(data, "Cartões", data.potentials?.cards?.total || data.cards?.full_time?.total, raw.league_cards_avg || raw.cards_potential, "mid", "decimal")}
+        ${renderPredictionCard(data, "Escanteios", data.potentials?.corners?.total || data.corners?.full_time?.total, raw.league_corners_avg || raw.corners_potential, "good", "decimal")}
+      </div>
     `;
   }
 
@@ -372,13 +381,13 @@
     return `
       <article class="complete-h2h-metric ${metricTone(total ? (count / total) * 100 : null)}">
         <strong>${escapeHTML(percentFromCount(count, total))}</strong><span>${escapeHTML(label)}</span>
-        <small>${escapeHTML(total ? `${count} / ${total} ${sublabel || "matches"}` : "Dados indisponiveis")}</small>
+        <small>${escapeHTML(total ? `${count} / ${total} partidas${sublabel ? ` - ${sublabel}` : ""}` : "Dados indisponíveis")}</small>
       </article>
     `;
   }
 
   function renderH2HFixtures(rows) {
-    if (!rows.length) return `<div class="complete-empty-mini">Historico direto nao disponivel no retorno atual da API.</div>`;
+    if (!rows.length) return `<div class="complete-empty-mini">Histórico direto não disponível no retorno atual da API.</div>`;
 
     return rows.slice(0, 8).map(function(row) {
       const dateRaw = row.date || row.match_date || row.date_unix || row.timestamp || "";
@@ -400,26 +409,64 @@
 
     return `
       <section class="card complete-h2h-card">
-        <div class="complete-section-title"><span>Head to Head Statistics</span><strong>${escapeHTML(homeName())} vs ${escapeHTML(awayName())}</strong></div>
+        <div class="complete-section-title"><span>Estatísticas do Confronto Direto</span><strong>${escapeHTML(homeName())} x ${escapeHTML(awayName())}</strong></div>
         <div class="complete-h2h-top">
-          <div class="complete-h2h-team">${renderLogo("home")}<strong>${escapeHTML(homeName())}</strong><span>${stats.homeWins} Wins (${escapeHTML(percentFromCount(stats.homeWins, total))})</span></div>
+          <div class="complete-h2h-team">${renderLogo("home")}<strong>${escapeHTML(homeName())}</strong><span>${stats.homeWins} vitórias (${escapeHTML(percentFromCount(stats.homeWins, total))})</span></div>
           <div class="complete-h2h-center">
-            <strong>${escapeHTML(total || "-")}</strong><span>Matches</span>
+            <strong>${escapeHTML(total || "-")}</strong><span>Partidas</span>
             <div class="complete-h2h-bar" style="--home:${homePct}%; --draw:${drawPct}%; --away:${awayPct}%"><span>${homePct}%</span><i>${drawPct}%</i><b>${awayPct}%</b></div>
-            <div class="complete-h2h-labels"><span>${stats.homeWins} Wins</span><span>${stats.draws} Draws</span><span>${stats.awayWins} Wins</span></div>
+            <div class="complete-h2h-labels"><span>${stats.homeWins} vitórias</span><span>${stats.draws} empates</span><span>${stats.awayWins} vitórias</span></div>
           </div>
-          <div class="complete-h2h-team">${renderLogo("away")}<strong>${escapeHTML(awayName())}</strong><span>${stats.awayWins} Wins (${escapeHTML(percentFromCount(stats.awayWins, total))})</span></div>
+          <div class="complete-h2h-team">${renderLogo("away")}<strong>${escapeHTML(awayName())}</strong><span>${stats.awayWins} vitórias (${escapeHTML(percentFromCount(stats.awayWins, total))})</span></div>
         </div>
-        <p class="complete-h2h-copy">O historico direto mostra ${escapeHTML(total || "-")} partidas entre ${escapeHTML(homeName())} e ${escapeHTML(awayName())}. ${escapeHTML(homeName())} venceu ${stats.homeWins}, houve ${stats.draws} empates e ${escapeHTML(awayName())} venceu ${stats.awayWins}.</p>
+        <p class="complete-h2h-copy">O histórico direto mostra ${escapeHTML(total || "-")} partidas entre ${escapeHTML(homeName())} e ${escapeHTML(awayName())}. ${escapeHTML(homeName())} venceu ${stats.homeWins}, houve ${stats.draws} empates e ${escapeHTML(awayName())} venceu ${stats.awayWins}.</p>
         <div class="complete-h2h-metrics">
-          ${renderH2HMetric("Over 1.5", stats.over15, total)}
-          ${renderH2HMetric("Over 2.5", stats.over25, total)}
-          ${renderH2HMetric("Over 3.5", stats.over35, total)}
-          ${renderH2HMetric("BTTS", stats.btts, total)}
-          ${renderH2HMetric("Clean Sheets", stats.homeClean, total, homeName())}
-          ${renderH2HMetric("Clean Sheets", stats.awayClean, total, awayName())}
+          ${renderH2HMetric("Mais de 1.5", stats.over15, total)}
+          ${renderH2HMetric("Mais de 2.5", stats.over25, total)}
+          ${renderH2HMetric("Mais de 3.5", stats.over35, total)}
+          ${renderH2HMetric("Ambas Marcam", stats.btts, total)}
+          ${renderH2HMetric("Sem Sofrer Gol", stats.homeClean, total, homeName())}
+          ${renderH2HMetric("Sem Sofrer Gol", stats.awayClean, total, awayName())}
         </div>
-        <div class="complete-h2h-strip"><div class="complete-strip-title">${escapeHTML(homeName())} v ${escapeHTML(awayName())} Past H2H Results & Fixtures</div><div class="complete-h2h-scroll">${renderH2HFixtures(stats.rows)}</div></div>
+        <div class="complete-h2h-strip"><div class="complete-strip-title">Resultados e jogos anteriores do confronto direto</div><div class="complete-h2h-scroll">${renderH2HFixtures(stats.rows)}</div></div>
+      </section>
+    `;
+  }
+
+  function renderAiInsight(data) {
+    const over15 = numberValue(data.potentials?.goals?.over15);
+    const over25 = numberValue(data.potentials?.goals?.over25);
+    const btts = numberValue(data.potentials?.btts?.full_time);
+    const corners = numberValue(data.potentials?.corners?.total || data.corners?.full_time?.total);
+    const h2hTotal = getH2HStats(data).total;
+    const balance = getBalance(data);
+    const bestMarket = over25 !== null && over25 >= 55 ? "Mais de 2.5 gols" : btts !== null && btts >= 55 ? "Ambas Marcam" : over15 !== null ? "Mais de 1.5 gols" : "mercado principal";
+    const tendency = over15 !== null && over15 >= 55 ? "Tendência ofensiva" : "Tendência moderada";
+    const alertText = h2hTotal ? `${h2hTotal} confrontos diretos mapeados.` : "Histórico direto limitado no retorno da API.";
+    const lead = balance.diff
+      ? `${balance.better} chega melhor no recorte de forma, com diferença de ${displayDecimal(balance.diff, " PPG")}.`
+      : "A forma atual aparece equilibrada entre as equipes.";
+
+    return `
+      <section class="complete-ai-card">
+        <div class="complete-ai-copy">
+          <span>Insight da IA</span>
+          <p>${escapeHTML(lead)} Para pré-jogo, o mercado observado é ${escapeHTML(bestMarket)}, com atenção ao ritmo ofensivo e à confirmação das escalações.</p>
+        </div>
+        <div class="complete-ai-metrics">
+          <article><span>⚙</span><strong>${escapeHTML(tendency)}</strong><small>${escapeHTML(over15 !== null ? `Probabilidade de ${displayPct(over15)} para Mais de 1.5` : "Dados ofensivos em análise")}</small></article>
+          <article><span>↗</span><strong>Mercado observado</strong><small>${escapeHTML(bestMarket)}${over25 !== null ? ` em ${displayPct(over25)}` : ""}</small></article>
+          <article><span>⚠</span><strong>Alerta</strong><small>${escapeHTML(alertText)}${corners !== null ? ` Média de escanteios: ${displayDecimal(corners)}.` : ""}</small></article>
+        </div>
+      </section>
+    `;
+  }
+
+  function renderUnifiedCard(data) {
+    return `
+      <section class="card complete-unified-card">
+        ${renderCurrentForm(data)}
+        ${renderPredictionStats(data)}
       </section>
     `;
   }
@@ -431,9 +478,8 @@
     loadFootyStatsDetails(data);
 
     return `
-      ${aiHero("Completas", "Forma atual, estatisticas de previsao e confronto direto com dados reais da FootyStats.", ["Over 2.5", displayPct(data.potentials?.goals?.over25)], ["BTTS", displayPct(data.potentials?.btts?.full_time)], ["H2H", `${getH2HStats(data).total || "-"} jogos`])}
-      ${renderCurrentForm(data)}
-      ${renderPredictionStats(data)}
+      ${renderAiInsight(data)}
+      ${renderUnifiedCard(data)}
       ${renderH2H(data)}
     `;
   };
