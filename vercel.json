@@ -35,6 +35,9 @@
     "api/intervalo.js": {
       "maxDuration": 20
     },
+    "api/jogadores.js": {
+      "maxDuration": 20
+    },
     "api/partida-completa.js": {
       "maxDuration": 30
     }
