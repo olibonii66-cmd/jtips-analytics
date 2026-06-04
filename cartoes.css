@@ -1,0 +1,258 @@
+.cards-view {
+  display: grid;
+  gap: 14px;
+}
+
+.cards-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+  padding: 0 16px 16px;
+}
+
+.cards-title {
+  align-items: baseline;
+  border-bottom: 1px solid var(--border);
+  box-shadow: 0 7px 18px rgba(8, 25, 18, 0.04);
+  display: flex;
+  gap: 8px;
+  margin: 0 -16px 18px;
+  padding: 16px;
+}
+
+.cards-title span {
+  color: #0071c8;
+  font-size: 1.18rem;
+  font-weight: 950;
+}
+
+.cards-title::before {
+  background: #ef5149;
+  border-radius: 3px;
+  box-shadow: 15px 0 0 #ffe679;
+  content: "";
+  height: 18px;
+  width: 11px;
+}
+
+.cards-summary-grid {
+  align-items: center;
+  border-bottom: 1px solid var(--border);
+  display: grid;
+  gap: 14px;
+  grid-template-columns: 150px minmax(210px, 1fr) minmax(180px, 0.7fr) minmax(180px, 0.7fr);
+  margin-bottom: 18px;
+  padding-bottom: 18px;
+}
+
+.cards-icon-pair {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+}
+
+.cards-icon-pair span,
+.cards-icon-pair i {
+  border-radius: 3px;
+  display: block;
+  height: 60px;
+  width: 40px;
+}
+
+.cards-icon-pair span {
+  background: #fb7b74;
+}
+
+.cards-icon-pair i {
+  background: #ffea87;
+  border: 1px solid #ead371;
+}
+
+.cards-average {
+  text-align: center;
+}
+
+.cards-average strong {
+  color: var(--dark);
+  display: block;
+  font-size: 1.35rem;
+  font-weight: 950;
+}
+
+.cards-average span {
+  color: var(--dark);
+  display: block;
+  font-size: 1.12rem;
+  font-weight: 950;
+  margin: 3px 0;
+}
+
+.cards-average small {
+  color: #475569;
+  display: block;
+  font-size: 0.78rem;
+  line-height: 1.4;
+}
+
+.cards-mini-card {
+  border: 1px solid #dce2ea;
+  border-radius: 5px;
+  box-shadow: 0 5px 14px rgba(8, 25, 18, 0.08);
+  min-height: 86px;
+  padding: 14px 56px 14px 14px;
+  position: relative;
+}
+
+.cards-mini-card strong {
+  color: #061b3d;
+  display: block;
+  font-size: 1.05rem;
+  margin-bottom: 6px;
+}
+
+.cards-mini-card span {
+  color: #64748b;
+  font-size: 0.78rem;
+}
+
+.cards-team-logo,
+.cards-team-fallback {
+  background: #fff;
+  border: 1px solid #dbe6de;
+  border-radius: 50%;
+  height: 32px;
+  object-fit: contain;
+  padding: 4px;
+  position: absolute;
+  right: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 32px;
+}
+
+.cards-team-fallback {
+  color: var(--green);
+  display: grid;
+  font-size: 0.62rem;
+  font-weight: 950;
+  place-items: center;
+}
+
+.cards-subtabs {
+  display: grid;
+  gap: 0;
+  grid-template-columns: 1fr 1fr;
+  margin: 0 0 8px;
+}
+
+.cards-tab-button {
+  background: transparent;
+  border: 0;
+  border-radius: 5px;
+  color: #8a9bb7;
+  font-weight: 900;
+  min-height: 46px;
+  padding: 0 12px;
+}
+
+.cards-tab-button.active {
+  background: #e7eef7;
+  color: #3d72bd;
+}
+
+.cards-panel {
+  display: none;
+}
+
+.cards-panel.active {
+  display: block;
+}
+
+.cards-table {
+  border-collapse: separate;
+  border-spacing: 0 4px;
+  font-size: 0.88rem;
+  margin-top: 8px;
+  width: 100%;
+}
+
+.cards-table th,
+.cards-table td {
+  padding: 8px 12px;
+}
+
+.cards-table th {
+  background: #eef1f3;
+  color: var(--dark);
+  font-weight: 500;
+  text-align: center;
+}
+
+.cards-table th:first-child,
+.cards-table td:first-child {
+  text-align: left;
+}
+
+.cards-table td {
+  background: #f0f3f5;
+  border-left: 2px solid #fff;
+  border-right: 2px solid #fff;
+  color: var(--dark);
+  text-align: center;
+}
+
+.cards-table td:not(:first-child) {
+  font-weight: 900;
+}
+
+.cards-high {
+  background: #b8eb99 !important;
+  color: #087017 !important;
+}
+
+.cards-mid {
+  background: #f6f7c8 !important;
+  color: #8a7000 !important;
+}
+
+.cards-low {
+  background: #fde5e1 !important;
+  color: #e11900 !important;
+}
+
+.cards-empty {
+  background: #f4f2ea !important;
+  color: var(--muted) !important;
+}
+
+.cards-note,
+.cards-intro {
+  color: #64748b;
+  font-size: 0.8rem;
+  line-height: 1.45;
+  margin-top: 10px;
+}
+
+.cards-intro {
+  color: var(--dark);
+  font-size: 0.94rem;
+  margin: 0 0 14px;
+}
+
+@media (max-width: 900px) {
+  .cards-summary-grid,
+  .cards-subtabs {
+    grid-template-columns: 1fr;
+  }
+
+  .cards-table {
+    font-size: 0.78rem;
+  }
+
+  .cards-table th,
+  .cards-table td {
+    padding: 7px 6px;
+  }
+}
