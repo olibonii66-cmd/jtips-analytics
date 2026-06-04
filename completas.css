@@ -191,18 +191,21 @@
 .complete-form-list {
   display: grid;
   gap: 7px;
+  justify-items: center;
 }
 
 .complete-form-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  grid-template-columns: minmax(92px, 1fr) auto minmax(92px, 1fr);
   gap: 8px;
   align-items: center;
   font-size: 0.79rem;
+  margin: 0 auto;
+  width: min(100%, 390px);
 }
 
 .complete-form-row.detailed {
-  grid-template-columns: 92px minmax(0, 1fr) auto minmax(0, 1fr);
+  grid-template-columns: minmax(92px, 1fr) auto minmax(92px, 1fr);
 }
 
 .complete-form-row small {
@@ -218,9 +221,14 @@
   white-space: nowrap;
 }
 
+.complete-form-row strong {
+  text-align: right;
+}
+
 .complete-form-row em {
   color: var(--muted);
   font-style: normal;
+  text-align: left;
 }
 
 .complete-form-row span {
@@ -228,7 +236,10 @@
   border-radius: 4px;
   color: var(--dark);
   font-weight: 950;
+  justify-self: center;
+  min-width: 42px;
   padding: 4px 5px;
+  text-align: center;
 }
 
 .complete-form-center {
