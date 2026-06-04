@@ -36,7 +36,9 @@
       const params = new URLSearchParams({
         season_id: ids.season,
         home_id: ids.home,
-        away_id: ids.away
+        away_id: ids.away,
+        home_name: homeName(),
+        away_name: awayName()
       });
 
       const response = await fetch(`/api/jogadores?${params.toString()}`);
