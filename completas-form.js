@@ -60,7 +60,7 @@
       const payload = await response.json();
 
       if (!response.ok || !payload.ok || !payload.data) {
-        throw new Error(payload.error || "Ultimos jogos indisponiveis.");
+        throw new Error(payload.error || "Últimos jogos indisponíveis.");
       }
 
       data.raw = data.raw || {};
@@ -133,7 +133,7 @@
 
   function renderRows(rows) {
     if (!rows.length) {
-      return `<div class="complete-empty-mini">Ultimos jogos nao disponiveis na API.</div>`;
+      return `<div class="complete-empty-mini">Últimos jogos não disponíveis na API.</div>`;
     }
 
     return rows.map(function(row) {
