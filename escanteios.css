@@ -1,0 +1,243 @@
+.corner-view {
+  display: grid;
+  gap: 14px;
+}
+
+.corner-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+  padding: 0 16px 16px;
+}
+
+.corner-title {
+  align-items: baseline;
+  border-bottom: 1px solid var(--border);
+  box-shadow: 0 7px 18px rgba(8, 25, 18, 0.04);
+  display: flex;
+  gap: 8px;
+  margin: 0 -16px 18px;
+  padding: 16px;
+}
+
+.corner-title span {
+  color: #0071c8;
+  font-size: 1.18rem;
+  font-weight: 950;
+}
+
+.corner-title em {
+  color: var(--muted);
+  font-size: 0.92rem;
+  font-style: normal;
+}
+
+.corner-summary-grid {
+  align-items: center;
+  border-bottom: 1px solid var(--border);
+  display: grid;
+  gap: 14px;
+  grid-template-columns: 150px minmax(210px, 1fr) minmax(180px, 0.7fr) minmax(180px, 0.7fr);
+  margin-bottom: 18px;
+  padding-bottom: 18px;
+}
+
+.corner-flag {
+  color: #c8c8c8;
+  font-size: 5rem;
+  line-height: 1;
+  text-align: center;
+}
+
+.corner-average {
+  text-align: center;
+}
+
+.corner-average strong {
+  color: var(--dark);
+  display: block;
+  font-size: 1.35rem;
+  font-weight: 950;
+}
+
+.corner-average span {
+  color: var(--dark);
+  display: block;
+  font-size: 1.12rem;
+  font-weight: 950;
+  margin: 3px 0;
+}
+
+.corner-average small {
+  color: #275fbe;
+  display: block;
+  font-size: 0.78rem;
+  line-height: 1.4;
+}
+
+.corner-mini-card {
+  border: 1px solid #dce2ea;
+  border-radius: 5px;
+  box-shadow: 0 5px 14px rgba(8, 25, 18, 0.08);
+  min-height: 86px;
+  padding: 14px 56px 14px 14px;
+  position: relative;
+}
+
+.corner-mini-card strong {
+  color: #061b3d;
+  display: block;
+  font-size: 1.05rem;
+  margin-bottom: 6px;
+}
+
+.corner-mini-card span {
+  color: #64748b;
+  font-size: 0.78rem;
+}
+
+.corner-team-logo,
+.corner-team-fallback {
+  background: #fff;
+  border: 1px solid #dbe6de;
+  border-radius: 50%;
+  height: 32px;
+  object-fit: contain;
+  padding: 4px;
+  position: absolute;
+  right: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 32px;
+}
+
+.corner-team-fallback {
+  color: var(--green);
+  display: grid;
+  font-size: 0.62rem;
+  font-weight: 950;
+  place-items: center;
+}
+
+.corner-subtabs {
+  display: grid;
+  gap: 0;
+  grid-template-columns: 1fr 1fr;
+  margin: 0 0 8px;
+}
+
+.corner-tab-button {
+  background: transparent;
+  border: 0;
+  border-radius: 5px;
+  color: #8a9bb7;
+  font-weight: 900;
+  min-height: 46px;
+  padding: 0 12px;
+}
+
+.corner-tab-button.active {
+  background: #e7eef7;
+  color: #3d72bd;
+}
+
+.corner-panel {
+  display: none;
+}
+
+.corner-panel.active {
+  display: block;
+}
+
+.corner-table {
+  border-collapse: separate;
+  border-spacing: 0 4px;
+  font-size: 0.88rem;
+  margin-top: 8px;
+  width: 100%;
+}
+
+.corner-table th,
+.corner-table td {
+  padding: 8px 12px;
+}
+
+.corner-table th {
+  background: #eef1f3;
+  color: var(--dark);
+  font-weight: 500;
+  text-align: center;
+}
+
+.corner-table th:first-child,
+.corner-table td:first-child {
+  text-align: left;
+}
+
+.corner-table td {
+  background: #f0f3f5;
+  border-left: 2px solid #fff;
+  border-right: 2px solid #fff;
+  color: var(--dark);
+  text-align: center;
+}
+
+.corner-table td:not(:first-child) {
+  font-weight: 900;
+}
+
+.corner-high {
+  background: #b8eb99 !important;
+  color: #087017 !important;
+}
+
+.corner-mid {
+  background: #f6f7c8 !important;
+  color: #8a7000 !important;
+}
+
+.corner-low {
+  background: #fde5e1 !important;
+  color: #e11900 !important;
+}
+
+.corner-empty {
+  background: #f4f2ea !important;
+  color: var(--muted) !important;
+}
+
+.corner-note,
+.corner-intro {
+  color: #64748b;
+  font-size: 0.8rem;
+  line-height: 1.45;
+  margin-top: 10px;
+}
+
+.corner-intro {
+  color: var(--dark);
+  font-size: 0.94rem;
+  margin: 0 0 14px;
+}
+
+@media (max-width: 900px) {
+  .corner-summary-grid,
+  .corner-subtabs {
+    grid-template-columns: 1fr;
+  }
+
+  .corner-flag {
+    font-size: 3rem;
+  }
+
+  .corner-table {
+    font-size: 0.78rem;
+  }
+
+  .corner-table th,
+  .corner-table td {
+    padding: 7px 6px;
+  }
+}
