@@ -15,14 +15,8 @@ export default async function handler(req, res) {
   if (!homeId || !awayId) return res.status(400).json({ ok: false, error: "Informe home_id e away_id." });
 
   try {
-    const result = await fetchFootyStats("league-players", {
-      key: apiKey,
-      league_id: seasonId,
-      page: 1,
-      max_per_page: 1000
-    });
-
-    const players = extractArray(result.data);
+    const result = await fetchLeaguePlayers(apiKey, seasonId);
+    const players = result.players;
     const homePlayers = filterPlayersForTeam(players, homeId, homeName).map(normalizePlayer);
     const awayPlayers = filterPlayersForTeam(players, awayId, awayName).map(normalizePlayer);
 
@@ -39,7 +33,7 @@ export default async function handler(req, res) {
       },
       diagnostics: {
         league_players_ok: result.ok,
-        league_players_status: result.status,
+        league_players_pages: result.pages,
         league_players_count: players.length,
         home_players_count: homePlayers.length,
         away_players_count: awayPlayers.length,
@@ -54,6 +48,39 @@ export default async function handler(req, res) {
   } catch (error) {
     return res.status(500).json({ ok: false, error: "Erro interno ao buscar dados de jogadores.", detail: error.message });
   }
+}
+
+async function fetchLeaguePlayers(apiKey, seasonId) {
+  const pagesToFetch = [1, 2, 3, 4, 5, 6, 7, 8];
+  const pageResults = await Promise.all(pagesToFetch.map(function(page) {
+    return fetchFootyStats("league-players", {
+      key: apiKey,
+      league_id: seasonId,
+      page,
+      max_per_page: 500
+    });
+  }));
+
+  const pages = pageResults.map(function(result, index) {
+    const players = extractArray(result.data);
+    return {
+      page: pagesToFetch[index],
+      ok: result.ok,
+      status: result.status,
+      count: players.length,
+      parse_error: result.parse_error || null
+    };
+  });
+
+  const players = uniquePlayers(pageResults.flatMap(function(result) {
+    return extractArray(result.data);
+  }));
+
+  return {
+    ok: pageResults.some(function(result) { return result.ok; }),
+    pages,
+    players
+  };
 }
 
 async function fetchFootyStats(endpoint, params) {
@@ -92,6 +119,26 @@ function extractArray(payload) {
   if (payload.data && Array.isArray(payload.data.players)) return payload.data.players;
   if (payload.response && Array.isArray(payload.response.players)) return payload.response.players;
   return [];
+}
+
+function uniquePlayers(players) {
+  const seen = new Set();
+  const output = [];
+
+  players.forEach(function(player) {
+    const key = String(
+      player.id ||
+      player.player_id ||
+      player.playerID ||
+      `${player.full_name || player.known_as || player.player_name || player.name || "jogador"}-${teamNameValues(player).join("|")}`
+    );
+
+    if (seen.has(key)) return;
+    seen.add(key);
+    output.push(player);
+  });
+
+  return output;
 }
 
 function filterPlayersForTeam(players, teamId, teamName) {
