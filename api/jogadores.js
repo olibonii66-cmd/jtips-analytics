@@ -8,6 +8,8 @@ export default async function handler(req, res) {
   const seasonId = String(req.query.season_id || req.query.seasonId || req.query.league_id || req.query.competition_id || "").trim();
   const homeId = String(req.query.home_id || req.query.homeId || "").trim();
   const awayId = String(req.query.away_id || req.query.awayId || "").trim();
+  const homeName = String(req.query.home_name || req.query.homeName || "").trim();
+  const awayName = String(req.query.away_name || req.query.awayName || "").trim();
 
   if (!seasonId) return res.status(400).json({ ok: false, error: "Informe o season_id da liga." });
   if (!homeId || !awayId) return res.status(400).json({ ok: false, error: "Informe home_id e away_id." });
@@ -21,8 +23,8 @@ export default async function handler(req, res) {
     });
 
     const players = extractArray(result.data);
-    const homePlayers = players.filter(function(player) { return belongsToTeam(player, homeId); }).map(normalizePlayer);
-    const awayPlayers = players.filter(function(player) { return belongsToTeam(player, awayId); }).map(normalizePlayer);
+    const homePlayers = filterPlayersForTeam(players, homeId, homeName).map(normalizePlayer);
+    const awayPlayers = filterPlayersForTeam(players, awayId, awayName).map(normalizePlayer);
 
     return res.status(200).json({
       ok: true,
@@ -31,14 +33,18 @@ export default async function handler(req, res) {
       input: {
         season_id: seasonId,
         home_id: homeId,
-        away_id: awayId
+        away_id: awayId,
+        home_name: homeName || null,
+        away_name: awayName || null
       },
       diagnostics: {
         league_players_ok: result.ok,
         league_players_status: result.status,
         league_players_count: players.length,
         home_players_count: homePlayers.length,
-        away_players_count: awayPlayers.length
+        away_players_count: awayPlayers.length,
+        home_filter: buildFilterDiagnostics(players, homeId, homeName),
+        away_filter: buildFilterDiagnostics(players, awayId, awayName)
       },
       data: {
         home: buildTeamLists(homePlayers),
@@ -88,25 +94,113 @@ function extractArray(payload) {
   return [];
 }
 
-function belongsToTeam(player, teamId) {
+function filterPlayersForTeam(players, teamId, teamName) {
+  const byId = players.filter(function(player) {
+    return belongsToTeamId(player, teamId);
+  });
+
+  if (byId.length) return byId;
+
+  const byName = players.filter(function(player) {
+    return belongsToTeamName(player, teamName);
+  });
+
+  if (byName.length) return byName;
+
+  const compactName = compactTeamName(teamName);
+
+  return players.filter(function(player) {
+    return teamNameValues(player).some(function(value) {
+      const compactValue = compactTeamName(value);
+      return compactName && compactValue && (compactValue.includes(compactName) || compactName.includes(compactValue));
+    });
+  });
+}
+
+function belongsToTeamId(player, teamId) {
   const ids = [
     player.team_id,
     player.teamID,
+    player.teamId,
     player.club_id,
     player.clubID,
+    player.clubId,
     player.club_team_id,
     player.clubTeamID,
+    player.clubTeamId,
     player.current_team_id,
     player.currentTeamID,
+    player.currentTeamId,
     player.team_a_id,
     player.teamAID,
+    player.teamAId,
     player.squad_team_id,
-    player.squadTeamID
+    player.squadTeamID,
+    player.squadTeamId,
+    player.parent_team_id,
+    player.parentTeamID,
+    player.parentTeamId
   ];
 
   return ids.some(function(value) {
     return value !== undefined && value !== null && String(value) === String(teamId);
   });
+}
+
+function belongsToTeamName(player, teamName) {
+  const wanted = normalizeText(teamName);
+  if (!wanted) return false;
+
+  return teamNameValues(player).some(function(value) {
+    const normalized = normalizeText(value);
+    return normalized && normalized === wanted;
+  });
+}
+
+function teamNameValues(player) {
+  return [
+    player.team_name,
+    player.teamName,
+    player.team,
+    player.club_name,
+    player.clubName,
+    player.club,
+    player.current_team_name,
+    player.currentTeamName,
+    player.current_team,
+    player.currentTeam,
+    player.squad_team_name,
+    player.squadTeamName,
+    player.parent_team_name,
+    player.parentTeamName
+  ].filter(function(value) {
+    return value !== undefined && value !== null && String(value).trim() !== "";
+  });
+}
+
+function normalizeText(value) {
+  return String(value || "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/\bec\b/g, "")
+    .replace(/\bfc\b/g, "")
+    .replace(/\bsc\b/g, "")
+    .replace(/\bpr\b/g, "")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
+function compactTeamName(value) {
+  return normalizeText(value).replace(/\s+/g, "");
+}
+
+function buildFilterDiagnostics(players, teamId, teamName) {
+  const byId = players.filter(function(player) { return belongsToTeamId(player, teamId); }).length;
+  const byName = players.filter(function(player) { return belongsToTeamName(player, teamName); }).length;
+  const sampleNames = Array.from(new Set(players.flatMap(teamNameValues))).slice(0, 20);
+
+  return { by_id: byId, by_name: byName, requested_name: teamName || null, sample_team_names: sampleNames };
 }
 
 function normalizePlayer(player) {
