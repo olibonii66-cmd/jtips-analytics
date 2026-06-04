@@ -20,6 +20,9 @@
     "api/completas-form.js": {
       "maxDuration": 20
     },
+    "api/gols.js": {
+      "maxDuration": 20
+    },
     "api/partida-completa.js": {
       "maxDuration": 30
     }
