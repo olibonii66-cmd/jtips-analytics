@@ -43,7 +43,7 @@
       const payload = await response.json();
 
       if (!response.ok || !payload.ok || !payload.data) {
-        throw new Error(payload.error || "Dados de jogadores indisponiveis.");
+        throw new Error(payload.error || "Dados de jogadores indisponíveis.");
       }
 
       data._jogadoresData = payload.data;
@@ -99,7 +99,7 @@
   }
 
   function emptyList() {
-    return `<div class="players-empty">Dados de jogadores indisponiveis no retorno atual da API.</div>`;
+    return `<div class="players-empty">Dados de jogadores indisponíveis no retorno atual da API.</div>`;
   }
 
   function playerRows(players, side, mode) {
@@ -136,7 +136,7 @@
           <h3>${escape(title)}</h3>
         </header>
         ${playerRows(players, side, mode)}
-        <p class="players-note">* Estatisticas da temporada atual da liga</p>
+        <p class="players-note">* Estatísticas da temporada atual da liga</p>
       </article>
     `;
   }
@@ -182,17 +182,17 @@
         "integer"
       )}
       ${playersSection(
-        "Quem pode receber cartao?",
-        `Cartoes recebidos - ${homeName()}`,
-        `Cartoes recebidos - ${awayName()}`,
+        "Quem pode receber cartão?",
+        `Cartões recebidos - ${homeName()}`,
+        `Cartões recebidos - ${awayName()}`,
         home.cards,
         away.cards,
         "integer"
       )}
       ${playersSection(
-        "Cartoes por 90 minutos",
-        `Cartoes / 90 - ${homeName()}`,
-        `Cartoes / 90 - ${awayName()}`,
+        "Cartões por 90 minutos",
+        `Cartões / 90 - ${homeName()}`,
+        `Cartões / 90 - ${awayName()}`,
         home.cards_per_90,
         away.cards_per_90,
         "decimal"
