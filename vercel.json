@@ -14,6 +14,9 @@
     "api/completas-h2h.js": {
       "maxDuration": 20
     },
+    "api/completas-league.js": {
+      "maxDuration": 20
+    },
     "api/partida-completa.js": {
       "maxDuration": 30
     }
