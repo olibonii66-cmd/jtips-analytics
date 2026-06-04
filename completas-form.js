@@ -148,6 +148,25 @@
     }).join("");
   }
 
+  function updateTabState(item, selected) {
+    item.classList.toggle("active", selected);
+
+    if (item.tagName !== "B") {
+      item.style.removeProperty("background");
+      item.style.removeProperty("color");
+      return;
+    }
+
+    if (selected) {
+      item.style.removeProperty("background");
+      item.style.removeProperty("color");
+      return;
+    }
+
+    item.style.background = "transparent";
+    item.style.color = "#8a96a3";
+  }
+
   function updateFormList(tabElement) {
     const teamElement = tabElement.closest(".complete-form-team");
     if (!teamElement) return;
@@ -157,9 +176,7 @@
     const list = teamElement.querySelector(".complete-form-list");
 
     teamElement.querySelectorAll(".complete-form-tabs span, .complete-form-tabs b").forEach(function(item) {
-      const selected = item === tabElement;
-      item.classList.toggle("active", selected);
-      item.classList.toggle("inactive", item.tagName === "B" && !selected);
+      updateTabState(item, item === tabElement);
     });
 
     if (list) list.innerHTML = renderRows(getRows(side, mode));
