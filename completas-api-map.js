@@ -109,6 +109,77 @@
     data.h2h = normalized;
   }
 
+  function applyLeagueAverages(data, league) {
+    if (!data || !league?.averages) return;
+
+    const raw = getRawMatch(data);
+    if (!raw) return;
+
+    const averages = league.averages;
+
+    data.league_averages = averages;
+    data.league = data.league || {};
+    data.league.name = league.name || data.league.name || selectedMatch?.league || "Liga";
+    data.league.country = league.country || data.league.country || null;
+
+    raw.league_o15 = averages.over15;
+    raw.over_15_league_average = averages.over15;
+    raw.league_o25 = averages.over25;
+    raw.over_25_league_average = averages.over25;
+    raw.league_o35 = averages.over35;
+    raw.over_35_league_average = averages.over35;
+    raw.league_btts = averages.btts;
+    raw.btts_league_average = averages.btts;
+    raw.league_avg_goals = averages.goals_per_match;
+    raw.average_goals = averages.goals_per_match;
+    raw.league_cards_avg = averages.cards_per_match;
+    raw.cards_league_average = averages.cards_per_match;
+    raw.league_corners_avg = averages.corners_per_match;
+    raw.corners_league_average = averages.corners_per_match;
+  }
+
+  function needsLeagueAverages(data) {
+    return Boolean(
+      data &&
+      selectedMatch?.seasonId &&
+      !data._completasLeagueLoading &&
+      !data._completasLeagueLoaded &&
+      !data._completasLeagueError
+    );
+  }
+
+  async function loadLeagueAverages(data) {
+    if (!needsLeagueAverages(data)) return;
+
+    data._completasLeagueLoading = true;
+
+    try {
+      const params = new URLSearchParams({
+        season_id: selectedMatch.seasonId
+      });
+      const dateUnix = data.status?.date_unix || getRawMatch(data)?.date_unix;
+
+      if (dateUnix) params.set("max_time", dateUnix);
+
+      const response = await fetch(`/api/completas-league?${params.toString()}`);
+      const payload = await response.json();
+
+      if (!response.ok || !payload.ok || !payload.data) {
+        throw new Error(payload.error || "Medias da liga indisponiveis.");
+      }
+
+      applyLeagueAverages(data, payload.data);
+      data.diagnostics = data.diagnostics || {};
+      data.diagnostics.completas_league = payload.input || null;
+      data._completasLeagueLoaded = true;
+    } catch (error) {
+      data._completasLeagueError = error.message;
+    } finally {
+      data._completasLeagueLoading = false;
+      if (selectedMatch?.complete === data) renderTab("completas");
+    }
+  }
+
   function needsH2H(data) {
     const raw = getRawMatch(data);
     return Boolean(
@@ -159,9 +230,10 @@
     try {
       const data = selectedMatch?.complete;
       normalizeFootyStatsH2H(data);
+      loadLeagueAverages(data);
       loadCompleteH2H(data);
     } catch (error) {
-      console.warn("Nao foi possivel normalizar H2H da FootyStats", error);
+      console.warn("Nao foi possivel normalizar dados da FootyStats", error);
     }
   }
 
