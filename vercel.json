@@ -11,6 +11,9 @@
     "api/match-details.js": {
       "maxDuration": 10
     },
+    "api/completas-h2h.js": {
+      "maxDuration": 20
+    },
     "api/partida-completa.js": {
       "maxDuration": 30
     }
