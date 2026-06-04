@@ -157,7 +157,9 @@
     const list = teamElement.querySelector(".complete-form-list");
 
     teamElement.querySelectorAll(".complete-form-tabs span, .complete-form-tabs b").forEach(function(item) {
-      item.classList.toggle("active", item === tabElement);
+      const selected = item === tabElement;
+      item.classList.toggle("active", selected);
+      item.classList.toggle("inactive", item.tagName === "B" && !selected);
     });
 
     if (list) list.innerHTML = renderRows(getRows(side, mode));
