@@ -32,6 +32,9 @@
     "api/chutes.js": {
       "maxDuration": 20
     },
+    "api/intervalo.js": {
+      "maxDuration": 20
+    },
     "api/partida-completa.js": {
       "maxDuration": 30
     }
