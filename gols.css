@@ -1,0 +1,244 @@
+.gols-view {
+  display: grid;
+  gap: 14px;
+}
+
+.gols-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+  padding: 0 16px 16px;
+}
+
+.gols-title {
+  align-items: baseline;
+  border-bottom: 1px solid var(--border);
+  box-shadow: 0 7px 18px rgba(8, 25, 18, 0.04);
+  display: flex;
+  gap: 8px;
+  margin: 0 -16px 18px;
+  padding: 16px;
+}
+
+.gols-title span {
+  color: #0071c8;
+  font-size: 1.18rem;
+  font-weight: 950;
+}
+
+.gols-title.conceded span {
+  color: #a43a3a;
+}
+
+.gols-title em {
+  color: var(--muted);
+  font-size: 0.92rem;
+  font-style: normal;
+}
+
+.gols-comparison,
+.gols-intro {
+  color: var(--dark);
+  font-size: 0.94rem;
+  line-height: 1.45;
+  margin: 0 0 14px;
+}
+
+.gols-comparison {
+  font-weight: 850;
+}
+
+.gols-comparison::first-letter {
+  text-transform: uppercase;
+}
+
+.gols-bars {
+  border-bottom: 1px solid var(--border);
+  display: grid;
+  gap: 8px;
+  margin-bottom: 18px;
+  padding-bottom: 18px;
+  max-width: 620px;
+}
+
+.gols-bar-row {
+  align-items: center;
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr);
+  gap: 8px;
+}
+
+.gols-team-logo,
+.gols-team-fallback {
+  background: #fff;
+  border: 1px solid #dbe6de;
+  border-radius: 50%;
+  box-shadow: 0 5px 14px rgba(8, 25, 18, 0.08);
+  height: 44px;
+  object-fit: contain;
+  padding: 5px;
+  width: 44px;
+}
+
+.gols-team-fallback {
+  color: var(--green);
+  display: grid;
+  font-size: 0.72rem;
+  font-weight: 950;
+  place-items: center;
+}
+
+.gols-bar-fill {
+  align-items: center;
+  background: #aee68f;
+  border-radius: 3px;
+  color: #064019;
+  display: flex;
+  min-height: 32px;
+  min-width: 86px;
+  padding: 0 9px;
+}
+
+.gols-bar-row.away .gols-bar-fill {
+  background: #ffb0aa;
+  color: #b51d14;
+}
+
+.gols-bar-fill strong {
+  font-size: 0.85rem;
+  white-space: nowrap;
+}
+
+.gols-bar-row small {
+  color: var(--muted);
+  display: block;
+  font-size: 0.78rem;
+  margin-top: 2px;
+}
+
+.gols-subtabs {
+  border-top: 1px solid var(--border);
+  display: grid;
+  gap: 0;
+  grid-template-columns: 1fr 1fr;
+  margin: 4px 0 16px;
+  padding-top: 18px;
+}
+
+.gols-subtabs.three {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.gols-tab-button {
+  background: transparent;
+  border: 0;
+  border-radius: 5px;
+  color: #8a9bb7;
+  font-weight: 900;
+  min-height: 46px;
+  padding: 0 12px;
+}
+
+.gols-tab-button.active {
+  background: #e7eef7;
+  color: #3d72bd;
+}
+
+.gols-panel {
+  display: none;
+}
+
+.gols-panel.active {
+  display: block;
+}
+
+.gols-table {
+  border-collapse: separate;
+  border-spacing: 0 4px;
+  font-size: 0.88rem;
+  width: 100%;
+}
+
+.gols-table th,
+.gols-table td {
+  padding: 8px 12px;
+}
+
+.gols-table th {
+  background: #eef1f3;
+  color: var(--dark);
+  font-weight: 500;
+  text-align: center;
+}
+
+.gols-table th:first-child,
+.gols-table td:first-child {
+  text-align: left;
+}
+
+.gols-table td {
+  background: #f0f3f5;
+  border-left: 2px solid #fff;
+  border-right: 2px solid #fff;
+  color: var(--dark);
+  text-align: center;
+}
+
+.gols-table td:not(:first-child) {
+  font-weight: 900;
+}
+
+.gols-heat-high {
+  background: #b8eb99 !important;
+  color: #087017 !important;
+}
+
+.gols-heat-mid {
+  background: #f6f7c8 !important;
+  color: #8a7000 !important;
+}
+
+.gols-heat-low {
+  background: #fde5e1 !important;
+  color: #e11900 !important;
+}
+
+.gols-heat-empty {
+  background: #f4f2ea !important;
+  color: var(--muted) !important;
+}
+
+.gols-note {
+  color: #64748b;
+  font-size: 0.78rem;
+  line-height: 1.45;
+  margin-top: 10px;
+}
+
+@media (max-width: 760px) {
+  .gols-title,
+  .gols-subtabs,
+  .gols-subtabs.three {
+    grid-template-columns: 1fr;
+  }
+
+  .gols-title {
+    align-items: flex-start;
+    display: grid;
+  }
+
+  .gols-bars {
+    max-width: none;
+  }
+
+  .gols-table {
+    font-size: 0.78rem;
+  }
+
+  .gols-table th,
+  .gols-table td {
+    padding: 7px 6px;
+  }
+}
