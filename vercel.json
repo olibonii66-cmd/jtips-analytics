@@ -23,6 +23,9 @@
     "api/gols.js": {
       "maxDuration": 20
     },
+    "api/escanteios.js": {
+      "maxDuration": 20
+    },
     "api/partida-completa.js": {
       "maxDuration": 30
     }
