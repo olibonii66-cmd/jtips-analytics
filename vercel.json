@@ -4,6 +4,15 @@
   "functions": {
     "api/health.js": {
       "maxDuration": 10
+    },
+    "api/jogos.js": {
+      "maxDuration": 10
+    },
+    "api/match-details.js": {
+      "maxDuration": 10
+    },
+    "api/partida-completa.js": {
+      "maxDuration": 30
     }
   }
 }
