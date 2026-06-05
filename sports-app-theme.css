@@ -1,0 +1,584 @@
+/* JTIPS sports app theme: visual layer loaded after the tab-specific CSS. */
+:root {
+  --bg: #f4f7f8;
+  --surface: #ffffff;
+  --surface-soft: #f7faf9;
+  --dark: #06251b;
+  --dark-2: #0a3929;
+  --green: #0b6b4c;
+  --green-2: #0f8a63;
+  --green-soft: #e9f7f0;
+  --gold: #caa846;
+  --gold-2: #f0d77b;
+  --gold-soft: #fff7d8;
+  --text: #071b2f;
+  --muted: #687782;
+  --border: #dde7e3;
+  --red: #e34b5f;
+  --red-soft: #fdebef;
+  --blue: #2675d9;
+  --blue-soft: #eaf3ff;
+  --amber: #c08316;
+  --amber-soft: #fff3d5;
+  --shadow: 0 12px 28px rgba(7, 27, 47, 0.08);
+  --shadow-soft: 0 6px 18px rgba(7, 27, 47, 0.06);
+  --radius: 10px;
+}
+
+body {
+  background:
+    linear-gradient(180deg, rgba(6, 37, 27, 0.05), transparent 220px),
+    var(--bg);
+  color: var(--text);
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+  letter-spacing: 0;
+}
+
+.app-header {
+  background: #06251b;
+  border-bottom: 1px solid rgba(202, 168, 70, 0.35);
+  box-shadow: 0 10px 28px rgba(6, 37, 27, 0.2);
+  min-height: 72px;
+  padding: 10px 28px;
+}
+
+.brand img {
+  border-radius: 13px;
+  height: 50px;
+  width: 50px;
+}
+
+.brand strong {
+  color: var(--gold-2);
+  font-size: 1.38rem;
+  letter-spacing: 0;
+}
+
+.nav {
+  gap: 10px;
+}
+
+.nav button {
+  border-radius: 999px;
+  border: 1px solid transparent;
+  color: rgba(255, 255, 255, 0.78);
+  min-height: 40px;
+  padding: 0 15px;
+}
+
+.nav button.active,
+.nav button:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(202, 168, 70, 0.32);
+  color: var(--gold-2);
+}
+
+.search {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(202, 168, 70, 0.38);
+  height: 44px;
+}
+
+.container {
+  width: min(1440px, calc(100% - 28px));
+}
+
+.page {
+  padding-top: 18px;
+}
+
+.back-btn {
+  background: #ffffff;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  box-shadow: var(--shadow-soft);
+  color: var(--green);
+  font-weight: 850;
+  margin-bottom: 14px;
+  min-height: 38px;
+  padding: 0 16px;
+}
+
+.match-header {
+  align-items: center;
+  background: #ffffff;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  box-shadow: var(--shadow);
+  display: grid;
+  gap: 16px;
+  grid-template-columns: minmax(250px, 0.85fr) minmax(420px, 1.5fr) minmax(210px, 0.9fr);
+  margin-bottom: 16px;
+  overflow: hidden;
+  padding: 20px 24px;
+  position: relative;
+}
+
+.match-header::before {
+  background: linear-gradient(90deg, var(--green), var(--gold), transparent);
+  content: "";
+  height: 3px;
+  left: 0;
+  position: absolute;
+  right: 0;
+  top: 0;
+}
+
+.match-meta-compact {
+  color: var(--muted);
+  font-size: 0.9rem;
+  line-height: 1.55;
+}
+
+.match-meta-compact strong {
+  color: var(--green);
+  font-size: 0.88rem;
+  font-weight: 900;
+}
+
+.match-league-line {
+  align-items: center;
+  background: var(--green-soft);
+  border-radius: 999px;
+  color: var(--green);
+  display: inline-flex;
+  gap: 7px;
+  margin-bottom: 8px;
+  padding: 6px 10px;
+}
+
+.match-country-dot {
+  height: 11px;
+  width: 11px;
+}
+
+.versus {
+  align-items: center;
+  display: grid;
+  gap: 18px;
+  grid-template-columns: minmax(0, 1fr) 76px minmax(0, 1fr);
+  justify-items: center;
+}
+
+.versus > div:not(.vs) {
+  align-items: center;
+  display: grid;
+  gap: 10px;
+  justify-items: center;
+  min-width: 0;
+}
+
+.versus strong {
+  color: var(--text);
+  font-size: 1rem;
+  font-weight: 900;
+  letter-spacing: 0;
+  max-width: 190px;
+  overflow: hidden;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.team-logo-big,
+.big-badge {
+  background: #fff;
+  border: 1px solid #d9e8e2;
+  border-radius: 18px;
+  box-shadow: 0 8px 22px rgba(7, 27, 47, 0.08);
+  height: 78px;
+  object-fit: contain;
+  padding: 10px;
+  width: 78px;
+}
+
+.vs {
+  align-items: center;
+  background: #06251b;
+  border: 3px solid var(--gold-2);
+  border-radius: 50%;
+  box-shadow: 0 10px 22px rgba(6, 37, 27, 0.18);
+  color: var(--gold-2);
+  display: flex;
+  font-size: 0.95rem;
+  font-weight: 950;
+  height: 62px;
+  justify-content: center;
+  letter-spacing: 0;
+  min-width: 62px;
+  width: 62px;
+}
+
+.match-side-panel {
+  align-items: end;
+  display: grid;
+  gap: 10px;
+  justify-items: end;
+}
+
+.pre-badge {
+  align-items: center;
+  background: #e8f4ee;
+  border: 1px solid #cfe6dc;
+  border-radius: 999px;
+  color: var(--green);
+  display: inline-flex;
+  font-size: 0.9rem;
+  font-weight: 950;
+  min-height: 38px;
+  padding: 0 14px;
+  white-space: nowrap;
+}
+
+.sports-odds-row {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  width: min(100%, 270px);
+}
+
+.sports-odd-chip {
+  background: #f6faf8;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  display: grid;
+  gap: 2px;
+  min-height: 52px;
+  padding: 7px 9px;
+  text-align: center;
+}
+
+.sports-odd-chip span {
+  color: var(--muted);
+  font-size: 0.7rem;
+  font-weight: 950;
+  text-transform: uppercase;
+}
+
+.sports-odd-chip strong {
+  color: var(--text);
+  font-size: 1rem;
+  font-weight: 950;
+}
+
+.tabs {
+  background: #ffffff;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  box-shadow: var(--shadow-soft);
+  display: flex;
+  gap: 6px;
+  margin-bottom: 16px;
+  overflow-x: auto;
+  padding: 8px;
+}
+
+.tab {
+  background: transparent;
+  border: 0;
+  border-radius: 999px;
+  color: var(--muted);
+  flex: 0 0 auto;
+  font-weight: 900;
+  min-height: 42px;
+  padding: 0 18px;
+  white-space: nowrap;
+}
+
+.tab.active {
+  background: var(--green);
+  box-shadow: inset 0 -2px 0 rgba(240, 215, 123, 0.75);
+  color: #ffffff;
+}
+
+.card,
+.hero,
+.ai-strip,
+.complete-unified-card,
+.complete-form-card,
+.complete-h2h-card,
+.gols-card,
+.corner-card,
+.cards-card,
+.shots-card,
+.interval-card,
+.players-section,
+.ia-card {
+  background: #ffffff !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 14px !important;
+  box-shadow: var(--shadow-soft) !important;
+}
+
+.hero,
+.complete-ai-card {
+  background: linear-gradient(135deg, #073624, #0a6b4c) !important;
+  border-color: rgba(202, 168, 70, 0.35) !important;
+  color: #ffffff;
+}
+
+.hero h1,
+.hero p,
+.complete-ai-copy p,
+.complete-ai-copy span,
+.complete-ai-metrics strong,
+.complete-ai-metrics small {
+  color: #ffffff;
+}
+
+.hero-chip,
+.complete-ai-metrics article {
+  background: rgba(255, 255, 255, 0.1) !important;
+  border: 1px solid rgba(240, 215, 123, 0.26) !important;
+  border-radius: 10px !important;
+}
+
+.hero-chip span,
+.complete-ai-copy span,
+.complete-ai-metrics article > span {
+  color: var(--gold-2) !important;
+}
+
+.card h2,
+.complete-section-title span,
+.gols-title span,
+.corner-title span,
+.cards-title span,
+.shots-title span,
+.interval-title span,
+.players-section-title span,
+.ia-title,
+.ia-summary-title {
+  color: var(--text) !important;
+  font-weight: 950 !important;
+  letter-spacing: 0 !important;
+}
+
+.gols-title,
+.corner-title,
+.cards-title,
+.players-section-title,
+.ia-title,
+.interval-title,
+.ia-summary-title {
+  background: #ffffff !important;
+  border-bottom: 1px solid var(--border) !important;
+  box-shadow: none !important;
+}
+
+.gols-title::after,
+.corner-title::after,
+.cards-title::after,
+.players-section-title::after,
+.ia-title::after,
+.interval-title::after {
+  background: var(--gold);
+  border-radius: 999px;
+  content: "";
+  display: block;
+  height: 3px;
+  margin-left: auto;
+  width: 42px;
+}
+
+.stat-card,
+.ai-card,
+.corner-mini-card,
+.cards-mini-card,
+.players-team-card {
+  background: #ffffff !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 12px !important;
+  box-shadow: none !important;
+}
+
+.stat-card strong,
+.corner-average strong,
+.cards-average strong,
+.players-team-title h3 {
+  color: var(--text) !important;
+}
+
+.heat-table,
+.gols-table,
+.corner-table,
+.cards-table,
+.shots-table,
+.interval-table {
+  border-collapse: separate !important;
+  border-spacing: 0 6px !important;
+}
+
+.heat-table th,
+.gols-table th,
+.corner-table th,
+.cards-table th,
+.shots-table th,
+.interval-table th {
+  background: #f0f5f3 !important;
+  color: var(--muted) !important;
+  font-size: 0.78rem !important;
+  font-weight: 900 !important;
+  text-transform: uppercase;
+}
+
+.heat-table td,
+.gols-table td,
+.corner-table td,
+.cards-table td,
+.shots-table td,
+.interval-table td {
+  border: 0 !important;
+  border-bottom: 1px solid rgba(221, 231, 227, 0.9) !important;
+}
+
+.heat-high,
+.gols-heat-high,
+.corner-high,
+.cards-high,
+.shots-high,
+.interval-high {
+  background: #dff6d2 !important;
+  color: #0a7d33 !important;
+}
+
+.heat-mid,
+.gols-heat-mid,
+.corner-mid,
+.cards-mid,
+.shots-mid,
+.interval-mid {
+  background: var(--amber-soft) !important;
+  color: #8b5a05 !important;
+}
+
+.heat-low,
+.gols-heat-low,
+.corner-low,
+.cards-low,
+.shots-low,
+.interval-low {
+  background: var(--red-soft) !important;
+  color: #c3203a !important;
+}
+
+.gols-bar-fill,
+.players-home .players-bar-fill {
+  background: #cdeaff !important;
+  color: #0b4b83 !important;
+}
+
+.gols-bar-row.away .gols-bar-fill,
+.players-away .players-bar-fill {
+  background: #ffd9d5 !important;
+  color: #b92c3d !important;
+}
+
+.corner-tab-button.active,
+.cards-tab-button.active,
+.gols-tab-button.active,
+.ia-team-tabs button.active,
+.complete-form-tabs b,
+.complete-form-tabs .active {
+  background: var(--green-soft) !important;
+  color: var(--green) !important;
+}
+
+.corner-tab-button,
+.cards-tab-button,
+.gols-tab-button,
+.ia-team-tabs button {
+  border-radius: 999px !important;
+}
+
+.complete-form-row span,
+.form-score,
+.score-pill {
+  background: var(--gold-soft) !important;
+  color: var(--text) !important;
+}
+
+.ia-summary-card,
+.ia-trends-card {
+  overflow: hidden;
+}
+
+.ia-trend-row.up span {
+  color: var(--green-2) !important;
+}
+
+.ia-trend-row.down span {
+  color: var(--red) !important;
+}
+
+.footer-note {
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.date-nav button {
+  border-radius: 999px;
+  box-shadow: var(--shadow-soft);
+}
+
+.date-nav button.active {
+  background: var(--green);
+  border-color: var(--green);
+  color: #ffffff;
+}
+
+@media (max-width: 1100px) {
+  .app-header {
+    flex-wrap: wrap;
+  }
+
+  .search {
+    width: min(100%, 420px);
+  }
+
+  .match-header {
+    grid-template-columns: 1fr;
+    justify-items: stretch;
+  }
+
+  .match-side-panel {
+    align-items: start;
+    justify-items: start;
+  }
+
+  .sports-odds-row {
+    width: 100%;
+  }
+}
+
+@media (max-width: 760px) {
+  .container {
+    width: min(100% - 16px, 1440px);
+  }
+
+  .app-header {
+    padding: 10px 14px;
+  }
+
+  .nav {
+    overflow-x: auto;
+    width: 100%;
+  }
+
+  .versus {
+    gap: 10px;
+    grid-template-columns: 1fr 58px 1fr;
+  }
+
+  .team-logo-big,
+  .big-badge {
+    height: 60px;
+    width: 60px;
+  }
+
+  .vs {
+    height: 50px;
+    min-width: 50px;
+    width: 50px;
+  }
+}
