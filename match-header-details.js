@@ -91,6 +91,17 @@
       .replace(/\s+-\s+([A-Z]{2})\b/, " - $1");
   }
 
+  function oddValue(match, index) {
+    const value = Array.isArray(match?.odds) ? match.odds[index] : "";
+    if (value && value !== "-" && value !== "0.00") return value;
+
+    const data = selectedMatch?.complete;
+    const fallback = index === 0 ? data?.odds?.result?.home : index === 1 ? data?.odds?.result?.draw : data?.odds?.result?.away;
+
+    if (typeof fmtOdd === "function") return fmtOdd(fallback);
+    return fallback || "-";
+  }
+
   function renderMeta(match) {
     const stadium = getStadiumLine();
     const location = getLocationLine();
@@ -101,6 +112,21 @@
         <div>${escape(formatMatchDate(match))}</div>
         ${stadium ? `<div>${escape(stadium)}</div>` : ""}
         ${location ? `<div>${escape(location)}</div>` : ""}
+      </div>
+    `;
+  }
+
+  function renderSidePanel(match) {
+    return `
+      <div class="match-side-panel">
+        <div class="pre-badge">
+          ${match.status === "done" ? "✅ FINALIZADO" : "📅 PRÉ-JOGO"}
+        </div>
+        <div class="sports-odds-row" aria-label="Odds 1 X 2">
+          <div class="sports-odd-chip"><span>1</span><strong>${escape(oddValue(match, 0))}</strong></div>
+          <div class="sports-odd-chip"><span>X</span><strong>${escape(oddValue(match, 1))}</strong></div>
+          <div class="sports-odd-chip"><span>2</span><strong>${escape(oddValue(match, 2))}</strong></div>
+        </div>
       </div>
     `;
   }
@@ -127,9 +153,7 @@
         </div>
       </div>
 
-      <div class="pre-badge">
-        ${match.status === "done" ? "✅ FINALIZADO" : "📅 PRÉ-JOGO"}
-      </div>
+      ${renderSidePanel(match)}
     `;
   };
 })();
