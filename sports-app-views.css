@@ -173,7 +173,11 @@
 .sa-panels {
   display: grid;
   gap: 16px;
-  grid-template-columns: minmax(300px, 0.9fr) minmax(360px, 1.2fr) minmax(300px, 0.9fr);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.sa-panels .sa-section:last-child {
+  grid-column: 1 / -1;
 }
 
 .sa-panel-body {
@@ -194,6 +198,27 @@
   grid-template-columns: auto minmax(0, 1fr) auto;
   min-height: 46px;
   padding: 10px 12px;
+}
+
+.sa-player-row {
+  grid-template-columns: minmax(0, 1fr) auto;
+  overflow: hidden;
+  position: relative;
+}
+
+.sa-player-fill {
+  bottom: 7px;
+  left: 8px;
+  opacity: 0.9;
+  position: absolute;
+  top: 7px;
+  z-index: 0;
+}
+
+.sa-player-row p,
+.sa-player-row strong {
+  position: relative;
+  z-index: 1;
 }
 
 .sa-trend-row span {
