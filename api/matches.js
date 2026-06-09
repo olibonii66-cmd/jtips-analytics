@@ -5,6 +5,17 @@ function extractList(payload) {
   return [];
 }
 
+function brazilDateIso(date = new Date()) {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Sao_Paulo",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(date);
+  const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+  return `${values.year}-${values.month}-${values.day}`;
+}
+
 function leagueLookup(payload) {
   const lookup = new Map();
 
@@ -46,7 +57,7 @@ module.exports = async function handler(req, res) {
     : req.query.date;
   const date = /^\d{4}-\d{2}-\d{2}$/.test(requestedDate || "")
     ? requestedDate
-    : new Date().toISOString().slice(0, 10);
+    : brazilDateIso();
 
   const matchesUrl = new URL("https://api.football-data-api.com/todays-matches");
   matchesUrl.searchParams.set("key", apiKey);

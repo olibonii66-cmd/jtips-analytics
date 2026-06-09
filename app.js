@@ -7,7 +7,18 @@ const API_CONFIG = {
   timeoutMs: 9000,
 };
 
-const today = new Date().toISOString().slice(0, 10);
+function brazilDateIso(date = new Date()) {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Sao_Paulo",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(date);
+  const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+  return `${values.year}-${values.month}-${values.day}`;
+}
+
+const today = brazilDateIso();
 const dayMs = 24 * 60 * 60 * 1000;
 
 function shiftedDate(days) {
@@ -730,7 +741,15 @@ function dateFromApi(value, fallback = today) {
     const numeric = Number(value);
     const ms = numeric > 9999999999 ? numeric : numeric * 1000;
     const parsed = new Date(ms);
-    return Number.isNaN(parsed.getTime()) ? fallback : parsed.toISOString().slice(0, 10);
+    if (Number.isNaN(parsed.getTime())) return fallback;
+    const parts = new Intl.DateTimeFormat("en-CA", {
+      timeZone: "America/Sao_Paulo",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).formatToParts(parsed);
+    const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+    return `${values.year}-${values.month}-${values.day}`;
   }
 
   const text = String(value);
@@ -771,6 +790,7 @@ function timeFromApi(item, fallback = "00:00") {
 
   if (Number.isNaN(parsed.getTime())) return fallback;
   return new Intl.DateTimeFormat("pt-BR", {
+    timeZone: "America/Sao_Paulo",
     hour: "2-digit",
     minute: "2-digit",
     hour12: false,
@@ -819,6 +839,64 @@ function extractApiList(payload) {
   }
 
   return [];
+}
+
+function deriveApiMarket(item, goals) {
+  const candidates = [
+    {
+      market: "Mais de 1.5 gols",
+      confidence: firstValue(item, ["o15_potential", "over15"]),
+      odd: firstValue(item, ["odds_ft_over15"]),
+      type: "gols",
+    },
+    {
+      market: "Mais de 2.5 gols",
+      confidence: firstValue(item, ["o25_potential", "over25"]),
+      odd: firstValue(item, ["odds_ft_over25"]),
+      type: "gols",
+    },
+    {
+      market: "Ambas marcam",
+      confidence: firstValue(item, ["btts_potential"]),
+      odd: firstValue(item, ["odds_btts_yes"]),
+      type: "gols",
+    },
+    {
+      market: "Mais de 8.5 escanteios",
+      confidence: firstValue(item, ["corners_o85_potential", "corners_potential"]),
+      odd: firstValue(item, ["odds_corners_over_85"]),
+      type: "escanteios",
+    },
+    {
+      market: "Mais de 9.5 escanteios",
+      confidence: firstValue(item, ["corners_o95_potential"]),
+      odd: firstValue(item, ["odds_corners_over_95"]),
+      type: "escanteios",
+    },
+    {
+      market: "Mais cartões no jogo",
+      confidence: firstValue(item, ["cards_potential"]),
+      odd: null,
+      type: "cartoes",
+    },
+  ]
+    .map((candidate) => ({
+      ...candidate,
+      confidence: validMetric(candidate.confidence),
+      odd: validMetric(candidate.odd),
+    }))
+    .filter((candidate) => candidate.confidence !== null && candidate.confidence > 0)
+    .sort((a, b) => b.confidence - a.confidence);
+
+  if (candidates.length) return candidates[0];
+
+  const fallbackConfidence = clamp(50 + (goals - 2) * 12, 40, 78);
+  return {
+    market: goals >= 2.4 ? "Mais de 1.5 gols" : "Menos de 3.5 gols",
+    confidence: fallbackConfidence,
+    odd: null,
+    type: goals >= 2.4 ? "gols" : "mais-menos",
+  };
 }
 
 function normalizeApiMatch(item, index, selectedDate) {
@@ -915,8 +993,8 @@ function normalizeApiMatch(item, index, selectedDate) {
     60,
   );
 
-  const market = cleanText(
-    firstValue(item, [
+  const derivedMarket = deriveApiMarket(item, goals);
+  const explicitMarket = firstValue(item, [
       "market",
       "best_market",
       "recommended_market",
@@ -925,9 +1003,8 @@ function normalizeApiMatch(item, index, selectedDate) {
       "tip.market",
       "tip.name",
       "bet.market",
-    ]),
-    goals >= 2.5 ? "Over 2.5 gols" : "Under 3.5 gols",
-  );
+    ]);
+  const market = cleanText(explicitMarket, derivedMarket.market);
   const confidence = percentFromApi(
     firstValue(item, [
       "confidence",
@@ -938,9 +1015,9 @@ function normalizeApiMatch(item, index, selectedDate) {
       "tip.confidence",
       "bet.confidence",
     ]),
-    Math.max(62, Math.min(84, 55 + goals * 4 + corners * 0.8)),
+    derivedMarket.confidence,
   );
-  const odd = averageFromApi(
+  const rawOdd = averageFromApi(
     firstValue(item, [
       "odd",
       "odds",
@@ -953,9 +1030,10 @@ function normalizeApiMatch(item, index, selectedDate) {
       "odds_ft_over25",
       "odds_ft_1",
     ]),
-    suggestedOdd(confidence, 0.12),
+    derivedMarket.odd || 0,
     100,
   );
+  const odd = rawOdd && rawOdd > 1 ? rawOdd : 0;
 
   return {
     id: cleanText(
@@ -1008,11 +1086,17 @@ function normalizeApiMatch(item, index, selectedDate) {
     competitionId: firstValue(item, ["competition_id", "league_id", "season_id"]),
     homeLogo: cleanText(firstValue(item, ["home_image", "home_logo", "homeTeam.logo"]), ""),
     awayLogo: cleanText(firstValue(item, ["away_image", "away_logo", "awayTeam.logo"]), ""),
+    homeTeamId: firstValue(item, ["homeID", "home_id", "home_team_id"]),
+    awayTeamId: firstValue(item, ["awayID", "away_id", "away_team_id"]),
     homeScore: toNumber(firstValue(item, ["homeGoalCount", "home_score", "scores.home"])),
     awayScore: toNumber(firstValue(item, ["awayGoalCount", "away_score", "scores.away"])),
-    marketType: cleanText(firstValue(item, ["marketType", "market_type", "type"]), normalizeMarketType(market)),
+    marketType: cleanText(
+      firstValue(item, ["marketType", "market_type", "type"]),
+      explicitMarket ? normalizeMarketType(market) : derivedMarket.type,
+    ),
     market,
     odd,
+    hasRealOdd: odd > 1,
     confidence,
     risk: riskFromConfidence(confidence, firstValue(item, ["risk", "risk_level", "prediction.risk"])),
     reason: cleanText(
@@ -1027,6 +1111,10 @@ function normalizeApiMatch(item, index, selectedDate) {
       cards,
       homeAway: cleanText(firstValue(item, ["stats.homeAway", "home_away", "trend"]), "Modelo API"),
     },
+    raw: item,
+    detail: null,
+    detailLoading: false,
+    detailError: null,
   };
 }
 
@@ -1125,6 +1213,223 @@ async function refreshMatchesForDate() {
   render();
 }
 
+function validMetric(value) {
+  const number = toNumber(value);
+  return number !== null && number >= 0 ? number : null;
+}
+
+function detailField(match, paths, fallback = null) {
+  const sources = [match.detail?.match, match.raw, match];
+
+  for (const source of sources) {
+    if (!source) continue;
+    const value = firstValue(source, paths);
+    if (value !== undefined && value !== null && value !== "") return value;
+  }
+
+  return fallback;
+}
+
+function averageValues(values) {
+  const valid = values.filter((value) => value !== null && Number.isFinite(value));
+  if (!valid.length) return null;
+  return valid.reduce((sum, value) => sum + value, 0) / valid.length;
+}
+
+function historyMetrics(list, teamId) {
+  const rows = (Array.isArray(list) ? list : [])
+    .map((game) => {
+      const isHome = String(game.homeID) === String(teamId);
+      const homeGoals = validMetric(game.homeGoalCount);
+      const awayGoals = validMetric(game.awayGoalCount);
+      const goalsFor = isHome ? homeGoals : awayGoals;
+      const goalsAgainst = isHome ? awayGoals : homeGoals;
+      const totalGoals =
+        validMetric(game.totalGoalCount) ??
+        (goalsFor !== null && goalsAgainst !== null ? goalsFor + goalsAgainst : null);
+      const cornersFor = validMetric(isHome ? game.team_a_corners : game.team_b_corners);
+      const cornersAgainst = validMetric(isHome ? game.team_b_corners : game.team_a_corners);
+      const totalCorners =
+        validMetric(game.totalCornerCount) ??
+        (cornersFor !== null && cornersAgainst !== null ? cornersFor + cornersAgainst : null);
+      const cardsFor =
+        validMetric(isHome ? game.team_a_cards_num : game.team_b_cards_num) ??
+        ((validMetric(isHome ? game.team_a_yellow_cards : game.team_b_yellow_cards) || 0) +
+          (validMetric(isHome ? game.team_a_red_cards : game.team_b_red_cards) || 0));
+      const cardsAgainst =
+        validMetric(isHome ? game.team_b_cards_num : game.team_a_cards_num) ??
+        ((validMetric(isHome ? game.team_b_yellow_cards : game.team_a_yellow_cards) || 0) +
+          (validMetric(isHome ? game.team_b_red_cards : game.team_a_red_cards) || 0));
+      const shotsFor = validMetric(isHome ? game.team_a_shots : game.team_b_shots);
+      const shotsAgainst = validMetric(isHome ? game.team_b_shots : game.team_a_shots);
+      const onTargetFor = validMetric(
+        isHome ? game.team_a_shotsOnTarget : game.team_b_shotsOnTarget,
+      );
+      const onTargetAgainst = validMetric(
+        isHome ? game.team_b_shotsOnTarget : game.team_a_shotsOnTarget,
+      );
+      const htGoals = validMetric(game.HTGoalCount);
+      const secondHalfGoals = validMetric(game.GoalCount_2hg);
+      const firstHalfCorners = validMetric(game.corner_fh_count);
+      const secondHalfCorners = validMetric(game.corner_2h_count);
+
+      return {
+        goalsFor,
+        goalsAgainst,
+        totalGoals,
+        btts: goalsFor !== null && goalsAgainst !== null ? goalsFor > 0 && goalsAgainst > 0 : null,
+        cornersFor,
+        cornersAgainst,
+        totalCorners,
+        cardsFor,
+        cardsAgainst,
+        totalCards:
+          cardsFor !== null && cardsAgainst !== null ? cardsFor + cardsAgainst : null,
+        shotsFor,
+        shotsAgainst,
+        totalShots:
+          shotsFor !== null && shotsAgainst !== null ? shotsFor + shotsAgainst : null,
+        onTargetFor,
+        onTargetAgainst,
+        totalOnTarget:
+          onTargetFor !== null && onTargetAgainst !== null
+            ? onTargetFor + onTargetAgainst
+            : null,
+        htGoals,
+        secondHalfGoals,
+        firstHalfCorners,
+        secondHalfCorners,
+        result:
+          goalsFor === null || goalsAgainst === null
+            ? null
+            : goalsFor > goalsAgainst
+              ? "V"
+              : goalsFor === goalsAgainst
+                ? "E"
+                : "D",
+      };
+    })
+    .filter(Boolean);
+
+  const avg = (key) => averageValues(rows.map((row) => row[key]));
+  const percentage = (predicate) => {
+    const valid = rows.filter((row) => predicate(row) !== null);
+    if (!valid.length) return null;
+    return Math.round(
+      (valid.filter((row) => predicate(row) === true).length / valid.length) * 100,
+    );
+  };
+
+  return {
+    count: rows.length,
+    rows,
+    avg,
+    over: (key, line) =>
+      percentage((row) => (row[key] === null ? null : row[key] > line)),
+    under: (key, line) =>
+      percentage((row) => (row[key] === null ? null : row[key] < line)),
+    btts: percentage((row) => row.btts),
+    form: rows.map((row) => row.result).filter(Boolean),
+    points: rows.reduce(
+      (total, row) => total + (row.result === "V" ? 3 : row.result === "E" ? 1 : 0),
+      0,
+    ),
+  };
+}
+
+function matchHistories(match) {
+  return {
+    home: historyMetrics(match.detail?.lastx?.home, match.homeTeamId),
+    away: historyMetrics(match.detail?.lastx?.away, match.awayTeamId),
+  };
+}
+
+function ppgToForm(value, fallback) {
+  const ppg = validMetric(value);
+  return ppg === null ? fallback : clamp((ppg / 3) * 100, 1, 100);
+}
+
+function applyDetailToMatch(match, payload) {
+  const raw = payload.match || {};
+  const homeTeam = payload.teams?.home || {};
+  const awayTeam = payload.teams?.away || {};
+  match.detail = payload;
+  match.raw = { ...match.raw, ...raw };
+  match.homeTeamId = raw.homeID ?? match.homeTeamId;
+  match.awayTeamId = raw.awayID ?? match.awayTeamId;
+  match.home = cleanText(homeTeam.name || raw.home_name, match.home);
+  match.away = cleanText(awayTeam.name || raw.away_name, match.away);
+  match.homeLogo = cleanText(homeTeam.logo || raw.home_image, match.homeLogo);
+  match.awayLogo = cleanText(awayTeam.logo || raw.away_image, match.awayLogo);
+  match.stadium = cleanText(raw.stadium_name, match.stadium || "");
+  match.status = cleanText(raw.status, match.status).toLowerCase();
+
+  const histories = matchHistories(match);
+  const totalXg = validMetric(raw.total_xg_prematch);
+  const goalsHistory = averageValues([
+    histories.home.avg("totalGoals"),
+    histories.away.avg("totalGoals"),
+  ]);
+  const cornersHistory = averageValues([
+    histories.home.avg("totalCorners"),
+    histories.away.avg("totalCorners"),
+  ]);
+  const cardsHistory = averageValues([
+    histories.home.avg("totalCards"),
+    histories.away.avg("totalCards"),
+  ]);
+
+  match.stats.goals = Number((totalXg ?? goalsHistory ?? match.stats.goals).toFixed(2));
+  match.stats.corners = Number((cornersHistory ?? match.stats.corners).toFixed(2));
+  match.stats.cards = Number((cardsHistory ?? match.stats.cards).toFixed(2));
+  match.stats.homeForm = ppgToForm(
+    raw.pre_match_home_ppg ?? raw.pre_match_teamA_overall_ppg ?? raw.home_ppg,
+    histories.home.count ? clamp((histories.home.points / (histories.home.count * 3)) * 100) : match.stats.homeForm,
+  );
+  match.stats.awayForm = ppgToForm(
+    raw.pre_match_away_ppg ?? raw.pre_match_teamB_overall_ppg ?? raw.away_ppg,
+    histories.away.count ? clamp((histories.away.points / (histories.away.count * 3)) * 100) : match.stats.awayForm,
+  );
+  match.detailLoading = false;
+  match.detailError = null;
+}
+
+async function loadMatchDetails(match) {
+  if (!match || match.detail || match.detailLoading || state.dataSource !== "api") return;
+
+  match.detailLoading = true;
+  match.detailError = null;
+  renderDetail(match);
+
+  try {
+    const url = new URL("/api/match", window.location.origin);
+    url.searchParams.set("match_id", match.id);
+    if (match.competitionId) url.searchParams.set("league_id", match.competitionId);
+    const payload = await fetchApiPayload(url.toString());
+
+    if (!payload?.ok) {
+      throw new Error(payload?.message || "Detalhes indisponíveis");
+    }
+
+    applyDetailToMatch(match, payload);
+  } catch (error) {
+    match.detailLoading = false;
+    match.detailError = error;
+  }
+
+  if (getCurrentAnalysisMatch() === match) renderDetail(match);
+}
+
+function openMatchAnalysis(match, sourceView = "jogos") {
+  if (!match) return;
+  state.currentAnalysisMatch = match;
+  state.analysisSourceView = sourceView;
+  state.activeTab = "resumo";
+  showDashboardView("analise");
+  renderDetail(match);
+  void loadMatchDetails(match);
+}
+
 function uniqueBy(key) {
   return [...new Set(matches.map((match) => match[key]).filter(Boolean))].sort((a, b) =>
     a.localeCompare(b, "pt-BR"),
@@ -1173,7 +1478,7 @@ function projectedConfidence(average, line, direction = "over") {
 }
 
 function impliedProbability(odd) {
-  return Math.round((1 / odd) * 100);
+  return odd > 1 ? Math.round((1 / odd) * 100) : 0;
 }
 
 function valueEdge(match) {
@@ -1200,13 +1505,14 @@ function analysisCard(label, value, helper = "") {
 }
 
 function marketLine(label, odd, confidence, helper = "") {
+  const validOdd = validMetric(odd);
   return `
     <div class="market-line">
       <div>
         <strong>${label}</strong>
         ${helper ? `<span>${helper}</span>` : ""}
       </div>
-      <span>Odd ${odd.toFixed(2)}</span>
+      <span>${validOdd && validOdd > 1 ? `Odd ${validOdd.toFixed(2)}` : "Odd indisponível"}</span>
       <div class="fixture-signal line-score">
         <strong>${confidence}%</strong>
         <div class="bar"><span class="${confidenceClass(confidence)}" style="width: ${confidence}%"></span></div>
@@ -1264,6 +1570,12 @@ function formBadge(result) {
 }
 
 function winOdd(match, side) {
+  const realOdd = validMetric(
+    detailField(match, side === "home" ? ["odds_ft_1"] : ["odds_ft_2"]),
+  );
+  if (realOdd && realOdd > 1) return realOdd;
+  if (state.dataSource === "api" || match.raw) return 0;
+
   const fixed = {
     "best-am-ago": { home: 3.2, away: 2.1 },
     "best-pal-for": { home: 1.63, away: 5.2 },
@@ -1646,7 +1958,7 @@ function getFilteredMatches() {
       (country === "todos" || match.country === country) &&
       (league === "todos" || match.league === league) &&
       (market === "todos" || match.marketType === market) &&
-      match.odd >= odd &&
+      (!match.hasRealOdd || match.odd >= odd) &&
       match.confidence >= confidence &&
       teamMatch
     );
@@ -1659,9 +1971,13 @@ function renderSummary(list) {
   const avgConfidence = total
     ? Math.round(list.reduce((sum, match) => sum + match.confidence, 0) / total)
     : 0;
-  const avgOdd = total
-    ? (list.reduce((sum, match) => sum + match.odd, 0) / total).toFixed(2)
-    : "0.00";
+  const matchesWithOdds = list.filter((match) => match.hasRealOdd && match.odd > 1);
+  const avgOdd = matchesWithOdds.length
+    ? (
+        matchesWithOdds.reduce((sum, match) => sum + match.odd, 0) /
+        matchesWithOdds.length
+      ).toFixed(2)
+    : "—";
 
   refs.totalMatches.textContent = total;
   refs.strongTips.textContent = strong;
@@ -1698,6 +2014,56 @@ function ticketTeamBadges(match, sides = ["home", "away"]) {
 }
 
 function comfortLines(match) {
+  if (state.dataSource === "api" || match.raw) {
+    const candidates = [
+      {
+        label: match.market,
+        percent: match.confidence,
+        odd: match.hasRealOdd ? match.odd : null,
+        teams: ["home", "away"],
+      },
+      {
+        label: "Mais de 1.5 gols",
+        percent: apiProbability(match, ["o15_potential", "over15"], ["odds_ft_over15"]),
+        odd: validMetric(detailField(match, ["odds_ft_over15"])),
+        teams: ["home", "away"],
+      },
+      {
+        label: "Ambas marcam",
+        percent: apiProbability(match, ["btts_potential"], ["odds_btts_yes"]),
+        odd: validMetric(detailField(match, ["odds_btts_yes"])),
+        teams: ["home", "away"],
+      },
+      {
+        label: "Mais de 8.5 escanteios",
+        percent: apiProbability(
+          match,
+          ["corners_o85_potential", "corners_potential"],
+          ["odds_corners_over_85"],
+        ),
+        odd: validMetric(detailField(match, ["odds_corners_over_85"])),
+        teams: ["home", "away"],
+      },
+      {
+        label: "Mais cartões no jogo",
+        percent: apiProbability(match, ["cards_potential"], []),
+        odd: null,
+        teams: ["home", "away"],
+      },
+    ];
+    const seen = new Set();
+
+    return candidates
+      .filter((line) => validMetric(line.percent) !== null && line.percent >= 70)
+      .filter((line) => {
+        if (seen.has(line.label)) return false;
+        seen.add(line.label);
+        return true;
+      })
+      .sort((a, b) => b.percent - a.percent)
+      .slice(0, 4);
+  }
+
   const cornerLine = match.stats.corners >= 9.6 ? 9.5 : 8.5;
   const cardLine = match.stats.cards >= 4.8 ? 4.5 : 3.5;
   const homeScore = clamp(match.stats.homeForm + (match.stats.goals - 2) * 6, 35, 92);
@@ -1740,18 +2106,37 @@ function comfortLines(match) {
     .slice(0, 4);
 }
 
+function teamMark(team, imageUrl, className, baseClass) {
+  const safeUrl = safeImageUrl(imageUrl);
+  return `
+    <span class="${baseClass} ${className}${safeUrl ? " has-image" : ""}">
+      ${
+        safeUrl
+          ? `<img src="${escapeHtml(safeUrl)}" alt="Escudo ${escapeHtml(team)}" loading="lazy">`
+          : teamCode(team)
+      }
+    </span>
+  `;
+}
+
 function renderBestCard(match, index) {
   const lines = comfortLines(match);
   const ticket = lines.slice(0, 3);
-  const oddTotal = ticket.reduce((total, line) => total * line.odd, 1);
+  const ticketWithOdds = ticket.filter((line) => line.odd && line.odd > 1);
+  const oddTotal =
+    ticket.length && ticketWithOdds.length === ticket.length
+      ? ticket.reduce((total, line) => total * line.odd, 1)
+      : null;
   const homeClass = teamClassName(match.home);
   const awayClass = teamClassName(match.away);
+  const homeWinOdd = winOdd(match, "home");
+  const awayWinOdd = winOdd(match, "away");
 
   return `
     <article class="market-card${index === 0 ? " featured" : ""}">
       <header class="market-card-header">
         <div class="match-identity">
-          <span class="mini-crest ${homeClass}">${teamCode(match.home)}</span>
+          ${teamMark(match.home, match.homeLogo, homeClass, "mini-crest")}
           <div>
             <strong>${escapeHtml(match.home)} <span>vs</span> ${escapeHtml(match.away)}</strong>
             <small>${escapeHtml(match.country)} • ${escapeHtml(match.league)}</small>
@@ -1763,16 +2148,16 @@ function renderBestCard(match, index) {
 
       <div class="score-panel pregame-panel">
         <div class="team-side">
-          <span class="team-logo ${homeClass}">${teamCode(match.home)}</span>
+          ${teamMark(match.home, match.homeLogo, homeClass, "team-logo")}
           <span>Casa</span>
           <strong>${escapeHtml(match.home)}</strong>
-          <em>Odd ${winOdd(match, "home").toFixed(2)}</em>
+          <em>${homeWinOdd > 1 ? `Odd ${homeWinOdd.toFixed(2)}` : "Odd indisponível"}</em>
         </div>
         <div class="team-side right">
-          <span class="team-logo ${awayClass}">${teamCode(match.away)}</span>
+          ${teamMark(match.away, match.awayLogo, awayClass, "team-logo")}
           <span>Fora</span>
           <strong>${escapeHtml(match.away)}</strong>
-          <em>Odd ${winOdd(match, "away").toFixed(2)}</em>
+          <em>${awayWinOdd > 1 ? `Odd ${awayWinOdd.toFixed(2)}` : "Odd indisponível"}</em>
         </div>
       </div>
 
@@ -1817,14 +2202,14 @@ function renderBestCard(match, index) {
                   ${ticketTeamBadges(match, line.teams)}
                   <span class="ticket-pick">${escapeHtml(line.label)}</span>
                   <strong>${line.percent}%</strong>
-                  <em>Odd ${line.odd.toFixed(2)}</em>
+                   <em>${line.odd && line.odd > 1 ? `Odd ${line.odd.toFixed(2)}` : "Sem odd"}</em>
                 </div>
               `,
             )
             .join("")}
           <div class="ticket-total">
             <span>Odd total</span>
-            <strong>${oddTotal.toFixed(2)}</strong>
+            <strong>${oddTotal ? oddTotal.toFixed(2) : "—"}</strong>
           </div>
         </div>
       </div>
@@ -1864,11 +2249,7 @@ function renderBestOfDay() {
     button.addEventListener("click", () => {
       const match = state.bestMatches.find((item) => String(item.id) === button.dataset.bestMatchId);
       if (!match) return;
-      state.currentAnalysisMatch = match;
-      state.analysisSourceView = "melhores";
-      state.activeTab = "resumo";
-      showDashboardView("analise");
-      renderDetail(match);
+      openMatchAnalysis(match, "melhores");
     });
   });
 }
@@ -2051,12 +2432,7 @@ function renderDailyGames() {
     button.addEventListener("click", () => {
       const match = matches.find((item) => String(item.id) === button.dataset.dailyMatchId);
       if (!match) return;
-
-      state.currentAnalysisMatch = match;
-      state.analysisSourceView = "jogos";
-      state.activeTab = "resumo";
-      showDashboardView("analise");
-      renderDetail(match);
+      openMatchAnalysis(match, "jogos");
     });
   });
 
@@ -2134,7 +2510,7 @@ function renderFixtures(list) {
         </div>
         <div class="fixture-market">
           <strong>${match.market}</strong>
-          <span>Odd ${match.odd.toFixed(2)} • <span class="${riskClass(match.risk)}">Risco ${match.risk}</span></span>
+          <span>${match.hasRealOdd ? `Odd ${match.odd.toFixed(2)}` : "Odd indisponível"} • <span class="${riskClass(match.risk)}">Risco ${match.risk}</span></span>
         </div>
         <div class="fixture-signal">
           <strong>${match.confidence}%</strong>
@@ -2881,6 +3257,667 @@ function renderJogadoresTab(match, subtab) {
   return analysisModule(title, "", "", content);
 }
 
+function metricText(value, decimals = 1) {
+  const number = validMetric(value);
+  if (number === null) return "—";
+  return number.toFixed(decimals).replace(".", ",");
+}
+
+function percentText(value) {
+  const number = validMetric(value);
+  return number === null ? "—" : `${clamp(number, 0, 100)}%`;
+}
+
+function averagePercent(...values) {
+  return averageValues(values.map(validMetric));
+}
+
+function apiProbability(match, potentialPaths, oddPaths, fallback = null) {
+  const potential = validMetric(detailField(match, potentialPaths));
+  if (potential !== null && potential <= 100) return clamp(potential, 0, 100);
+
+  const odd = validMetric(detailField(match, oddPaths));
+  if (odd && odd > 1) return clamp(100 / odd, 0, 100);
+  return fallback;
+}
+
+function probabilityRow(label, home, away, average) {
+  const finalAverage = validMetric(average) ?? averagePercent(home, away);
+  return {
+    label,
+    home: percentText(home),
+    away: percentText(away),
+    avg: percentText(finalAverage),
+    homeTone: validMetric(home) ?? 0,
+    awayTone: validMetric(away) ?? 0,
+    avgTone: validMetric(finalAverage) ?? 0,
+  };
+}
+
+function historyProbability(history, key, line, direction = "over") {
+  if (!history?.count) return null;
+  return direction === "under" ? history.under(key, line) : history.over(key, line);
+}
+
+function realDataNotice(match) {
+  const availability = match.detail?.availability;
+  if (!match.detail) return "Dados iniciais da partida recebidos da FootyStats.";
+  const sources = [
+    "detalhes da partida",
+    availability?.homeLast && availability?.awayLast ? "últimos 5 jogos" : null,
+    availability?.players ? "jogadores da liga" : null,
+  ].filter(Boolean);
+  return `Fonte: FootyStats • ${sources.join(" • ")}`;
+}
+
+function renderGolsTab(match, subtab) {
+  const histories = matchHistories(match);
+  const totalXg = validMetric(detailField(match, ["total_xg_prematch"]));
+  const lines = [0.5, 1.5, 2.5, 3.5, 4.5];
+  const potentialFields = {
+    0.5: ["o05_potential", "over05"],
+    1.5: ["o15_potential", "over15"],
+    2.5: ["o25_potential", "over25"],
+    3.5: ["o35_potential", "over35"],
+    4.5: ["o45_potential", "over45"],
+  };
+  const oddFields = {
+    0.5: ["odds_ft_over05"],
+    1.5: ["odds_ft_over15"],
+    2.5: ["odds_ft_over25"],
+    3.5: ["odds_ft_over35"],
+    4.5: ["odds_ft_over45"],
+  };
+  const overRows = lines.map((line) => {
+    const home = historyProbability(histories.home, "totalGoals", line);
+    const away = historyProbability(histories.away, "totalGoals", line);
+    const fallback =
+      totalXg !== null ? projectedConfidence(totalXg, line, "over") : null;
+    const average = apiProbability(
+      match,
+      potentialFields[line],
+      oddFields[line],
+      averagePercent(home, away) ?? fallback,
+    );
+    return probabilityRow(`Mais de ${String(line).replace(".", ",")}`, home, away, average);
+  });
+  const bttsHome = histories.home.btts;
+  const bttsAway = histories.away.btts;
+  const bttsAverage = apiProbability(
+    match,
+    ["btts_potential"],
+    ["odds_btts_yes"],
+    averagePercent(bttsHome, bttsAway),
+  );
+  overRows.push(probabilityRow("Ambas marcam", bttsHome, bttsAway, bttsAverage));
+
+  const underRows = lines.map((line) => {
+    const home = historyProbability(histories.home, "totalGoals", line, "under");
+    const away = historyProbability(histories.away, "totalGoals", line, "under");
+    const over = apiProbability(match, potentialFields[line], oddFields[line]);
+    const average = averagePercent(home, away) ?? (over === null ? null : 100 - over);
+    return probabilityRow(`Menos de ${String(line).replace(".", ",")}`, home, away, average);
+  });
+  const timeLines = [
+    { section: "Gols do primeiro tempo" },
+    probabilityRow(
+      "Mais de 0,5 FH",
+      historyProbability(histories.home, "htGoals", 0.5),
+      historyProbability(histories.away, "htGoals", 0.5),
+      apiProbability(match, ["o05HT_potential"], ["odds_1st_half_over05"]),
+    ),
+    probabilityRow(
+      "Mais de 1,5 FH",
+      historyProbability(histories.home, "htGoals", 1.5),
+      historyProbability(histories.away, "htGoals", 1.5),
+      apiProbability(match, ["o15HT_potential"], ["odds_1st_half_over15"]),
+    ),
+    { section: "Gols do segundo tempo" },
+    probabilityRow(
+      "Mais de 0,5 2H",
+      historyProbability(histories.home, "secondHalfGoals", 0.5),
+      historyProbability(histories.away, "secondHalfGoals", 0.5),
+      apiProbability(match, ["o05_2H_potential"], ["odds_2nd_half_over05"]),
+    ),
+    probabilityRow(
+      "Mais de 1,5 2H",
+      historyProbability(histories.home, "secondHalfGoals", 1.5),
+      historyProbability(histories.away, "secondHalfGoals", 1.5),
+      apiProbability(match, ["o15_2H_potential"], ["odds_2nd_half_over15"]),
+    ),
+  ];
+  const rows = subtab === "tempos" ? timeLines : subtab === "under" ? underRows : overRows;
+  const label =
+    subtab === "tempos" ? "1º/2º Tempo" : subtab === "under" ? "Gols (Menos)" : "Gols da partida";
+  const summary = summaryStatCards([
+    {
+      label: "xG pré-jogo",
+      value: metricText(totalXg, 2),
+      helper: "Projeção total da API",
+      featured: true,
+    },
+    {
+      label: match.home,
+      value: metricText(histories.home.avg("goalsFor"), 2),
+      helper: "Gols marcados / últimos jogos",
+    },
+    {
+      label: match.away,
+      value: metricText(histories.away.avg("goalsFor"), 2),
+      helper: "Gols marcados / últimos jogos",
+    },
+  ]);
+
+  return analysisModule(
+    "Previsões de gols e Ambas as Equipes Marcam",
+    "Dados reais e forma recente",
+    realDataNotice(match),
+    `${summary}${renderStatsTable("", label, rows, match)}`,
+  );
+}
+
+function renderCartoesTab(match, subtab) {
+  const histories = matchHistories(match);
+  const totalAverage = averageValues([
+    histories.home.avg("totalCards"),
+    histories.away.avg("totalCards"),
+  ]);
+  const homeAverage = histories.home.avg("cardsFor");
+  const awayAverage = histories.away.avg("cardsFor");
+  const potential = validMetric(detailField(match, ["cards_potential"]));
+  const summary = summaryStatCards([
+    {
+      label: "Total de cartões por partida",
+      value: metricText(totalAverage ?? match.stats.cards, 2),
+      helper: "Média dos últimos jogos",
+      featured: true,
+    },
+    { label: match.home, value: metricText(homeAverage, 2), helper: "Cartões / partida" },
+    { label: match.away, value: metricText(awayAverage, 2), helper: "Cartões / partida" },
+  ]);
+  const totalRows = [2.5, 3.5, 4.5, 5.5, 6.5].map((line) =>
+    probabilityRow(
+      `Mais de ${String(line).replace(".", ",")}`,
+      historyProbability(histories.home, "totalCards", line),
+      historyProbability(histories.away, "totalCards", line),
+      potential,
+    ),
+  );
+  const teamRows = [
+    {
+      label: "Cartões por partida",
+      home: metricText(homeAverage, 2),
+      away: metricText(awayAverage, 2),
+      avg: metricText(averageValues([homeAverage, awayAverage]), 2),
+    },
+    ...[0.5, 1.5, 2.5, 3.5].map((line) =>
+      probabilityRow(
+        `Mais de ${String(line).replace(".", ",")} por equipe`,
+        historyProbability(histories.home, "cardsFor", line),
+        historyProbability(histories.away, "cardsFor", line),
+      ),
+    ),
+    { section: "Cartões do adversário" },
+    ...[0.5, 1.5, 2.5, 3.5].map((line) =>
+      probabilityRow(
+        `Mais de ${String(line).replace(".", ",")} contra`,
+        historyProbability(histories.home, "cardsAgainst", line),
+        historyProbability(histories.away, "cardsAgainst", line),
+      ),
+    ),
+  ];
+
+  return analysisModule(
+    "Número de cartões",
+    "Histórico disciplinar real",
+    realDataNotice(match),
+    `${summary}${renderStatsTable("", subtab === "equipe" ? "Cartões de Equipe" : "Cartões no Jogo", subtab === "equipe" ? teamRows : totalRows, match)}`,
+  );
+}
+
+function renderEscanteiosTab(match, subtab) {
+  const histories = matchHistories(match);
+  const totalAverage = averageValues([
+    histories.home.avg("totalCorners"),
+    histories.away.avg("totalCorners"),
+  ]);
+  const homeAverage = histories.home.avg("cornersFor");
+  const awayAverage = histories.away.avg("cornersFor");
+  const summary = summaryStatCards([
+    {
+      label: "Escanteios / Partida",
+      value: metricText(totalAverage ?? match.stats.corners, 2),
+      helper: "Média dos últimos jogos",
+      featured: true,
+    },
+    { label: match.home, value: metricText(homeAverage, 2), helper: "A favor / partida" },
+    { label: match.away, value: metricText(awayAverage, 2), helper: "A favor / partida" },
+  ]);
+  const potentialByLine = {
+    8.5: ["corners_o85_potential"],
+    9.5: ["corners_o95_potential"],
+    10.5: ["corners_o105_potential"],
+  };
+  const totalRows = [6.5, 7.5, 8.5, 9.5, 10.5, 11.5, 12.5].map((line) =>
+    probabilityRow(
+      `Mais de ${String(line).replace(".", ",")}`,
+      historyProbability(histories.home, "totalCorners", line),
+      historyProbability(histories.away, "totalCorners", line),
+      apiProbability(
+        match,
+        potentialByLine[line] || ["corners_potential"],
+        [`odds_corners_over_${String(line).replace(".5", "5").replace(".", "")}`],
+      ),
+    ),
+  );
+  const teamRows = [
+    {
+      label: "Escanteios conquistados por partida",
+      home: metricText(homeAverage, 2),
+      away: metricText(awayAverage, 2),
+      avg: metricText(averageValues([homeAverage, awayAverage]), 2),
+    },
+    {
+      label: "Escanteios contra / partida",
+      home: metricText(histories.home.avg("cornersAgainst"), 2),
+      away: metricText(histories.away.avg("cornersAgainst"), 2),
+      avg: metricText(
+        averageValues([
+          histories.home.avg("cornersAgainst"),
+          histories.away.avg("cornersAgainst"),
+        ]),
+        2,
+      ),
+    },
+    ...[2.5, 3.5, 4.5].map((line) =>
+      probabilityRow(
+        `Mais de ${String(line).replace(".", ",")} cantos para`,
+        historyProbability(histories.home, "cornersFor", line),
+        historyProbability(histories.away, "cornersFor", line),
+      ),
+    ),
+  ];
+  const timeRows = [
+    { section: "Primeiro tempo" },
+    {
+      label: "Média FH",
+      home: metricText(histories.home.avg("firstHalfCorners"), 2),
+      away: metricText(histories.away.avg("firstHalfCorners"), 2),
+      avg: metricText(
+        averageValues([
+          histories.home.avg("firstHalfCorners"),
+          histories.away.avg("firstHalfCorners"),
+        ]),
+        2,
+      ),
+    },
+    ...[3.5, 4.5, 5.5].map((line) =>
+      probabilityRow(
+        `FH acima de ${String(line).replace(".", ",")}`,
+        historyProbability(histories.home, "firstHalfCorners", line),
+        historyProbability(histories.away, "firstHalfCorners", line),
+      ),
+    ),
+    { section: "Segundo tempo" },
+    ...[3.5, 4.5, 5.5].map((line) =>
+      probabilityRow(
+        `2H acima de ${String(line).replace(".", ",")}`,
+        historyProbability(histories.home, "secondHalfCorners", line),
+        historyProbability(histories.away, "secondHalfCorners", line),
+      ),
+    ),
+  ];
+  const rows = subtab === "equipe" ? teamRows : subtab === "tempos" ? timeRows : totalRows;
+
+  return analysisModule(
+    "Número de escanteios",
+    "Quantos escanteios haverá?",
+    realDataNotice(match),
+    `${summary}${renderStatsTable("", subtab === "equipe" ? "Escanteios da equipe" : subtab === "tempos" ? "Primeiro/Segundo Tempo" : "Escanteios da partida", rows, match)}`,
+  );
+}
+
+function renderFinalizacoesTab(match, subtab) {
+  const histories = matchHistories(match);
+  const homeShots = histories.home.avg("shotsFor");
+  const awayShots = histories.away.avg("shotsFor");
+  const homeTarget = histories.home.avg("onTargetFor");
+  const awayTarget = histories.away.avg("onTargetFor");
+  const teamRows = [
+    {
+      label: "Chutes / Partida",
+      home: metricText(homeShots, 2),
+      away: metricText(awayShots, 2),
+      avg: metricText(averageValues([homeShots, awayShots]), 2),
+    },
+    {
+      label: "Tiros no alvo / Partida",
+      home: metricText(homeTarget, 2),
+      away: metricText(awayTarget, 2),
+      avg: metricText(averageValues([homeTarget, awayTarget]), 2),
+    },
+    ...[10.5, 11.5, 12.5, 13.5, 14.5].map((line) =>
+      probabilityRow(
+        `Chutes da equipe acima de ${String(line).replace(".", ",")}`,
+        historyProbability(histories.home, "shotsFor", line),
+        historyProbability(histories.away, "shotsFor", line),
+      ),
+    ),
+    ...[3.5, 4.5, 5.5].map((line) =>
+      probabilityRow(
+        `Chutes no alvo acima de ${String(line).replace(".", ",")}`,
+        historyProbability(histories.home, "onTargetFor", line),
+        historyProbability(histories.away, "onTargetFor", line),
+      ),
+    ),
+  ];
+  const matchRows = [
+    ...[19.5, 21.5, 23.5, 25.5].map((line) =>
+      probabilityRow(
+        `Match Shots acima de ${String(line).replace(".", ",")}`,
+        historyProbability(histories.home, "totalShots", line),
+        historyProbability(histories.away, "totalShots", line),
+      ),
+    ),
+    ...[6.5, 7.5, 8.5, 9.5].map((line) =>
+      probabilityRow(
+        `Chutes no alvo totais acima de ${String(line).replace(".", ",")}`,
+        historyProbability(histories.home, "totalOnTarget", line),
+        historyProbability(histories.away, "totalOnTarget", line),
+      ),
+    ),
+  ];
+
+  return analysisModule(
+    "Finalizações",
+    "Chutes e tiros no alvo",
+    realDataNotice(match),
+    renderStatsTable(
+      "",
+      subtab === "match" ? "Match Shots" : "Finalizações da equipe",
+      subtab === "match" ? matchRows : teamRows,
+      match,
+    ),
+  );
+}
+
+function realPlayerCard(match, title, players, side, footer) {
+  const team = side === "home" ? match.home : match.away;
+  const logo = side === "home" ? match.homeLogo : match.awayLogo;
+  const safeLogo = safeImageUrl(logo);
+
+  if (!players.length) {
+    return `
+      <article class="player-card">
+        <header>
+          ${teamMark(team, logo, "", "analysis-crest small")}
+          <h4>${title}</h4>
+        </header>
+        <p>Dados de jogadores indisponíveis para esta liga.</p>
+      </article>
+    `;
+  }
+
+  const max = Math.max(...players.map((player) => Number(player.value) || 0), 1);
+  return `
+    <article class="player-card">
+      <header>
+        <span class="analysis-crest small${safeLogo ? " has-image" : ""}">
+          ${safeLogo ? `<img src="${escapeHtml(safeLogo)}" alt="">` : teamCode(team)}
+        </span>
+        <h4>${title}</h4>
+      </header>
+      <ul class="player-list">
+        ${players.map((player) => playerBar(escapeHtml(player.name), player.value, max, side)).join("")}
+      </ul>
+      <p>${footer}</p>
+    </article>
+  `;
+}
+
+function renderJogadoresTab(match, subtab) {
+  const homePlayers = match.detail?.players?.home || [];
+  const awayPlayers = match.detail?.players?.away || [];
+  const valueField =
+    subtab === "gols"
+      ? "goals_overall"
+      : subtab === "cartoes90"
+        ? "cards_per_90_overall"
+        : "cards_overall";
+  const title =
+    subtab === "gols"
+      ? "Artilheiros"
+      : subtab === "cartoes90"
+        ? "Cartões por 90 minutos"
+        : "Jogadores mais advertidos";
+  const prepare = (players) =>
+    players
+      .map((player) => ({
+        name: player.full_name || player.known_as || `${player.first_name || ""} ${player.last_name || ""}`.trim(),
+        value: validMetric(player[valueField]) ?? 0,
+      }))
+      .filter((player) => player.name && player.value > 0)
+      .sort((a, b) => b.value - a.value)
+      .slice(0, 8);
+  const footer = `Estatísticas reais da temporada • ${match.league}`;
+
+  return analysisModule(
+    title,
+    "",
+    realDataNotice(match),
+    `
+      <div class="players-grid">
+        ${realPlayerCard(match, `${title} - ${match.home}`, prepare(homePlayers), "home", footer)}
+        ${realPlayerCard(match, `${title} - ${match.away}`, prepare(awayPlayers), "away", footer)}
+      </div>
+    `,
+  );
+}
+
+function renderCasaForaTab(match, subtab) {
+  const raw = match.detail?.match || match.raw || {};
+  const homePpg = validMetric(
+    raw.pre_match_home_ppg ?? raw.pre_match_teamA_overall_ppg ?? raw.home_ppg,
+  );
+  const awayPpg = validMetric(
+    raw.pre_match_away_ppg ?? raw.pre_match_teamB_overall_ppg ?? raw.away_ppg,
+  );
+  const homeXg = validMetric(raw.team_a_xg_prematch);
+  const awayXg = validMetric(raw.team_b_xg_prematch);
+  const homeOdd = validMetric(raw.odds_ft_1);
+  const drawOdd = validMetric(raw.odds_ft_x);
+  const awayOdd = validMetric(raw.odds_ft_2);
+  const homeProbability = apiProbability(match, [], ["odds_ft_1"], match.stats.homeForm);
+  const drawProbability = apiProbability(match, [], ["odds_ft_x"]);
+  const awayProbability = apiProbability(match, [], ["odds_ft_2"], match.stats.awayForm);
+  const marketRows = [
+    marketLine(`${match.home} vence`, homeOdd, homeProbability || 0, homeOdd ? "Odd real" : "Sem odd real"),
+    marketLine("Empate", drawOdd, drawProbability || 0, drawOdd ? "Odd real" : "Sem odd real"),
+    marketLine(`${match.away} vence`, awayOdd, awayProbability || 0, awayOdd ? "Odd real" : "Sem odd real"),
+  ].join("");
+  const selected =
+    subtab === "mandante"
+      ? [
+          analysisCard("PPG em casa", metricText(homePpg, 2), "Pontos por jogo"),
+          analysisCard("xG pré-jogo", metricText(homeXg, 2)),
+          analysisCard("Posição", match.detail?.teams?.home?.tablePosition ?? "—"),
+          analysisCard("Odd vitória", homeOdd ? homeOdd.toFixed(2) : "—"),
+        ]
+      : subtab === "visitante"
+        ? [
+            analysisCard("PPG fora", metricText(awayPpg, 2), "Pontos por jogo"),
+            analysisCard("xG pré-jogo", metricText(awayXg, 2)),
+            analysisCard("Posição", match.detail?.teams?.away?.tablePosition ?? "—"),
+            analysisCard("Odd vitória", awayOdd ? awayOdd.toFixed(2) : "—"),
+          ]
+        : [
+            analysisCard(match.home, `${metricText(homePpg, 2)} PPG`, `xG ${metricText(homeXg, 2)}`),
+            analysisCard("Empate", drawOdd ? `Odd ${drawOdd.toFixed(2)}` : "Odd indisponível"),
+            analysisCard(match.away, `${metricText(awayPpg, 2)} PPG`, `xG ${metricText(awayXg, 2)}`),
+          ];
+
+  return `
+    <div class="analysis-block">
+      ${analysisHeading("Casa / Fora", "PPG, xG e odds reais")}
+      <div class="analysis-grid">${selected.join("")}</div>
+      <div class="market-lines">${marketRows}</div>
+      <p class="analysis-note">${realDataNotice(match)}</p>
+    </div>
+  `;
+}
+
+function renderTeamIdentity(match, side) {
+  const team = side === "home" ? match.home : match.away;
+  const logo = side === "home" ? match.homeLogo : match.awayLogo;
+  const label = side === "home" ? "Casa" : "Fora";
+  const odd = validMetric(detailField(match, side === "home" ? ["odds_ft_1"] : ["odds_ft_2"]));
+  const history = side === "home" ? matchHistories(match).home : matchHistories(match).away;
+  const form = history.form.length ? history.form : formPattern(side === "home" ? match.stats.homeForm : match.stats.awayForm, side);
+
+  return `
+    <div class="analysis-team-card ${side}">
+      ${teamMark(team, logo, "", "analysis-crest")}
+      <div class="analysis-team-meta">
+        <span>${label}</span>
+        <strong>${escapeHtml(team)}</strong>
+        <em>${odd && odd > 1 ? `Odd ${odd.toFixed(2)}` : "Odd indisponível"}</em>
+      </div>
+      <div class="form-strip" aria-label="Forma recente ${escapeHtml(team)}">
+        ${form.slice(0, 5).map(formBadge).join("")}
+      </div>
+    </div>
+  `;
+}
+
+function stadiumName(match) {
+  return cleanText(
+    match.stadium || detailField(match, ["stadium_name"]),
+    "Estádio não informado",
+  );
+}
+
+function renderFixtureAnalysis(match) {
+  const histories = matchHistories(match);
+  const raw = match.detail?.match || match.raw || {};
+  const totalXg = validMetric(raw.total_xg_prematch);
+  const btts = apiProbability(match, ["btts_potential"], ["odds_btts_yes"]);
+  const homePpg = validMetric(raw.pre_match_home_ppg ?? raw.pre_match_teamA_overall_ppg);
+  const awayPpg = validMetric(raw.pre_match_away_ppg ?? raw.pre_match_teamB_overall_ppg);
+
+  return `
+    <section class="fixture-analysis-card">
+      ${analysisHeading("Fixture Analysis", `${match.country} / ${match.league}`)}
+      <div class="fixture-copy">
+        <p>Em ${matchDateLabel(match)}, <strong>${escapeHtml(match.home)}</strong> e <strong>${escapeHtml(match.away)}</strong> se enfrentam pela <strong>${escapeHtml(match.league)}</strong>.</p>
+        <p>O PPG pré-jogo está em <strong>${metricText(homePpg, 2)}</strong> para o mandante e <strong>${metricText(awayPpg, 2)}</strong> para o visitante. O xG total pré-jogo é <strong>${metricText(totalXg, 2)}</strong>.</p>
+        <p>A forma recente considera <strong>${histories.home.count}</strong> jogos de ${escapeHtml(match.home)} e <strong>${histories.away.count}</strong> jogos de ${escapeHtml(match.away)}. A leitura BTTS da API está em <strong>${percentText(btts)}</strong>.</p>
+        <p>${realDataNotice(match)}. Mercados sem base suficiente permanecem sem sugestão.</p>
+      </div>
+    </section>
+  `;
+}
+
+function trendRows(match, side) {
+  const team = side === "home" ? match.home : match.away;
+  const history = side === "home" ? matchHistories(match).home : matchHistories(match).away;
+  const goals = history.avg("goalsFor");
+  const conceded = history.avg("goalsAgainst");
+  const corners = history.avg("totalCorners");
+  const cards = history.avg("totalCards");
+
+  if (!history.count) {
+    return [{ type: "neutral", text: `Últimos jogos de ${team} não estão disponíveis nesta consulta.` }];
+  }
+
+  return [
+    {
+      type: history.points >= history.count * 1.6 ? "up" : "down",
+      text: `${team} somou ${history.points} pontos nos últimos ${history.count} jogos.`,
+    },
+    {
+      type: goals >= 1.5 ? "up" : "neutral",
+      text: `Média recente de ${metricText(goals, 2)} gols marcados e ${metricText(conceded, 2)} sofridos.`,
+    },
+    {
+      type: history.btts >= 60 ? "up" : "neutral",
+      text: `Ambas marcaram em ${percentText(history.btts)} das partidas analisadas.`,
+    },
+    {
+      type: corners >= 9 ? "up" : "neutral",
+      text: `Os jogos recentes tiveram média de ${metricText(corners, 2)} escanteios.`,
+    },
+    {
+      type: cards >= 4.5 ? "down" : "neutral",
+      text: `Média disciplinar combinada de ${metricText(cards, 2)} cartões.`,
+    },
+  ];
+}
+
+function renderTrendColumn(match, side) {
+  const team = side === "home" ? match.home : match.away;
+  const logo = side === "home" ? match.homeLogo : match.awayLogo;
+  return `
+    <article class="trend-column">
+      <header>
+        ${teamMark(team, logo, "", "analysis-crest small")}
+        <strong>${escapeHtml(team)}</strong>
+      </header>
+      <div class="trend-list">
+        ${trendRows(match, side)
+          .map(
+            (row) => `
+              <div class="trend-item ${row.type}">
+                <span>${trendIcon(row.type)}</span>
+                <p>${row.text}</p>
+              </div>
+            `,
+          )
+          .join("")}
+      </div>
+    </article>
+  `;
+}
+
+function renderAiStatsSummary(match) {
+  const raw = match.detail?.match || match.raw || {};
+  const totalXg = validMetric(raw.total_xg_prematch);
+  const btts = apiProbability(match, ["btts_potential"], ["odds_btts_yes"]);
+  const corners85 = apiProbability(
+    match,
+    ["corners_o85_potential", "corners_potential"],
+    ["odds_corners_over_85"],
+  );
+  const over15 = apiProbability(
+    match,
+    ["o15_potential", "over15"],
+    ["odds_ft_over15"],
+    totalXg !== null ? projectedConfidence(totalXg, 1.5, "over") : null,
+  );
+  const mainPick =
+    over15 !== null && over15 >= 70
+      ? "Mais de 1,5 gols"
+      : corners85 !== null && corners85 >= 70
+        ? "Mais de 8,5 escanteios"
+        : "Sem entrada forte";
+
+  return `
+    <section class="ai-summary-card">
+      ${analysisHeading("GPT-5 AI Stats Summary", `${match.home} vs ${match.away}`)}
+      <div class="ai-summary-copy">
+        <p>A leitura usa os dados reais disponíveis da FootyStats. O xG total pré-jogo é <strong>${metricText(totalXg, 2)}</strong>, o BTTS aparece em <strong>${percentText(btts)}</strong> e a linha de mais de 8,5 escanteios em <strong>${percentText(corners85)}</strong>.</p>
+        <p>O mercado de mais de 1,5 gols apresenta leitura de <strong>${percentText(over15)}</strong>. Quando odds ou histórico não estão disponíveis, o JTIPS não classifica a seleção como aposta de valor.</p>
+      </div>
+      <div class="ai-pick-grid">
+        ${analysisCard("Leitura principal", mainPick, mainPick === "Sem entrada forte" ? "Dados insuficientes" : "Maior consistência")}
+        ${analysisCard("xG total", metricText(totalXg, 2), "Pré-jogo")}
+        ${analysisCard("BTTS", percentText(btts), "Potencial da API")}
+        ${analysisCard("Qualidade", match.detail?.availability?.homeLast && match.detail?.availability?.awayLast ? "Alta" : "Parcial", realDataNotice(match))}
+      </div>
+      <p class="ai-disclaimer">Análise estatística, sem garantia de resultado. Use gestão responsável.</p>
+    </section>
+  `;
+}
+
 function renderMatchHeader(match) {
   return `
     <div class="analysis-match-header">
@@ -2939,6 +3976,29 @@ function renderDetail(match) {
   refs.detailTitle.textContent = `${match.home} x ${match.away}`;
   refs.detailTime.textContent = match.time;
   renderTabNavigation(match);
+
+  if (match.detailLoading) {
+    refs.detailBody.innerHTML = `
+      <div class="detail-loading">
+        <span></span>
+        <strong>Carregando estatísticas reais</strong>
+        <p>Buscando partida, últimos jogos, times e jogadores na FootyStats.</p>
+      </div>
+    `;
+    return;
+  }
+
+  if (match.detailError) {
+    refs.detailBody.innerHTML = `
+      <div class="detail-api-warning">
+        <strong>Alguns detalhes não puderam ser carregados</strong>
+        <p>As informações iniciais da partida continuam disponíveis. Tente atualizar novamente.</p>
+      </div>
+      ${renderDetailContent(match)}
+    `;
+    return;
+  }
+
   refs.detailBody.innerHTML = renderDetailContent(match);
 }
 
