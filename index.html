@@ -1,0 +1,527 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Jtips | Dashboard de Análises</title>
+    <link rel="preconnect" href="https://images.unsplash.com" />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="login-view" id="loginView">
+      <section class="login-market" aria-label="Login Jtips">
+        <div class="welcome-pill">
+          <img src="./assets/jtips-logo.png" alt="" />
+          Bem-vindo ao Jtips
+        </div>
+
+        <div class="login-title">
+          <img class="login-logo" src="./assets/jtips-logo.png" alt="Jtips" />
+          <h1>ANÁLISE DE <span>FUTEBOL</span></h1>
+          <p>Entre no módulo de futebol para acompanhar jogos, mercados, probabilidades e apostas prontas.</p>
+        </div>
+
+        <div class="market-login-grid">
+          <article class="football-access-card" aria-label="Módulo Futebol">
+            <div class="card-shade"></div>
+            <div class="sport-icon" aria-hidden="true">
+              <span></span>
+            </div>
+            <div class="football-card-copy">
+              <p>Football analysis</p>
+              <h2>FUTEBOL</h2>
+              <span>Análise pré-jogo, gols, escanteios, cartões, casa/fora e desempenho de times.</span>
+            </div>
+            <div class="access-row">
+              <strong>Acessar agora</strong>
+              <span>→</span>
+            </div>
+          </article>
+
+          <section class="login-card" aria-label="Acesso">
+            <div class="login-heading">
+              <img class="brand-logo small" src="./assets/jtips-logo.png" alt="Jtips" />
+              <div>
+                <p class="eyebrow">Acesso seguro</p>
+                <h2>Entrar no painel</h2>
+              </div>
+            </div>
+
+            <form id="loginForm" class="login-form">
+              <label>
+                E-mail
+                <input type="email" value="admin@jtips.com" autocomplete="email" />
+              </label>
+              <label>
+                Senha
+                <input type="password" value="jtips" autocomplete="current-password" />
+              </label>
+              <button type="submit">Entrar no futebol</button>
+            </form>
+          </section>
+        </div>
+      </section>
+    </main>
+
+    <div class="app-shell is-hidden" id="appShell">
+      <aside class="sidebar">
+        <div class="sidebar-brand">
+          <img class="brand-logo small" src="./assets/jtips-logo.png" alt="Jtips" />
+          <div>
+            <strong>Jtips</strong>
+            <span>Football intelligence</span>
+          </div>
+        </div>
+
+        <nav class="nav-list" aria-label="Navegação principal">
+          <a class="active" href="#melhores-do-dia" data-view="melhores" aria-current="page">Melhores do dia</a>
+          <a href="#jogos-do-dia" data-view="jogos">Jogos do Dia</a>
+          <a href="#configuracoes" data-view="configuracoes">Configurações</a>
+        </nav>
+
+        <div class="api-status">
+          <span class="status-dot"></span>
+          <div>
+            <strong>Modo mock</strong>
+            <span>Pronto para API</span>
+          </div>
+        </div>
+      </aside>
+
+      <main class="dashboard" id="dashboard">
+        <header class="topbar">
+          <div>
+            <p class="eyebrow">Futebol • Pré-jogo</p>
+            <h1>Melhores do Dia</h1>
+          </div>
+          <div class="top-actions">
+            <button class="icon-button" id="refreshButton" title="Atualizar dados" aria-label="Atualizar dados">
+              ↻
+            </button>
+            <button class="profile-button" id="logoutButton">Sair</button>
+          </div>
+        </header>
+
+        <section class="market-board app-view" id="melhores-do-dia" data-view-panel="melhores" aria-label="Melhores jogos do dia acima de 70%">
+          <article class="market-card featured">
+            <header class="market-card-header">
+              <div class="match-identity">
+                <span class="mini-crest am">AM</span>
+                <div>
+                  <strong>América Mineiro <span>vs</span> Atlético GO</strong>
+                  <small>Brasil • Serie B</small>
+                </div>
+              </div>
+              <button class="favorite-button" type="button" aria-label="Favoritar partida">★</button>
+              <span class="match-clock">20:00</span>
+            </header>
+
+            <div class="score-panel pregame-panel">
+              <div class="team-side">
+                <span class="team-logo am">AM</span>
+                <span>Casa</span>
+                <strong>América Mineiro</strong>
+                <em>Odd 3.20</em>
+              </div>
+              <div class="team-side right">
+                <span class="team-logo ago">AGO</span>
+                <span>Fora</span>
+                <strong>Atlético GO</strong>
+                <em>Odd 2.10</em>
+              </div>
+            </div>
+
+            <div class="line-section">
+              <div class="line-heading">
+                <span>Linhas de Conforto</span>
+                <strong>+70%</strong>
+              </div>
+              <div class="signal-lines">
+                <div class="signal-line"><span>Cantos 8.5</span><div><i style="width: 80%"></i></div><strong>80%</strong></div>
+                <div class="signal-line"><span>Atlético marca</span><div><i style="width: 80%"></i></div><strong>80%</strong></div>
+              </div>
+            </div>
+
+            <div class="line-section players">
+              <div class="line-heading">
+                <span>Bilhete</span>
+                <strong>2 seleções</strong>
+              </div>
+              <div class="ticket-slip">
+                <div class="anti-conflict">
+                  <span class="ticket-teams">
+                    <b class="am">AM</b>
+                    <b class="ago">AGO</b>
+                  </span>
+                  <div>
+                    <strong>Anti-conflito</strong>
+                    <small>Sem seleções opostas no bilhete</small>
+                  </div>
+                  <em>OK</em>
+                </div>
+                <div class="ticket-row">
+                  <span class="ticket-teams">
+                    <b class="am">AM</b>
+                    <b class="ago">AGO</b>
+                  </span>
+                  <span class="ticket-pick">Cantos +8.5</span>
+                  <strong>80%</strong>
+                  <em>Odd 1.80</em>
+                </div>
+                <div class="ticket-row">
+                  <span class="ticket-teams">
+                    <b class="ago">AGO</b>
+                  </span>
+                  <span class="ticket-pick">Atlético GO marcar</span>
+                  <strong>80%</strong>
+                  <em>Odd 1.55</em>
+                </div>
+                <div class="ticket-total">
+                  <span>Odd total</span>
+                  <strong>2.79</strong>
+                </div>
+              </div>
+            </div>
+
+            <footer class="market-actions">
+              <button type="button" data-analysis-id="best-am-ago">Análise</button>
+              <button class="bet365-button" type="button"><span>bet</span>365</button>
+            </footer>
+          </article>
+
+          <article class="market-card">
+            <header class="market-card-header">
+              <div class="match-identity">
+                <span class="mini-crest pal">PAL</span>
+                <div>
+                  <strong>Palmeiras <span>vs</span> Fortaleza</strong>
+                  <small>Brasil • Serie A</small>
+                </div>
+              </div>
+              <button class="favorite-button" type="button" aria-label="Favoritar partida">★</button>
+              <span class="match-clock">19:00</span>
+            </header>
+
+            <div class="score-panel pregame-panel">
+              <div class="team-side">
+                <span class="team-logo pal">PAL</span>
+                <span>Casa</span>
+                <strong>Palmeiras</strong>
+                <em>Odd 1.63</em>
+              </div>
+              <div class="team-side right">
+                <span class="team-logo for">FOR</span>
+                <span>Fora</span>
+                <strong>Fortaleza</strong>
+                <em>Odd 5.20</em>
+              </div>
+            </div>
+
+            <div class="line-section">
+              <div class="line-heading">
+                <span>Linhas de Conforto</span>
+                <strong>+70%</strong>
+              </div>
+              <div class="signal-lines">
+                <div class="signal-line"><span>Over 1.5</span><div><i style="width: 84%"></i></div><strong>84%</strong></div>
+                <div class="signal-line"><span>Cantos 9.5</span><div><i style="width: 78%"></i></div><strong>78%</strong></div>
+                <div class="signal-line"><span>Palmeiras marca</span><div><i style="width: 82%"></i></div><strong>82%</strong></div>
+              </div>
+            </div>
+
+            <div class="line-section players">
+              <div class="line-heading">
+                <span>Bilhete</span>
+                <strong>3 seleções</strong>
+              </div>
+              <div class="ticket-slip">
+                <div class="anti-conflict">
+                  <span class="ticket-teams">
+                    <b class="pal">PAL</b>
+                    <b class="for">FOR</b>
+                  </span>
+                  <div>
+                    <strong>Anti-conflito</strong>
+                    <small>Mercados compatíveis entre si</small>
+                  </div>
+                  <em>OK</em>
+                </div>
+                <div class="ticket-row">
+                  <span class="ticket-teams">
+                    <b class="pal">PAL</b>
+                    <b class="for">FOR</b>
+                  </span>
+                  <span class="ticket-pick">Over 1.5 gols</span>
+                  <strong>84%</strong>
+                  <em>Odd 1.46</em>
+                </div>
+                <div class="ticket-row">
+                  <span class="ticket-teams">
+                    <b class="pal">PAL</b>
+                    <b class="for">FOR</b>
+                  </span>
+                  <span class="ticket-pick">Cantos +9.5</span>
+                  <strong>78%</strong>
+                  <em>Odd 1.83</em>
+                </div>
+                <div class="ticket-row">
+                  <span class="ticket-teams">
+                    <b class="pal">PAL</b>
+                  </span>
+                  <span class="ticket-pick">Palmeiras marcar</span>
+                  <strong>82%</strong>
+                  <em>Odd 1.35</em>
+                </div>
+                <div class="ticket-total">
+                  <span>Odd total</span>
+                  <strong>3.61</strong>
+                </div>
+              </div>
+            </div>
+
+            <footer class="market-actions">
+              <button type="button" data-analysis-id="best-pal-for">Análise</button>
+              <button class="bet365-button" type="button"><span>bet</span>365</button>
+            </footer>
+          </article>
+        </section>
+
+        <section class="daily-games-view app-view is-hidden" id="jogos-do-dia" data-view-panel="jogos" aria-label="Jogos do dia">
+          <div class="daily-date-strip" aria-label="Calendário de jogos">
+            <button type="button"><span>Sex</span><strong>29.05</strong></button>
+            <button type="button"><span>Sab</span><strong>30.05</strong></button>
+            <button type="button"><span>Dom</span><strong>31.05</strong></button>
+            <button type="button"><span>Seg</span><strong>01.06</strong></button>
+            <button type="button"><span>Ter</span><strong>02.06</strong></button>
+            <button type="button"><span>Qua</span><strong>03.06</strong></button>
+            <button type="button"><span>Qui</span><strong>04.06</strong></button>
+            <button type="button"><span>Sex</span><strong>05.06</strong></button>
+            <button type="button"><span>Sab</span><strong>06.06</strong></button>
+            <button type="button"><span>Dom</span><strong>07.06</strong></button>
+            <button class="active" type="button"><span>Hoje</span><strong>08.06</strong></button>
+            <button type="button"><span>Ter</span><strong>09.06</strong></button>
+            <button type="button"><span>Qua</span><strong>10.06</strong></button>
+          </div>
+
+          <div class="daily-status-tabs" aria-label="Status dos jogos">
+            <button class="active" type="button">Todos</button>
+            <button type="button">Encerrados</button>
+            <button type="button">Próximos</button>
+          </div>
+
+          <div class="daily-league-list">
+            <article class="daily-league-card">
+              <header class="daily-league-header">
+                <div>
+                  <span class="flag-badge">🇺🇸</span>
+                  <strong>Estados Unidos</strong>
+                  <small>MLS Next Pro</small>
+                </div>
+                <button type="button" aria-label="Recolher liga">⌃</button>
+              </header>
+
+              <button class="daily-match-row" type="button" data-analysis-id="daily-us-1">
+                <div class="daily-teams">
+                  <span><b class="club-logo">CLB</b>Columbus Crew 2</span>
+                  <span><b class="club-logo dark">CON</b>Connecticut United</span>
+                </div>
+                <time>16:00</time>
+              </button>
+
+              <button class="daily-match-row" type="button" data-analysis-id="daily-us-2">
+                <div class="daily-teams">
+                  <span><b class="club-logo blue">MIN</b>Minnesota United 2</span>
+                  <span><b class="club-logo navy">SKC</b>Sporting Kansas City II</span>
+                </div>
+                <time>21:00</time>
+              </button>
+            </article>
+
+            <article class="daily-league-card">
+              <header class="daily-league-header">
+                <div>
+                  <span class="flag-badge">🇸🇪</span>
+                  <strong>Suécia</strong>
+                  <small>Ettan Norra</small>
+                </div>
+                <button type="button" aria-label="Recolher liga">⌃</button>
+              </header>
+
+              <button class="daily-match-row" type="button" data-analysis-id="daily-se-1">
+                <div class="daily-teams">
+                  <span><b class="club-logo red">FCS</b>FC Stockholm</span>
+                  <span><b class="club-logo orange">VAS</b>Vasalunds IF</span>
+                </div>
+                <time>14:00</time>
+              </button>
+
+              <button class="daily-match-row" type="button" data-analysis-id="daily-se-2">
+                <div class="daily-teams">
+                  <span><b class="club-logo green">JAR</b>FC Järfälla</span>
+                  <span><b class="club-logo yellow">IFS</b>IFK Stocksund</span>
+                </div>
+                <time>14:30</time>
+              </button>
+
+              <button class="daily-match-row" type="button" data-analysis-id="daily-se-3">
+                <div class="daily-teams">
+                  <span><b class="club-logo slate">ANG</b>Ängelholms FF</span>
+                  <span><b class="club-logo green">BKO</b>BK Olympic</span>
+                </div>
+                <time>14:00</time>
+              </button>
+
+              <button class="daily-match-row" type="button" data-analysis-id="daily-se-4">
+                <div class="daily-teams">
+                  <span><b class="club-logo sky">UTS</b>Utsiktens BK</span>
+                  <span><b class="club-logo red">ROS</b>FC Rosengård</span>
+                </div>
+                <time>14:30</time>
+              </button>
+            </article>
+
+            <article class="daily-league-card">
+              <header class="daily-league-header">
+                <div>
+                  <span class="flag-badge">🌐</span>
+                  <strong>Internacional</strong>
+                  <small>Friendlies</small>
+                </div>
+                <button type="button" aria-label="Recolher liga">⌃</button>
+              </header>
+
+              <button class="daily-match-row" type="button" data-analysis-id="daily-int-1">
+                <div class="daily-teams">
+                  <span><b class="club-logo yellow">UGA</b>Uganda</span>
+                  <span><b class="club-logo blue">GAM</b>Gâmbia</span>
+                </div>
+                <time>15:00</time>
+              </button>
+            </article>
+          </div>
+        </section>
+
+        <section class="settings-view app-view is-hidden" id="configuracoes" data-view-panel="configuracoes" aria-label="Configurações">
+          <div class="settings-shell">
+            <p class="eyebrow">Configurações</p>
+            <h2>Preferências do Jtips</h2>
+            <p>Depois vamos colocar conexão da API, filtros padrão, mercados favoritos e critérios de confiança.</p>
+          </div>
+        </section>
+
+        <div class="dashboard-later analysis-page app-view is-hidden" id="analise" data-view-panel="analise">
+        <section class="summary-grid" aria-label="Resumo">
+          <article class="summary-card">
+            <span>Jogos filtrados</span>
+            <strong id="totalMatches">0</strong>
+          </article>
+          <article class="summary-card">
+            <span>Apostas fortes</span>
+            <strong id="strongTips">0</strong>
+          </article>
+          <article class="summary-card">
+            <span>Confiança média</span>
+            <strong id="avgConfidence">0%</strong>
+          </article>
+          <article class="summary-card">
+            <span>Odd média</span>
+            <strong id="avgOdd">0.00</strong>
+          </article>
+        </section>
+
+        <section class="filters" aria-label="Filtros">
+          <label>
+            Data
+            <input type="date" id="dateFilter" />
+          </label>
+          <label>
+            País
+            <select id="countryFilter">
+              <option value="todos">Todos</option>
+            </select>
+          </label>
+          <label>
+            Liga
+            <select id="leagueFilter">
+              <option value="todos">Todas</option>
+            </select>
+          </label>
+          <label>
+            Time
+            <input type="search" id="teamFilter" placeholder="Buscar time" />
+          </label>
+          <label>
+            Mercado
+            <select id="marketFilter">
+              <option value="todos">Todos</option>
+              <option value="gols">Gols</option>
+              <option value="mais-menos">Mais/Menos</option>
+              <option value="escanteios">Escanteios</option>
+              <option value="cartoes">Cartões</option>
+              <option value="casa-fora">Casa/Fora</option>
+            </select>
+          </label>
+          <label>
+            Odd mínima
+            <input type="number" id="oddFilter" min="1" step="0.05" value="1.30" />
+          </label>
+          <label>
+            Confiança mínima
+            <input type="range" id="confidenceFilter" min="0" max="95" value="0" />
+            <span id="confidenceValue">0%</span>
+          </label>
+        </section>
+
+        <section class="content-grid">
+          <section class="fixtures-column" id="jogos" aria-label="Jogos por liga">
+            <div class="section-heading">
+              <div>
+                <p class="eyebrow">Agenda</p>
+                <h2>Jogos por liga</h2>
+              </div>
+              <span id="fixtureCount">0 jogos</span>
+            </div>
+
+            <div class="date-strip" aria-label="Atalhos de data">
+              <button class="date-chip" type="button" data-date-shift="-1">Ontem</button>
+              <button class="date-chip active" type="button" data-date-shift="0">Hoje</button>
+              <button class="date-chip" type="button" data-date-shift="1">Amanhã</button>
+              <button class="text-button" id="clearFilters" type="button">Limpar filtros</button>
+            </div>
+
+            <div class="fixtures-list" id="fixturesList"></div>
+          </section>
+
+          <section class="detail-panel" aria-label="Detalhes da partida">
+            <div class="match-cover">
+              <div>
+                <p class="eyebrow" id="detailLeague">Selecione uma partida</p>
+                <h2 id="detailTitle">Análise detalhada</h2>
+              </div>
+              <span id="detailTime">--:--</span>
+            </div>
+
+            <div class="match-tabs" id="matchTabs" role="tablist" aria-label="Abas da partida">
+              <button class="active" type="button" data-tab="resumo" role="tab">Resumo</button>
+              <button type="button" data-tab="casa-fora" role="tab">Casa/Fora</button>
+              <button type="button" data-tab="gols" role="tab">Gols</button>
+              <button type="button" data-tab="cartoes" role="tab">Cartões</button>
+              <button type="button" data-tab="escanteios" role="tab">Escanteios</button>
+              <button type="button" data-tab="finalizacoes" role="tab">Finalizações</button>
+              <button type="button" data-tab="jogadores" role="tab">Jogadores</button>
+            </div>
+
+            <div class="match-subtabs" id="matchSubtabs" aria-label="Subabas da partida"></div>
+
+            <div class="detail-body" id="detailBody">
+              <p class="empty-state">Clique em uma aposta ou partida para ver desempenho, casa/fora, gols, escanteios e cartões.</p>
+            </div>
+          </section>
+        </section>
+        </div>
+      </main>
+    </div>
+
+    <script src="./app.js"></script>
+  </body>
+</html>
