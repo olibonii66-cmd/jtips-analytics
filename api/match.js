@@ -58,8 +58,53 @@ async function optionalRequest(path, params) {
   }
 }
 
+async function optionalPagedRequest(path, params, maxPages = 8) {
+  try {
+    const firstPage = await fetchFootyStats(path, {
+      ...params,
+      page: 1,
+      max_per_page: 500,
+    });
+    const items = extractList(firstPage);
+    const totalPages = Math.min(
+      Math.max(Number(firstPage?.pager?.max_page) || 1, 1),
+      maxPages,
+    );
+
+    if (totalPages === 1) return items;
+
+    const remainingPages = await Promise.all(
+      Array.from({ length: totalPages - 1 }, (_, index) =>
+        optionalRequest(path, {
+          ...params,
+          page: index + 2,
+          max_per_page: 500,
+        }),
+      ),
+    );
+
+    return [
+      ...items,
+      ...remainingPages.flatMap((payload) => extractList(payload)),
+    ];
+  } catch (error) {
+    return [];
+  }
+}
+
 function findTeam(teams, teamId) {
   return teams.find((team) => String(team.id) === String(teamId)) || null;
+}
+
+function playerTeamId(player) {
+  return (
+    player?.club_team_id ??
+    player?.clubTeamID ??
+    player?.club_teamID ??
+    player?.team_id ??
+    player?.teamID ??
+    player?.club_id
+  );
 }
 
 function normalizeTeam(team, fallback) {
@@ -80,6 +125,12 @@ function normalizeTeam(team, fallback) {
     tablePosition: team.table_position ?? null,
     performanceRank: team.performance_rank ?? null,
     risk: team.risk ?? null,
+    stadium_name:
+      team.stadium_name ||
+      team.stadium?.name ||
+      team.venue_name ||
+      fallback?.stadium_name ||
+      "",
   };
 }
 
@@ -133,7 +184,7 @@ module.exports = async function handler(req, res) {
       match.league_id ||
       match.season_id;
 
-    const [teamsPayload, homeLastPayload, awayLastPayload, playersPayload] =
+    const [teamsPayload, homeLastPayload, awayLastPayload, players] =
       await Promise.all([
         leagueId
           ? optionalRequest("/league-teams", {
@@ -156,20 +207,20 @@ module.exports = async function handler(req, res) {
             })
           : null,
         leagueId
-          ? optionalRequest("/league-players", {
+          ? optionalPagedRequest("/league-players", {
               key: apiKey,
               league_id: leagueId,
             })
-          : null,
+          : [],
       ]);
 
     const teams = extractList(teamsPayload);
-    const players = extractList(playersPayload);
     const homeTeam = normalizeTeam(findTeam(teams, match.homeID), {
       id: match.homeID,
       name: match.home_name,
       logo: match.home_image,
       country: match.country,
+      stadium_name: match.stadium_name,
     });
     const awayTeam = normalizeTeam(findTeam(teams, match.awayID), {
       id: match.awayID,
@@ -197,10 +248,10 @@ module.exports = async function handler(req, res) {
       },
       players: {
         home: players.filter(
-          (player) => String(player.club_team_id) === String(match.homeID),
+          (player) => String(playerTeamId(player)) === String(match.homeID),
         ),
         away: players.filter(
-          (player) => String(player.club_team_id) === String(match.awayID),
+          (player) => String(playerTeamId(player)) === String(match.awayID),
         ),
       },
       availability: {
@@ -208,6 +259,12 @@ module.exports = async function handler(req, res) {
         homeLast: extractList(homeLastPayload).length > 0,
         awayLast: extractList(awayLastPayload).length > 0,
         players: players.length > 0,
+        homePlayers: players.some(
+          (player) => String(playerTeamId(player)) === String(match.homeID),
+        ),
+        awayPlayers: players.some(
+          (player) => String(playerTeamId(player)) === String(match.awayID),
+        ),
       },
     });
   } catch (error) {
