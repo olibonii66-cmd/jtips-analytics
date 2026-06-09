@@ -1,14 +1,13 @@
 (() => {
   const APP_PARTS = [
-    "./assets/runtime/app-v2-01.part",
-    "./assets/runtime/app-v2-02.part",
-    "./assets/runtime/app-v2-03.part",
-    "./assets/runtime/app-v2-04.part",
-    "./assets/runtime/app-v2-05.part",
+    "./assets/runtime/app-v3-01.part",
+    "./assets/runtime/app-v3-02.part",
+    "./assets/runtime/app-v3-03.part",
+    "./assets/runtime/app-v3-04.part",
   ];
   const STYLE_PARTS = [
-    "./assets/runtime/styles-v2-01.part",
-    "./assets/runtime/styles-v2-02.part",
+    "./assets/runtime/styles-v3-01.part",
+    "./assets/runtime/styles-v3-02.part",
   ];
 
   async function readCompressed(parts) {
@@ -45,7 +44,7 @@
   Promise.all([readCompressed(STYLE_PARTS), readCompressed(APP_PARTS)])
     .then(([styles, application]) => {
       const style = document.createElement("style");
-      style.dataset.jtipsVersion = "2026-06-09";
+      style.dataset.jtipsVersion = "2026-06-09-v3";
       style.textContent = styles;
       document.head.append(style);
       document.querySelector('link[href$="styles.css"]')?.remove();
@@ -62,7 +61,8 @@
     .catch((error) => {
       console.error(error);
       const notice = document.createElement("div");
-      notice.textContent = "Não foi possível carregar a atualização do JTIPS. Atualize a página.";
+      notice.textContent =
+        "Não foi possível carregar a atualização do JTIPS. Atualize a página.";
       notice.style.cssText =
         "position:fixed;inset:20px;z-index:9999;padding:18px;background:#171b18;color:#fff;border:1px solid #c9a84f;font:600 14px Arial,sans-serif";
       document.body.append(notice);
