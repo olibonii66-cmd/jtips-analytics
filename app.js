@@ -28,6 +28,20 @@
     return new Response(stream).text();
   }
 
+  function removeBrokenLogo(image) {
+    if (!(image instanceof HTMLImageElement) || !image.matches("img[data-team-logo]")) {
+      return;
+    }
+    image.closest("[data-logo-shell]")?.classList.remove("has-image");
+    image.remove();
+  }
+
+  document.addEventListener(
+    "error",
+    (event) => removeBrokenLogo(event.target),
+    true,
+  );
+
   Promise.all([readCompressed(STYLE_PARTS), readCompressed(APP_PARTS)])
     .then(([styles, application]) => {
       const style = document.createElement("style");
@@ -36,6 +50,14 @@
       document.head.append(style);
       document.querySelector('link[href$="styles.css"]')?.remove();
       window.eval(application);
+
+      [0, 250, 1000, 3000, 8000].forEach((delay) => {
+        window.setTimeout(() => {
+          document.querySelectorAll("img[data-team-logo]").forEach((image) => {
+            if (image.complete && image.naturalWidth === 0) removeBrokenLogo(image);
+          });
+        }, delay);
+      });
     })
     .catch((error) => {
       console.error(error);
