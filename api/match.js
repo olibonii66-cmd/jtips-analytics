@@ -1,5 +1,16 @@
 const FOOTYSTATS_BASE_URL = "https://api.football-data-api.com";
 
+function normalizeLogoUrl(value) {
+  if (!value) return "";
+
+  const logo = String(value).trim();
+  if (!logo) return "";
+  if (/^https?:\/\//i.test(logo)) return logo.replace(/^http:/i, "https:");
+  if (logo.startsWith("//")) return `https:${logo}`;
+
+  return `https://cdn.footystats.org/img/${logo.replace(/^\/?(?:img\/)?/i, "")}`;
+}
+
 function extractList(payload) {
   if (Array.isArray(payload)) return payload;
   if (Array.isArray(payload?.data)) return payload.data;
@@ -52,14 +63,19 @@ function findTeam(teams, teamId) {
 }
 
 function normalizeTeam(team, fallback) {
-  if (!team) return fallback;
+  if (!team) {
+    return {
+      ...fallback,
+      logo: normalizeLogoUrl(fallback?.logo),
+    };
+  }
 
   return {
     id: team.id,
     name: team.cleanName || team.name || team.full_name || fallback?.name,
     fullName: team.full_name || team.english_name || team.name || fallback?.name,
     shortHand: team.shortHand || team.shorthand || "",
-    logo: team.image || fallback?.logo || "",
+    logo: normalizeLogoUrl(team.image || fallback?.logo),
     country: team.country || fallback?.country || "",
     tablePosition: team.table_position ?? null,
     performanceRank: team.performance_rank ?? null,
