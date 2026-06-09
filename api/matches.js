@@ -5,6 +5,17 @@ function extractList(payload) {
   return [];
 }
 
+function normalizeLogoUrl(value) {
+  if (!value) return "";
+
+  const logo = String(value).trim();
+  if (!logo) return "";
+  if (/^https?:\/\//i.test(logo)) return logo.replace(/^http:/i, "https:");
+  if (logo.startsWith("//")) return `https:${logo}`;
+
+  return `https://cdn.footystats.org/img/${logo.replace(/^\/?(?:img\/)?/i, "")}`;
+}
+
 function brazilDateIso(date = new Date()) {
   const parts = new Intl.DateTimeFormat("en-CA", {
     timeZone: "America/Sao_Paulo",
@@ -38,6 +49,28 @@ function leagueLookup(payload) {
   });
 
   return lookup;
+}
+
+async function optionalJson(url) {
+  try {
+    const response = await fetch(url);
+    if (!response.ok) return null;
+    return await response.json();
+  } catch (error) {
+    return null;
+  }
+}
+
+function teamLookup(payload) {
+  return new Map(
+    extractList(payload).map((team) => [
+      String(team.id),
+      {
+        name: team.cleanName || team.name || team.full_name || "",
+        logo: normalizeLogoUrl(team.image),
+      },
+    ]),
+  );
 }
 
 module.exports = async function handler(req, res) {
@@ -84,10 +117,41 @@ module.exports = async function handler(req, res) {
     }
 
     const leagues = leagueLookup(leaguesPayload);
-    const data = extractList(matchesPayload).map((match) => {
+    const sourceMatches = extractList(matchesPayload);
+    const leagueIds = [
+      ...new Set(
+        sourceMatches
+          .map((match) => match.competition_id)
+          .filter(Boolean)
+          .map(String),
+      ),
+    ];
+    const teamLookups = new Map(
+      await Promise.all(
+        leagueIds.map(async (leagueId) => {
+          const teamsUrl = new URL(
+            "https://api.football-data-api.com/league-teams",
+          );
+          teamsUrl.searchParams.set("key", apiKey);
+          teamsUrl.searchParams.set("league_id", leagueId);
+          return [leagueId, teamLookup(await optionalJson(teamsUrl))];
+        }),
+      ),
+    );
+
+    const data = sourceMatches.map((match) => {
       const league = leagues.get(String(match.competition_id));
+      const teams = teamLookups.get(String(match.competition_id));
+      const homeTeam = teams?.get(String(match.homeID));
+      const awayTeam = teams?.get(String(match.awayID));
       return {
         ...match,
+        home_name: homeTeam?.name || match.home_name,
+        away_name: awayTeam?.name || match.away_name,
+        home_image:
+          homeTeam?.logo || normalizeLogoUrl(match.home_image),
+        away_image:
+          awayTeam?.logo || normalizeLogoUrl(match.away_image),
         competition_name:
           match.competition_name ||
           league?.name ||
