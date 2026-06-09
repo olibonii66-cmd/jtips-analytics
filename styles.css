@@ -1092,9 +1092,13 @@ select:focus {
   font-weight: 900;
 }
 
+.daily-league-card.collapsed .daily-league-matches {
+  display: none;
+}
+
 .daily-match-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 70px;
+  grid-template-columns: minmax(0, 1fr) minmax(120px, 190px);
   gap: 16px;
   align-items: center;
   width: 100%;
@@ -1152,6 +1156,18 @@ select:focus {
   font-weight: 950;
 }
 
+.club-logo.has-image {
+  overflow: hidden;
+  background: #f2f5f3;
+}
+
+.club-logo.has-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  padding: 2px;
+}
+
 .club-logo.dark {
   color: var(--text);
   background: #273039;
@@ -1197,6 +1213,22 @@ select:focus {
   background: #9edfff;
 }
 
+.daily-match-meta {
+  display: grid;
+  justify-items: end;
+  gap: 5px;
+  min-width: 0;
+}
+
+.daily-match-meta small {
+  overflow: hidden;
+  max-width: 100%;
+  color: var(--muted);
+  font-size: 0.68rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .daily-match-row time {
   justify-self: end;
   border: 1px solid var(--line);
@@ -1205,6 +1237,28 @@ select:focus {
   background: #0f1213;
   padding: 6px 10px;
   font-size: 0.78rem;
+}
+
+.daily-api-message {
+  display: grid;
+  gap: 5px;
+  min-height: 150px;
+  place-content: center;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  color: var(--text);
+  background: rgba(20, 24, 25, 0.92);
+  padding: 24px;
+  text-align: center;
+}
+
+.daily-api-message span {
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.daily-api-message.error {
+  border-color: rgba(255, 123, 88, 0.28);
 }
 
 .settings-shell {

@@ -287,118 +287,15 @@
         </section>
 
         <section class="daily-games-view app-view is-hidden" id="jogos-do-dia" data-view-panel="jogos" aria-label="Jogos do dia">
-          <div class="daily-date-strip" aria-label="Calendário de jogos">
-            <button type="button"><span>Sex</span><strong>29.05</strong></button>
-            <button type="button"><span>Sab</span><strong>30.05</strong></button>
-            <button type="button"><span>Dom</span><strong>31.05</strong></button>
-            <button type="button"><span>Seg</span><strong>01.06</strong></button>
-            <button type="button"><span>Ter</span><strong>02.06</strong></button>
-            <button type="button"><span>Qua</span><strong>03.06</strong></button>
-            <button type="button"><span>Qui</span><strong>04.06</strong></button>
-            <button type="button"><span>Sex</span><strong>05.06</strong></button>
-            <button type="button"><span>Sab</span><strong>06.06</strong></button>
-            <button type="button"><span>Dom</span><strong>07.06</strong></button>
-            <button class="active" type="button"><span>Hoje</span><strong>08.06</strong></button>
-            <button type="button"><span>Ter</span><strong>09.06</strong></button>
-            <button type="button"><span>Qua</span><strong>10.06</strong></button>
-          </div>
+          <div class="daily-date-strip" id="dailyDateStrip" aria-label="Calendário de jogos"></div>
 
           <div class="daily-status-tabs" aria-label="Status dos jogos">
-            <button class="active" type="button">Todos</button>
-            <button type="button">Encerrados</button>
-            <button type="button">Próximos</button>
+            <button class="active" type="button" data-daily-status="todos">Todos</button>
+            <button type="button" data-daily-status="encerrados">Encerrados</button>
+            <button type="button" data-daily-status="proximos">Próximos</button>
           </div>
 
-          <div class="daily-league-list">
-            <article class="daily-league-card">
-              <header class="daily-league-header">
-                <div>
-                  <span class="flag-badge">🇺🇸</span>
-                  <strong>Estados Unidos</strong>
-                  <small>MLS Next Pro</small>
-                </div>
-                <button type="button" aria-label="Recolher liga">⌃</button>
-              </header>
-
-              <button class="daily-match-row" type="button" data-analysis-id="daily-us-1">
-                <div class="daily-teams">
-                  <span><b class="club-logo">CLB</b>Columbus Crew 2</span>
-                  <span><b class="club-logo dark">CON</b>Connecticut United</span>
-                </div>
-                <time>16:00</time>
-              </button>
-
-              <button class="daily-match-row" type="button" data-analysis-id="daily-us-2">
-                <div class="daily-teams">
-                  <span><b class="club-logo blue">MIN</b>Minnesota United 2</span>
-                  <span><b class="club-logo navy">SKC</b>Sporting Kansas City II</span>
-                </div>
-                <time>21:00</time>
-              </button>
-            </article>
-
-            <article class="daily-league-card">
-              <header class="daily-league-header">
-                <div>
-                  <span class="flag-badge">🇸🇪</span>
-                  <strong>Suécia</strong>
-                  <small>Ettan Norra</small>
-                </div>
-                <button type="button" aria-label="Recolher liga">⌃</button>
-              </header>
-
-              <button class="daily-match-row" type="button" data-analysis-id="daily-se-1">
-                <div class="daily-teams">
-                  <span><b class="club-logo red">FCS</b>FC Stockholm</span>
-                  <span><b class="club-logo orange">VAS</b>Vasalunds IF</span>
-                </div>
-                <time>14:00</time>
-              </button>
-
-              <button class="daily-match-row" type="button" data-analysis-id="daily-se-2">
-                <div class="daily-teams">
-                  <span><b class="club-logo green">JAR</b>FC Järfälla</span>
-                  <span><b class="club-logo yellow">IFS</b>IFK Stocksund</span>
-                </div>
-                <time>14:30</time>
-              </button>
-
-              <button class="daily-match-row" type="button" data-analysis-id="daily-se-3">
-                <div class="daily-teams">
-                  <span><b class="club-logo slate">ANG</b>Ängelholms FF</span>
-                  <span><b class="club-logo green">BKO</b>BK Olympic</span>
-                </div>
-                <time>14:00</time>
-              </button>
-
-              <button class="daily-match-row" type="button" data-analysis-id="daily-se-4">
-                <div class="daily-teams">
-                  <span><b class="club-logo sky">UTS</b>Utsiktens BK</span>
-                  <span><b class="club-logo red">ROS</b>FC Rosengård</span>
-                </div>
-                <time>14:30</time>
-              </button>
-            </article>
-
-            <article class="daily-league-card">
-              <header class="daily-league-header">
-                <div>
-                  <span class="flag-badge">🌐</span>
-                  <strong>Internacional</strong>
-                  <small>Friendlies</small>
-                </div>
-                <button type="button" aria-label="Recolher liga">⌃</button>
-              </header>
-
-              <button class="daily-match-row" type="button" data-analysis-id="daily-int-1">
-                <div class="daily-teams">
-                  <span><b class="club-logo yellow">UGA</b>Uganda</span>
-                  <span><b class="club-logo blue">GAM</b>Gâmbia</span>
-                </div>
-                <time>15:00</time>
-              </button>
-            </article>
-          </div>
+          <div class="daily-league-list" id="dailyLeagueList" aria-live="polite"></div>
         </section>
 
         <section class="settings-view app-view is-hidden" id="configuracoes" data-view-panel="configuracoes" aria-label="Configurações">

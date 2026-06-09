@@ -479,6 +479,7 @@ const state = {
   dataSource: "mock",
   apiLoading: false,
   apiError: null,
+  dailyStatus: "todos",
   activeTab: "resumo",
   activeSubtabs: {
     resumo: "fixture",
@@ -558,6 +559,9 @@ const refs = {
   apiStatus: document.querySelector(".api-status"),
   apiStatusTitle: document.querySelector(".api-status strong"),
   apiStatusText: document.querySelector(".api-status div span"),
+  dailyDateStrip: document.querySelector("#dailyDateStrip"),
+  dailyLeagueList: document.querySelector("#dailyLeagueList"),
+  dailyStatusButtons: [...document.querySelectorAll("[data-daily-status]")],
   navLinks: [...document.querySelectorAll(".nav-list a[data-view]")],
   appViews: [...document.querySelectorAll(".app-view")],
   analysisTriggers: [...document.querySelectorAll("[data-analysis-id]")],
@@ -855,6 +859,8 @@ function normalizeApiMatch(item, index, selectedDate) {
       "average_goals",
       "total_goals_avg",
       "match_total_goals_avg",
+      "total_xg_prematch",
+      "avg_potential",
       "prediction.avg_goals",
     ]),
     2.4,
@@ -944,6 +950,8 @@ function normalizeApiMatch(item, index, selectedDate) {
       "tip.odd",
       "bet.odd",
       "odds.home",
+      "odds_ft_over25",
+      "odds_ft_1",
     ]),
     suggestedOdd(confidence, 0.12),
     100,
@@ -990,10 +998,18 @@ function normalizeApiMatch(item, index, selectedDate) {
         "competition.name",
         "league.name",
       ]),
-      "Liga",
+      firstValue(item, ["competition_id"])
+        ? `Competição ${firstValue(item, ["competition_id"])}`
+        : "Liga",
     ),
     home,
     away,
+    status: cleanText(firstValue(item, ["status", "match_status", "state"]), "incomplete").toLowerCase(),
+    competitionId: firstValue(item, ["competition_id", "league_id", "season_id"]),
+    homeLogo: cleanText(firstValue(item, ["home_image", "home_logo", "homeTeam.logo"]), ""),
+    awayLogo: cleanText(firstValue(item, ["away_image", "away_logo", "awayTeam.logo"]), ""),
+    homeScore: toNumber(firstValue(item, ["homeGoalCount", "home_score", "scores.home"])),
+    awayScore: toNumber(firstValue(item, ["awayGoalCount", "away_score", "scores.away"])),
     marketType: cleanText(firstValue(item, ["marketType", "market_type", "type"]), normalizeMarketType(market)),
     market,
     odd,
@@ -1855,6 +1871,208 @@ function renderBestOfDay() {
       renderDetail(match);
     });
   });
+}
+
+function dailyDateValue(offset) {
+  const base = new Date(`${today}T12:00:00`);
+  return new Date(base.getTime() + offset * dayMs).toISOString().slice(0, 10);
+}
+
+function dailyDateLabel(dateValue) {
+  const date = new Date(`${dateValue}T12:00:00`);
+  return new Intl.DateTimeFormat("pt-BR", {
+    weekday: "short",
+  })
+    .format(date)
+    .replace(".", "")
+    .slice(0, 3);
+}
+
+function dailyDayMonth(dateValue) {
+  const [year, month, day] = dateValue.split("-");
+  return `${day}.${month}`;
+}
+
+function renderDailyCalendar() {
+  if (!refs.dailyDateStrip) return;
+
+  const selectedDate = refs.dateFilter.value || today;
+  refs.dailyDateStrip.innerHTML = Array.from({ length: 13 }, (_, index) => index - 6)
+    .map((offset) => {
+      const dateValue = dailyDateValue(offset);
+      const isToday = dateValue === today;
+      const isActive = dateValue === selectedDate;
+      return `
+        <button
+          class="${isActive ? "active" : ""}"
+          type="button"
+          data-daily-date="${dateValue}"
+          aria-pressed="${isActive}"
+        >
+          <span>${isToday ? "Hoje" : dailyDateLabel(dateValue)}</span>
+          <strong>${dailyDayMonth(dateValue)}</strong>
+        </button>
+      `;
+    })
+    .join("");
+
+  refs.dailyDateStrip.querySelectorAll("[data-daily-date]").forEach((button) => {
+    button.addEventListener("click", () => {
+      refs.dateFilter.value = button.dataset.dailyDate;
+      void refreshMatchesForDate();
+    });
+  });
+}
+
+function finishedMatch(match) {
+  return ["complete", "completed", "finished", "ft", "encerrado"].includes(match.status);
+}
+
+function filterDailyByStatus(list) {
+  if (state.dailyStatus === "encerrados") {
+    return list.filter(finishedMatch);
+  }
+  if (state.dailyStatus === "proximos") {
+    return list.filter((match) => !finishedMatch(match));
+  }
+  return list;
+}
+
+function safeImageUrl(value) {
+  if (!value) return "";
+
+  try {
+    const url = new URL(value, window.location.origin);
+    return ["http:", "https:"].includes(url.protocol) ? url.href : "";
+  } catch (error) {
+    return "";
+  }
+}
+
+function dailyClubLogo(team, imageUrl) {
+  const safeUrl = safeImageUrl(imageUrl);
+  if (safeUrl) {
+    return `<b class="club-logo has-image"><img src="${escapeHtml(safeUrl)}" alt="" loading="lazy"></b>`;
+  }
+  return `<b class="club-logo">${teamCode(team)}</b>`;
+}
+
+function dailyStatusLabel(match) {
+  if (finishedMatch(match)) {
+    if (match.homeScore !== null && match.awayScore !== null) {
+      return `${match.homeScore} - ${match.awayScore}`;
+    }
+    return "Encerrado";
+  }
+
+  return match.time || "Pré-jogo";
+}
+
+function renderDailyGames() {
+  if (!refs.dailyLeagueList) return;
+
+  refs.dailyStatusButtons.forEach((button) => {
+    const active = button.dataset.dailyStatus === state.dailyStatus;
+    button.classList.toggle("active", active);
+    button.setAttribute("aria-pressed", String(active));
+  });
+
+  if (state.apiLoading) {
+    refs.dailyLeagueList.innerHTML = `
+      <div class="daily-api-message">
+        <strong>Carregando jogos reais</strong>
+        <span>Consultando a FootyStats...</span>
+      </div>
+    `;
+    return;
+  }
+
+  if (state.dataSource !== "api") {
+    refs.dailyLeagueList.innerHTML = `
+      <div class="daily-api-message error">
+        <strong>Não foi possível carregar os jogos</strong>
+        <span>A agenda não exibirá dados fictícios. Use o botão atualizar para tentar novamente.</span>
+      </div>
+    `;
+    return;
+  }
+
+  const selectedDate = refs.dateFilter.value || today;
+  const dailyMatches = filterDailyByStatus(
+    matches.filter((match) => match.date === selectedDate),
+  );
+
+  if (!dailyMatches.length) {
+    refs.dailyLeagueList.innerHTML = `
+      <div class="daily-api-message">
+        <strong>Nenhum jogo encontrado</strong>
+        <span>Não há partidas para esta data e status.</span>
+      </div>
+    `;
+    return;
+  }
+
+  refs.dailyLeagueList.innerHTML = [...groupByLeague([...dailyMatches]).values()]
+    .map(
+      (group, groupIndex) => `
+        <article class="daily-league-card" data-daily-league="${groupIndex}">
+          <header class="daily-league-header">
+            <div>
+              <span class="flag-badge">${escapeHtml(countryBadge(group.country))}</span>
+              <strong>${escapeHtml(group.country)}</strong>
+              <small>${escapeHtml(group.league)}</small>
+            </div>
+            <button type="button" data-collapse-league="${groupIndex}" aria-label="Recolher liga" aria-expanded="true">⌃</button>
+          </header>
+          <div class="daily-league-matches">
+            ${group.matches
+              .map(
+                (match) => `
+                  <button class="daily-match-row" type="button" data-daily-match-id="${escapeHtml(match.id)}">
+                    <div class="daily-teams">
+                      <span>${dailyClubLogo(match.home, match.homeLogo)}${escapeHtml(match.home)}</span>
+                      <span>${dailyClubLogo(match.away, match.awayLogo)}${escapeHtml(match.away)}</span>
+                    </div>
+                    <div class="daily-match-meta">
+                      <time>${escapeHtml(dailyStatusLabel(match))}</time>
+                      <small>${escapeHtml(match.market)} • ${match.confidence}%</small>
+                    </div>
+                  </button>
+                `,
+              )
+              .join("")}
+          </div>
+        </article>
+      `,
+    )
+    .join("");
+
+  refs.dailyLeagueList.querySelectorAll("[data-daily-match-id]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const match = matches.find((item) => String(item.id) === button.dataset.dailyMatchId);
+      if (!match) return;
+
+      state.currentAnalysisMatch = match;
+      state.analysisSourceView = "jogos";
+      state.activeTab = "resumo";
+      showDashboardView("analise");
+      renderDetail(match);
+    });
+  });
+
+  refs.dailyLeagueList.querySelectorAll("[data-collapse-league]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const card = button.closest(".daily-league-card");
+      const collapsed = card.classList.toggle("collapsed");
+      button.textContent = collapsed ? "⌄" : "⌃";
+      button.setAttribute("aria-expanded", String(!collapsed));
+    });
+  });
+}
+
+function renderDailyAgenda() {
+  renderDailyCalendar();
+  renderDailyGames();
 }
 
 function groupByLeague(list) {
@@ -2733,6 +2951,7 @@ function render() {
 
   renderDateChips();
   renderBestOfDay();
+  renderDailyAgenda();
   renderSummary(state.filtered);
   renderFixtures([...state.filtered]);
   renderDetail(matches.find((match) => match.id === state.selectedId));
@@ -2830,6 +3049,13 @@ function bootstrap() {
     trigger.addEventListener("click", () => {
       const sourcePanel = trigger.closest("[data-view-panel]");
       openDailyAnalysis(trigger.dataset.analysisId, sourcePanel?.dataset.viewPanel ?? "jogos");
+    });
+  });
+
+  refs.dailyStatusButtons.forEach((button) => {
+    button.addEventListener("click", () => {
+      state.dailyStatus = button.dataset.dailyStatus;
+      renderDailyGames();
     });
   });
 
