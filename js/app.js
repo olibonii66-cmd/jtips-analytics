@@ -591,8 +591,8 @@ function matchTableRow(match) {
       <td class="table-time"><strong>${formatTime(match.date)}</strong><small>${formatDate(match.date, { day: "2-digit", month: "short" })}</small></td>
       <td><div class="table-league table-league--plain"><span>${escapeHtml(match.league)}</span></div></td>
       <td><div class="table-match">
-        ${tableTeam(match.homeName, match.homeGoals, match.leagueColor, match.homeLogo, match.status === "complete")}
-        ${tableTeam(match.awayName, match.awayGoals, secondaryColor(match.leagueColor), match.awayLogo, match.status === "complete")}
+        ${tableTeam(match.homeName, match.homeGoals, match.leagueColor, match.homeLogo, shouldShowMatchScore(match))}
+        ${tableTeam(match.awayName, match.awayGoals, secondaryColor(match.leagueColor), match.awayLogo, shouldShowMatchScore(match))}
       </div></td>
       <td>${statusPill(match)}</td>
       <td><span class="market-pill">${escapeHtml(market.label)}</span></td>
@@ -1513,8 +1513,14 @@ function statusLabel(match) {
   return "Pré-jogo";
 }
 
+function shouldShowMatchScore(match) {
+  return ["live", "complete"].includes(match.status) &&
+    match.homeGoals !== null &&
+    match.awayGoals !== null;
+}
+
 function scoreText(match) {
-  if (match.status !== "complete" || match.homeGoals === null || match.awayGoals === null) return formatTime(match.date);
+  if (!shouldShowMatchScore(match)) return formatTime(match.date);
   return `${match.homeGoals} – ${match.awayGoals}`;
 }
 
