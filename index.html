@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Dashboard de análises esportivas para apostas de futebol com dados via FootyStats." />
+  <title>FootyEdge Analytics</title>
+  <link rel="preconnect" href="https://cdnjs.cloudflare.com" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" />
+  <link rel="stylesheet" href="/css/styles.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+  <aside class="sidebar" id="sidebar" aria-label="Navegação lateral">
+    <div class="brand">
+      <i class="fa-solid fa-chart-line"></i>
+      <span>FootyEdge</span>
+    </div>
+    <nav class="nav-links">
+      <a href="#dashboard" class="nav-link active"><i class="fa-solid fa-house"></i> Dashboard</a>
+      <a href="#matches" class="nav-link"><i class="fa-regular fa-calendar-days"></i> Jogos</a>
+      <a href="#stats" class="nav-link"><i class="fa-solid fa-ranking-star"></i> Estatísticas</a>
+      <a href="#odds" class="nav-link"><i class="fa-solid fa-scale-balanced"></i> Odds</a>
+      <a href="#h2h" class="nav-link"><i class="fa-solid fa-people-arrows"></i> H2H</a>
+      <a href="#tips" class="nav-link"><i class="fa-solid fa-lightbulb"></i> Tips</a>
+    </nav>
+    <div class="sidebar-note">
+      <strong>Uso responsável</strong>
+      <small>Conteúdo informativo. Aposte apenas se for permitido em sua região e com responsabilidade.</small>
+    </div>
+  </aside>
+
+  <div class="app-shell">
+    <header class="topbar">
+      <button class="icon-btn mobile-only" id="menuToggle" aria-label="Abrir menu"><i class="fa-solid fa-bars"></i></button>
+      <div>
+        <p class="eyebrow">Análises esportivas</p>
+        <h1>Dashboard de futebol para apostas</h1>
+      </div>
+      <div class="header-actions">
+        <button class="theme-toggle" id="themeToggle" aria-label="Alternar tema">
+          <i class="fa-solid fa-moon"></i><span>Dark</span>
+        </button>
+      </div>
+    </header>
+
+    <main class="content">
+      <section class="hero" id="dashboard">
+        <div>
+          <p class="eyebrow">Jogos do dia</p>
+          <h2>Leitura rápida de oportunidades</h2>
+          <p>Dados reais via FootyStats, cards de value bet, mercado sugerido e indicadores pré-jogo.</p>
+        </div>
+        <div class="hero-controls">
+          <label for="matchDate">Data</label>
+          <input type="date" id="matchDate" />
+          <button class="primary-btn" id="refreshBtn"><i class="fa-solid fa-rotate"></i> Atualizar</button>
+        </div>
+      </section>
+
+      <section class="kpi-grid" aria-label="Resumo de indicadores">
+        <article class="kpi-card"><span>Jogos carregados</span><strong id="kpiMatches">--</strong><small>agenda filtrada</small></article>
+        <article class="kpi-card"><span>Over 2.5 médio</span><strong id="kpiOver25">--</strong><small>potencial pré-jogo</small></article>
+        <article class="kpi-card"><span>BTTS médio</span><strong id="kpiBtts">--</strong><small>ambas marcam</small></article>
+        <article class="kpi-card"><span>Value bets</span><strong id="kpiValue">--</strong><small>estimativa interna</small></article>
+      </section>
+
+      <section class="grid-2">
+        <article class="panel">
+          <div class="panel-header">
+            <div><p class="eyebrow">Destaques</p><h3>Partidas em evidência</h3></div>
+            <span class="status-pill" id="apiStatus">API</span>
+          </div>
+          <div id="featuredMatches" class="match-list skeleton-area"></div>
+        </article>
+        <article class="panel">
+          <div class="panel-header">
+            <div><p class="eyebrow">Tendência</p><h3>Distribuição de mercados</h3></div>
+          </div>
+          <canvas id="marketsChart" height="230"></canvas>
+        </article>
+      </section>
+
+      <section class="panel" id="matches">
+        <div class="panel-header wrap">
+          <div><p class="eyebrow">Calendário</p><h3>Tabela de jogos e resultados</h3></div>
+          <div class="filters">
+            <input type="search" id="leagueFilter" placeholder="Filtrar por campeonato" />
+            <select id="statusFilter">
+              <option value="all">Todos</option>
+              <option value="complete">Finalizados</option>
+              <option value="incomplete">Agendados/ao vivo</option>
+            </select>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Horário</th><th>Campeonato</th><th>Mandante</th><th>Placar</th><th>Visitante</th><th>Status</th><th>Mercados</th></tr></thead>
+            <tbody id="matchesTable"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="grid-2" id="stats">
+        <article class="panel">
+          <div class="panel-header"><div><p class="eyebrow">Times</p><h3>Estatísticas dos times</h3></div></div>
+          <div id="teamStats" class="card-grid skeleton-area"></div>
+        </article>
+        <article class="panel">
+          <div class="panel-header"><div><p class="eyebrow">Jogadores</p><h3>Artilheiros e assistências</h3></div></div>
+          <div id="playerStats" class="leaderboard skeleton-area"></div>
+        </article>
+      </section>
+
+      <section class="panel" id="odds">
+        <div class="panel-header"><div><p class="eyebrow">Odds</p><h3>Probabilidades e value bet</h3></div></div>
+        <div id="oddsGrid" class="odds-grid skeleton-area"></div>
+      </section>
+
+      <section class="grid-2" id="h2h">
+        <article class="panel">
+          <div class="panel-header"><div><p class="eyebrow">Confrontos</p><h3>Histórico H2H</h3></div></div>
+          <form id="h2hForm" class="h2h-form">
+            <input type="number" id="matchIdInput" placeholder="ID da partida para buscar H2H" min="1" />
+            <button class="primary-btn" type="submit"><i class="fa-solid fa-search"></i> Buscar</button>
+          </form>
+          <p class="muted">No FootyStats, o H2H vem no endpoint de detalhes da partida. Nesta versão inicial usamos o ID da partida.</p>
+          <div id="h2hResults" class="h2h-results"></div>
+        </article>
+        <article class="panel" id="tips">
+          <div class="panel-header"><div><p class="eyebrow">Tips</p><h3>Dicas de apostas</h3></div></div>
+          <div id="tipsList" class="tips-list skeleton-area"></div>
+        </article>
+      </section>
+    </main>
+  </div>
+
+  <script type="module" src="/js/app.js"></script>
+</body>
+</html>
