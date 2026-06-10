@@ -3134,3 +3134,65 @@ svg {
     grid-template-columns: 1fr;
   }
 }
+
+/* Ver números com abas lado a lado */
+.numbers-modal--tabs {
+  gap: 14px;
+}
+
+.numbers-tabs {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 6px;
+  border: 1px solid var(--border-soft);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.numbers-tab {
+  flex: 0 0 auto;
+  min-height: 38px;
+  padding: 0 14px;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  color: var(--text-3);
+  background: transparent;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 900;
+  cursor: pointer;
+  transition: 0.2s ease;
+}
+
+.numbers-tab:hover,
+.numbers-tab.is-active {
+  color: var(--text);
+  border-color: rgba(0, 220, 105, 0.25);
+  background: rgba(0, 220, 105, 0.12);
+}
+
+.numbers-panels {
+  min-height: 310px;
+}
+
+.numbers-panel {
+  display: none;
+}
+
+.numbers-panel.is-active {
+  display: block;
+}
+
+@media (max-width: 760px) {
+  .numbers-tabs {
+    gap: 6px;
+  }
+
+  .numbers-tab {
+    min-height: 34px;
+    padding: 0 11px;
+    font-size: 11px;
+  }
+}

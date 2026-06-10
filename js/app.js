@@ -1376,6 +1376,10 @@ function setupTheme() {
 
 function setupModal() {
   els.matchModal.querySelectorAll("[data-close-modal]").forEach((item) => item.addEventListener("click", closeModal));
+  els.matchModal.addEventListener("click", (event) => {
+    const tabButton = event.target.closest("[data-numbers-tab]");
+    if (tabButton) switchNumbersTab(tabButton.dataset.numbersTab);
+  });
   document.addEventListener("keydown", (event) => {
     if (event.key === "Escape") closeModal();
   });
@@ -1571,7 +1575,7 @@ function playersList(title, players) {
 }
 
 
-/* Modal Ver números - versão corrigida com estatísticas reais pré-jogo */
+/* Modal Ver números - versão com abas por estatística */
 function matchModalTemplate(match) {
   const market = bestMarketForMatch(match);
   const homeStats = teamNumbersForMatch(match, "home");
@@ -1580,7 +1584,7 @@ function matchModalTemplate(match) {
   const awayPlayers = matchPlayers(match, "away");
 
   return `
-    <div class="numbers-modal numbers-modal--real">
+    <div class="numbers-modal numbers-modal--real numbers-modal--tabs">
       <div class="numbers-hero numbers-hero--real">
         <div class="numbers-team">
           ${teamCrest(match.homeName, match.leagueColor, match.homeLogo)}
@@ -1599,73 +1603,116 @@ function matchModalTemplate(match) {
         </div>
       </div>
 
-      ${numbersSection("Resumo", "fa-solid fa-chart-simple", `
-        <div class="numbers-grid numbers-grid--summary">
-          ${modalMarket("Campeonato", match.league || "—")}
-          ${modalMarket("Status", statusLabel(match))}
-          ${modalMarket("Mercado", market.label)}
-          ${modalMarket("Probabilidade", formatProbability(market.probability))}
-        </div>
-        <div class="numbers-note"><small>Insight da aposta</small><strong>${escapeHtml(modalAnalysis(match, market))}</strong></div>
-      `)}
+      ${numbersTabsNav()}
 
-      ${numbersSection("Gols", "fa-solid fa-futbol", `
-        <div class="numbers-comparison">
-          ${teamStatCard(match.homeName, "Gols por jogo", homeStats.goalsPerMatch)}
-          ${teamStatCard(match.awayName, "Gols por jogo", awayStats.goalsPerMatch)}
-          ${teamStatCard(match.homeName, "Sofridos por jogo", homeStats.concededPerMatch)}
-          ${teamStatCard(match.awayName, "Sofridos por jogo", awayStats.concededPerMatch)}
-        </div>
-        ${probabilityLine("Mais de 1.5 gols", match.probabilities.over15)}
-        ${probabilityLine("Mais de 2.5 gols", match.probabilities.over25)}
-        ${probabilityLine("Mais de 3.5 gols", match.probabilities.over35)}
-        ${probabilityLine("Ambas marcam", match.probabilities.btts)}
-      `)}
+      <div class="numbers-panels">
+        ${numbersTabPanel("resumo", "Resumo", "fa-solid fa-chart-simple", `
+          <div class="numbers-grid numbers-grid--summary">
+            ${modalMarket("Campeonato", match.league || "—")}
+            ${modalMarket("Status", statusLabel(match))}
+            ${modalMarket("Mercado", market.label)}
+            ${modalMarket("Probabilidade", formatProbability(market.probability))}
+          </div>
+          <div class="numbers-note"><small>Insight da aposta</small><strong>${escapeHtml(modalAnalysis(match, market))}</strong></div>
+        `, true)}
 
-      ${numbersSection("Escanteios", "fa-solid fa-flag", `
-        <div class="numbers-comparison">
-          ${teamStatCard(match.homeName, "Escanteios por jogo", homeStats.corners)}
-          ${teamStatCard(match.awayName, "Escanteios por jogo", awayStats.corners)}
-        </div>
-        ${probabilityLine("Mais de 8.5 escanteios", match.probabilities.cornersOver85)}
-        ${probabilityLine("Mais de 9.5 escanteios", match.probabilities.cornersOver95)}
-        ${probabilityLine("Mais de 10.5 escanteios", match.probabilities.cornersOver105)}
-        ${numbersStatRow("Escanteios registrados", match.stats.cornersHome, match.stats.cornersAway)}
-        ${officialDataNote(match.stats.cornersHome, match.stats.cornersAway, homeStats.corners, awayStats.corners, "A API não retornou escanteios oficiais para esta partida ou para estes times.")}
-      `)}
+        ${numbersTabPanel("gols", "Gols", "fa-solid fa-futbol", `
+          <div class="numbers-comparison">
+            ${teamStatCard(match.homeName, "Gols por jogo", homeStats.goalsPerMatch)}
+            ${teamStatCard(match.awayName, "Gols por jogo", awayStats.goalsPerMatch)}
+            ${teamStatCard(match.homeName, "Sofridos por jogo", homeStats.concededPerMatch)}
+            ${teamStatCard(match.awayName, "Sofridos por jogo", awayStats.concededPerMatch)}
+          </div>
+          ${probabilityLine("Mais de 1.5 gols", match.probabilities.over15)}
+          ${probabilityLine("Mais de 2.5 gols", match.probabilities.over25)}
+          ${probabilityLine("Mais de 3.5 gols", match.probabilities.over35)}
+          ${probabilityLine("Ambas marcam", match.probabilities.btts)}
+        `)}
 
-      ${numbersSection("Cartões", "fa-solid fa-square", `
-        <div class="numbers-comparison">
-          ${teamStatCard(match.homeName, "Cartões por jogo", homeStats.cards)}
-          ${teamStatCard(match.awayName, "Cartões por jogo", awayStats.cards)}
-        </div>
-        ${probabilityLine("Mais de 3.5 cartões", match.probabilities.cardsOver35)}
-        ${probabilityLine("Mais de 4.5 cartões", match.probabilities.cardsOver45)}
-        ${probabilityLine("Mais de 5.5 cartões", match.probabilities.cardsOver55)}
-        ${numbersStatRow("Cartões registrados", match.stats.cardsHome, match.stats.cardsAway)}
-        ${officialDataNote(match.stats.cardsHome, match.stats.cardsAway, homeStats.cards, awayStats.cards, "A API não retornou cartões oficiais para esta partida ou para estes times.")}
-      `)}
+        ${numbersTabPanel("escanteios", "Escanteios", "fa-solid fa-flag", `
+          <div class="numbers-comparison">
+            ${teamStatCard(match.homeName, "Escanteios por jogo", homeStats.corners)}
+            ${teamStatCard(match.awayName, "Escanteios por jogo", awayStats.corners)}
+          </div>
+          ${probabilityLine("Mais de 8.5 escanteios", match.probabilities.cornersOver85)}
+          ${probabilityLine("Mais de 9.5 escanteios", match.probabilities.cornersOver95)}
+          ${probabilityLine("Mais de 10.5 escanteios", match.probabilities.cornersOver105)}
+          ${numbersStatRow("Escanteios registrados", match.stats.cornersHome, match.stats.cornersAway)}
+          ${officialDataNote(match.stats.cornersHome, match.stats.cornersAway, homeStats.corners, awayStats.corners, "A API não retornou escanteios oficiais para esta partida ou para estes times.")}
+        `)}
 
-      ${numbersSection("Finalizações", "fa-solid fa-bullseye", `
-        <div class="numbers-comparison">
-          ${teamStatCard(match.homeName, "Finalizações por jogo", homeStats.shots)}
-          ${teamStatCard(match.awayName, "Finalizações por jogo", awayStats.shots)}
-          ${teamStatCard(match.homeName, "Posse média", homeStats.possession, "%")}
-          ${teamStatCard(match.awayName, "Posse média", awayStats.possession, "%")}
-        </div>
-        ${numbersStatRow("Finalizações registradas", match.stats.shotsHome, match.stats.shotsAway)}
-        ${numbersStatRow("Posse registrada", match.stats.possessionHome, match.stats.possessionAway, "%")}
-        ${officialDataNote(match.stats.shotsHome, match.stats.shotsAway, homeStats.shots, awayStats.shots, "A API não retornou finalizações oficiais para esta partida ou para estes times.")}
-      `)}
+        ${numbersTabPanel("cartoes", "Cartões", "fa-solid fa-square", `
+          <div class="numbers-comparison">
+            ${teamStatCard(match.homeName, "Cartões por jogo", homeStats.cards)}
+            ${teamStatCard(match.awayName, "Cartões por jogo", awayStats.cards)}
+          </div>
+          ${probabilityLine("Mais de 3.5 cartões", match.probabilities.cardsOver35)}
+          ${probabilityLine("Mais de 4.5 cartões", match.probabilities.cardsOver45)}
+          ${probabilityLine("Mais de 5.5 cartões", match.probabilities.cardsOver55)}
+          ${numbersStatRow("Cartões registrados", match.stats.cardsHome, match.stats.cardsAway)}
+          ${officialDataNote(match.stats.cardsHome, match.stats.cardsAway, homeStats.cards, awayStats.cards, "A API não retornou cartões oficiais para esta partida ou para estes times.")}
+        `)}
 
-      ${numbersSection("Jogadores", "fa-solid fa-user-group", `
-        <div class="numbers-players">
-          <div>${playersList("Mandante", homePlayers)}</div>
-          <div>${playersList("Visitante", awayPlayers)}</div>
-        </div>
-      `)}
+        ${numbersTabPanel("finalizacoes", "Finalizações", "fa-solid fa-bullseye", `
+          <div class="numbers-comparison">
+            ${teamStatCard(match.homeName, "Finalizações por jogo", homeStats.shots)}
+            ${teamStatCard(match.awayName, "Finalizações por jogo", awayStats.shots)}
+            ${teamStatCard(match.homeName, "Posse média", homeStats.possession, "%")}
+            ${teamStatCard(match.awayName, "Posse média", awayStats.possession, "%")}
+          </div>
+          ${numbersStatRow("Finalizações registradas", match.stats.shotsHome, match.stats.shotsAway)}
+          ${numbersStatRow("Posse registrada", match.stats.possessionHome, match.stats.possessionAway, "%")}
+          ${officialDataNote(match.stats.shotsHome, match.stats.shotsAway, homeStats.shots, awayStats.shots, "A API não retornou finalizações oficiais para esta partida ou para estes times.")}
+        `)}
+
+        ${numbersTabPanel("jogadores", "Jogadores", "fa-solid fa-user-group", `
+          <div class="numbers-players">
+            <div>${playersList("Mandante", homePlayers)}</div>
+            <div>${playersList("Visitante", awayPlayers)}</div>
+          </div>
+        `)}
+      </div>
     </div>
   `;
+}
+
+function numbersTabsNav() {
+  const tabs = [
+    ["resumo", "Resumo"],
+    ["gols", "Gols"],
+    ["escanteios", "Escanteios"],
+    ["cartoes", "Cartões"],
+    ["finalizacoes", "Finalizações"],
+    ["jogadores", "Jogadores"]
+  ];
+  return `
+    <div class="numbers-tabs" role="tablist" aria-label="Estatísticas da partida">
+      ${tabs.map(([id, label], index) => `
+        <button type="button" class="numbers-tab ${index === 0 ? "is-active" : ""}" data-numbers-tab="${id}" role="tab" aria-selected="${index === 0 ? "true" : "false"}">${escapeHtml(label)}</button>
+      `).join("")}
+    </div>
+  `;
+}
+
+function numbersTabPanel(id, title, icon, content, active = false) {
+  return `
+    <section class="numbers-section numbers-panel ${active ? "is-active" : ""}" data-numbers-panel="${id}" role="tabpanel">
+      <div class="numbers-section__head"><i class="${icon}"></i><strong>${escapeHtml(title)}</strong></div>
+      ${content}
+    </section>
+  `;
+}
+
+function switchNumbersTab(tabId) {
+  if (!tabId) return;
+  els.matchModal.querySelectorAll("[data-numbers-tab]").forEach((button) => {
+    const isActive = button.dataset.numbersTab === tabId;
+    button.classList.toggle("is-active", isActive);
+    button.setAttribute("aria-selected", isActive ? "true" : "false");
+  });
+  els.matchModal.querySelectorAll("[data-numbers-panel]").forEach((panel) => {
+    panel.classList.toggle("is-active", panel.dataset.numbersPanel === tabId);
+  });
 }
 
 function teamNumbersForMatch(match, side) {
