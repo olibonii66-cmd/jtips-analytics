@@ -282,17 +282,17 @@ svg {
 .team-crest {
   width: 38px;
   height: 38px;
-  overflow: hidden;
   border-radius: 12px;
+  overflow: hidden;
   font-size: 11px;
 }
-
 .team-crest img {
   width: 100%;
   height: 100%;
-  object-fit: contain;
-  padding: 3px;
+  border-radius: inherit;
+  object-fit: cover;
 }
+
 
 .sidebar__footer {
   padding: 14px;
@@ -1260,13 +1260,6 @@ svg {
 .status-pill.scheduled {
   color: var(--info);
   background: var(--info-soft);
-}
-
-.status-pill.cancelled,
-.status-pill.postponed,
-.status-pill.suspended {
-  color: var(--warning);
-  background: var(--warning-soft);
 }
 
 .market-pill {
