@@ -3196,3 +3196,91 @@ svg {
     font-size: 11px;
   }
 }
+
+
+/* Aba Gols - tabelas de títulos FootyStats */
+.numbers-goals-note {
+  margin-bottom: 12px;
+  padding: 12px 14px;
+  border: 1px solid rgba(0, 220, 105, 0.18);
+  border-radius: 12px;
+  color: var(--text-2);
+  background: rgba(0, 220, 105, 0.06);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.numbers-goals-table + .numbers-goals-table {
+  margin-top: 14px;
+}
+
+.numbers-goals-table__title {
+  padding: 9px 10px;
+  border-radius: 10px 10px 0 0;
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.05);
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.numbers-goals-scroll {
+  overflow-x: auto;
+}
+
+.numbers-goals-table table {
+  width: 100%;
+  min-width: 560px;
+  border-collapse: separate;
+  border-spacing: 3px;
+  font-size: 11px;
+}
+
+.numbers-goals-table th,
+.numbers-goals-table td {
+  padding: 8px 9px;
+  text-align: center;
+}
+
+.numbers-goals-table th:first-child,
+.numbers-goals-table td:first-child {
+  width: 36%;
+  text-align: left;
+}
+
+.numbers-goals-table th {
+  color: #06100c;
+  background: #e9eef2;
+  font-weight: 800;
+}
+
+.numbers-goals-table td:first-child {
+  color: #101820;
+  background: #eef2f4;
+  font-weight: 700;
+}
+
+.numbers-percent-cell {
+  color: #06100c;
+  background: #eef2f4;
+  font-weight: 900;
+}
+
+.numbers-percent-cell.is-good {
+  color: #067a21;
+  background: #b7ed9b;
+}
+
+.numbers-percent-cell.is-mid {
+  color: #766800;
+  background: #f2f4bd;
+}
+
+.numbers-percent-cell.is-low {
+  color: #d2160d;
+  background: #fbe0dc;
+}
+
+.numbers-percent-cell.is-empty {
+  color: #6f7785;
+  background: #eef2f4;
+}

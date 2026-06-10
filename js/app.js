@@ -1575,6 +1575,148 @@ function playersList(title, players) {
 }
 
 
+
+function percentForDisplay(value) {
+  if (value === null || value === undefined || !Number.isFinite(Number(value))) return null;
+  const number = Number(value);
+  return number <= 1 ? Math.round(number * 100) : Math.round(number);
+}
+
+function goalsProbabilityAverage(match, key) {
+  const map = {
+    over05: match.probabilities?.over05,
+    over15: match.probabilities?.over15,
+    over25: match.probabilities?.over25,
+    over35: match.probabilities?.over35,
+    over45: match.probabilities?.over45,
+    btts: match.probabilities?.btts,
+    bttsWin: match.probabilities?.bttsWin,
+    bttsDraw: match.probabilities?.bttsDraw,
+    bttsOver25: match.probabilities?.bttsOver25,
+    bttsNoOver25: match.probabilities?.bttsNoOver25,
+    bttsFirstHalf: match.probabilities?.bttsFirstHalf,
+    over05FH: match.probabilities?.over05FH,
+    over15FH: match.probabilities?.over15FH,
+    over25FH: match.probabilities?.over25FH,
+    bttsSecondHalf: match.probabilities?.bttsSecondHalf,
+    bttsBothHalves: match.probabilities?.bttsBothHalves,
+    over05SH: match.probabilities?.over05SH,
+    over15SH: match.probabilities?.over15SH,
+    over25SH: match.probabilities?.over25SH,
+    under05: match.probabilities?.under05,
+    under15: match.probabilities?.under15,
+    under25: match.probabilities?.under25,
+    under35: match.probabilities?.under35,
+    under45: match.probabilities?.under45,
+    under05FH: match.probabilities?.under05FH,
+    under15FH: match.probabilities?.under15FH,
+    under25FH: match.probabilities?.under25FH,
+    under05SH: match.probabilities?.under05SH,
+    under15SH: match.probabilities?.under15SH,
+    under25SH: match.probabilities?.under25SH
+  };
+  if (map[key] !== undefined && map[key] !== null && Number.isFinite(Number(map[key]))) return map[key];
+  if (key === "under15" && Number.isFinite(Number(match.probabilities?.over15))) return 1 - Number(match.probabilities.over15);
+  if (key === "under25" && Number.isFinite(Number(match.probabilities?.over25))) return 1 - Number(match.probabilities.over25);
+  if (key === "under35" && Number.isFinite(Number(match.probabilities?.over35))) return 1 - Number(match.probabilities.over35);
+  return null;
+}
+
+function goalsPercentCell(value) {
+  const percent = percentForDisplay(value);
+  const className = percent === null ? "is-empty" : percent >= 70 ? "is-good" : percent >= 40 ? "is-mid" : "is-low";
+  return `<td class="numbers-percent-cell ${className}">${percent === null ? "—" : `${percent}%`}</td>`;
+}
+
+function goalsNumbersTable(title, rows, match) {
+  return `
+    <div class="numbers-goals-table">
+      <div class="numbers-goals-table__title">${escapeHtml(title)}</div>
+      <div class="numbers-goals-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th>${escapeHtml(title)}</th>
+              <th>${escapeHtml(match.homeName)}</th>
+              <th>${escapeHtml(match.awayName)}</th>
+              <th>Média</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${rows.map((row) => `
+              <tr data-stat-key="${escapeHtml(row.key)}">
+                <td>${escapeHtml(row.label)}</td>
+                ${goalsPercentCell(row.home)}
+                ${goalsPercentCell(row.away)}
+                ${goalsPercentCell(goalsProbabilityAverage(match, row.key))}
+              </tr>
+            `).join("")}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  `;
+}
+
+function renderGoalsNumbersTab(match) {
+  const empty = null;
+  const matchRows = [
+    { key: "over05", label: "Mais de 0,5", home: empty, away: empty },
+    { key: "over15", label: "Mais de 1,5", home: empty, away: empty },
+    { key: "over25", label: "Mais de 2,5", home: empty, away: empty },
+    { key: "over35", label: "Mais de 3,5", home: empty, away: empty },
+    { key: "over45", label: "Mais de 4,5", home: empty, away: empty },
+    { key: "btts", label: "BTTS", home: empty, away: empty },
+    { key: "bttsWin", label: "Ambas as equipes marcam e ganhem.", home: empty, away: empty },
+    { key: "bttsDraw", label: "Ambas as equipes marcam e empate", home: empty, away: empty },
+    { key: "bttsOver25", label: "Ambas as equipes marcam e mais de 2,5 gols", home: empty, away: empty },
+    { key: "bttsNoOver25", label: "Ambas as equipes marcam Não e Mais de 2,5", home: empty, away: empty }
+  ];
+
+  const firstHalfRows = [
+    { key: "bttsFirstHalf", label: "Ambas as equipes marcam no primeiro tempo.", home: empty, away: empty },
+    { key: "over05FH", label: "Mais de 0,5 FH", home: empty, away: empty },
+    { key: "over15FH", label: "Mais de 1,5 FH", home: empty, away: empty },
+    { key: "over25FH", label: "Mais de 2,5 FH", home: empty, away: empty }
+  ];
+
+  const secondHalfRows = [
+    { key: "bttsSecondHalf", label: "Ambas as equipes marcam no segundo tempo.", home: empty, away: empty },
+    { key: "bttsBothHalves", label: "Ambas as equipes marcam nos dois tempos.", home: empty, away: empty },
+    { key: "over05SH", label: "Mais de 0,5 2H", home: empty, away: empty },
+    { key: "over15SH", label: "Mais de 1,5 2H", home: empty, away: empty },
+    { key: "over25SH", label: "Mais de 2,5 2H", home: empty, away: empty }
+  ];
+
+  const underRows = [
+    { key: "under05", label: "Menos de 0,5", home: empty, away: empty },
+    { key: "under15", label: "Menos de 1,5", home: empty, away: empty },
+    { key: "under25", label: "Menos de 2,5", home: empty, away: empty },
+    { key: "under35", label: "Menos de 3,5", home: empty, away: empty },
+    { key: "under45", label: "Menos de 4,5", home: empty, away: empty }
+  ];
+
+  const underHalvesRows = [
+    { key: "under05FH", label: "Menos de 0,5 FH", home: empty, away: empty },
+    { key: "under15FH", label: "Menos de 1,5 FH", home: empty, away: empty },
+    { key: "under25FH", label: "Menos de 2,5 FH", home: empty, away: empty },
+    { key: "under05SH", label: "Menos de 0,5 2H", home: empty, away: empty },
+    { key: "under15SH", label: "Menos de 1,5 2H", home: empty, away: empty },
+    { key: "under25SH", label: "Menos de 2,5 2H", home: empty, away: empty }
+  ];
+
+  return `
+    <div class="numbers-goals-note">
+      Títulos da aba Gols configurados conforme o modelo enviado. As células ficam em branco quando ainda não houver endpoint oficial mapeado para aquele campo.
+    </div>
+    ${goalsNumbersTable("Gols da partida", matchRows, match)}
+    ${goalsNumbersTable("Gols do primeiro tempo", firstHalfRows, match)}
+    ${goalsNumbersTable("Gols do segundo tempo", secondHalfRows, match)}
+    ${goalsNumbersTable("Menos de X gols", underRows, match)}
+    ${goalsNumbersTable("Primeiro/Segundo Tempo", underHalvesRows, match)}
+  `;
+}
+
 /* Modal Ver números - versão com abas por estatística */
 function matchModalTemplate(match) {
   const market = bestMarketForMatch(match);
@@ -1616,18 +1758,7 @@ function matchModalTemplate(match) {
           <div class="numbers-note"><small>Insight da aposta</small><strong>${escapeHtml(modalAnalysis(match, market))}</strong></div>
         `, true)}
 
-        ${numbersTabPanel("gols", "Gols", "fa-solid fa-futbol", `
-          <div class="numbers-comparison">
-            ${teamStatCard(match.homeName, "Gols por jogo", homeStats.goalsPerMatch)}
-            ${teamStatCard(match.awayName, "Gols por jogo", awayStats.goalsPerMatch)}
-            ${teamStatCard(match.homeName, "Sofridos por jogo", homeStats.concededPerMatch)}
-            ${teamStatCard(match.awayName, "Sofridos por jogo", awayStats.concededPerMatch)}
-          </div>
-          ${probabilityLine("Mais de 1.5 gols", match.probabilities.over15)}
-          ${probabilityLine("Mais de 2.5 gols", match.probabilities.over25)}
-          ${probabilityLine("Mais de 3.5 gols", match.probabilities.over35)}
-          ${probabilityLine("Ambas marcam", match.probabilities.btts)}
-        `)}
+        ${numbersTabPanel("gols", "Gols", "fa-solid fa-futbol", renderGoalsNumbersTab(match))}
 
         ${numbersTabPanel("escanteios", "Escanteios", "fa-solid fa-flag", `
           <div class="numbers-comparison">
