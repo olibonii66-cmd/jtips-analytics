@@ -403,7 +403,7 @@ function normalizeTeamIdentity(raw, league) {
     name,
     fullName: raw.full_name || raw.english_name || name,
     shortHand: raw.shortHand || raw.short_name || initials(name),
-    image: sanitizeImageUrl(raw.image || raw.logo || raw.team_logo || raw.image_url),
+    image: sanitizeImageUrl(raw.image || raw.logo || raw.team_logo || raw.team_badge || raw.badge || raw.crest || raw.image_url || raw.logo_url),
     leagueKey: league.key,
     color: colorFromString(name)
   };
@@ -497,33 +497,45 @@ function populateLeagueFilters() {
 
 function renderDashboard() {
   const liveCount = state.matches.filter((match) => match.status === "live").length;
-  const complete = state.matches.filter((match) => match.status === "complete");
-  const goals = complete.reduce((sum, match) => sum + (match.homeGoals || 0) + (match.awayGoals || 0), 0);
-  const avgGoals = complete.length ? round(goals / complete.length, 2) : 0;
-  const highValue = state.valueBets.filter((bet) => bet.value >= 7).length;
-  const averageConfidence = state.tips.length
-    ? round(state.tips.reduce((sum, tip) => sum + tip.confidence, 0) / state.tips.length, 1)
-    : 0;
 
-  els.dashboardMetrics.innerHTML = [
-    metricCard("fa-regular fa-futbol", "Jogos na data", state.matches.length, "partidas", "#59a8ff", `${liveCount} ao vivo`),
-    metricCard("fa-solid fa-chart-line", "Média de gols", avgGoals || "—", "por jogo", "#00c853", `${complete.length} encerrados`),
-    metricCard("fa-solid fa-bullseye", "Oportunidades", highValue, "alto valor", "#ffb547", "value ≥ 7%"),
-    metricCard("fa-solid fa-star", "Confiança média", averageConfidence, "de 5", "#9d8cff", `${state.tips.length} análises`)
-  ].join("");
+  if (els.dashboardMetrics) {
+    els.dashboardMetrics.innerHTML = "";
+    els.dashboardMetrics.classList.add("hidden");
+  }
 
-  const featured = [...state.matches]
-    .sort((a, b) => statusWeight(a.status) - statusWeight(b.status) || a.timestamp - b.timestamp)
-    .slice(0, 3);
+  const featured = getFeaturedMatches(3);
 
   els.featuredMatches.innerHTML = featured.length
     ? featured.map(featuredMatchTemplate).join("")
-    : emptyInline("Nenhum jogo em destaque nesta data.");
+    : emptyInline("Nenhum jogo com leitura acima de 70% nesta data.");
 
-  const tip = state.tips[0];
-  els.featuredTip.innerHTML = tip ? featuredTipTemplate(tip) : emptyInline("As tips serão publicadas assim que houver partidas.");
+  const tip = getFeaturedTip();
+  els.featuredTip.innerHTML = tip ? featuredTipTemplate(tip) : emptyInline("Nenhuma tip acima de 70% disponível agora.");
   els.liveNavBadge.textContent = String(liveCount);
   els.liveNavBadge.classList.toggle("hidden", liveCount === 0);
+}
+
+function getFeaturedMatches(limit = 3) {
+  return state.matches
+    .map((match) => ({ match, market: bestMarketForMatch(match) }))
+    .filter(({ market }) => Number.isFinite(market.probability) && market.probability >= 0.7)
+    .sort((a, b) => {
+      const probabilityDiff = (b.market.probability || 0) - (a.market.probability || 0);
+      if (probabilityDiff) return probabilityDiff;
+      return (b.market.value || 0) - (a.market.value || 0);
+    })
+    .slice(0, limit)
+    .map(({ match }) => match);
+}
+
+function getFeaturedTip() {
+  return state.tips
+    .filter((tip) => Number.isFinite(tip.probability) && tip.probability >= 0.7)
+    .sort((a, b) => {
+      const probabilityDiff = (b.probability || 0) - (a.probability || 0);
+      if (probabilityDiff) return probabilityDiff;
+      return (b.value || 0) - (a.value || 0);
+    })[0] || null;
 }
 
 function metricCard(icon, label, value, suffix, color, trend) {
@@ -562,9 +574,9 @@ function featuredMatchTemplate(match) {
 function featuredTipTemplate(tip) {
   return `
     <div class="tip-match">
-      ${tipTeam(tip.homeName, tip.homeColor)}
+      ${tipTeam(tip.homeName, tip.homeColor, tip.homeLogo)}
       <span class="tip-versus">VS</span>
-      ${tipTeam(tip.awayName, tip.awayColor)}
+      ${tipTeam(tip.awayName, tip.awayColor, tip.awayLogo)}
     </div>
     <div class="tip-market-box">
       <div class="tip-market-row">
@@ -834,8 +846,11 @@ function buildTips(matches) {
       awayName: bet.match.awayName,
       homeColor: bet.match.leagueColor,
       awayColor: secondaryColor(bet.match.leagueColor),
+      homeLogo: bet.match.homeLogo,
+      awayLogo: bet.match.awayLogo,
       market: bet.market,
       odd: bet.odd,
+      probability: bet.probability,
       confidence,
       value: bet.value,
       isLive,
@@ -873,9 +888,9 @@ function tipCard(tip) {
       </div>
       <div class="tip-card__body">
         <div class="tip-card__teams">
-          ${teamCrest(tip.homeName, tip.homeColor)}<span>${escapeHtml(tip.homeName)}</span>
+          ${teamCrest(tip.homeName, tip.homeColor, tip.homeLogo)}<span>${escapeHtml(tip.homeName)}</span>
           <i class="fa-solid fa-xmark"></i>
-          ${teamCrest(tip.awayName, tip.awayColor)}<span>${escapeHtml(tip.awayName)}</span>
+          ${teamCrest(tip.awayName, tip.awayColor, tip.awayLogo)}<span>${escapeHtml(tip.awayName)}</span>
         </div>
         <div class="tip-card__pick"><small>Entrada sugerida</small><strong>${escapeHtml(tip.market)}</strong></div>
         <p class="tip-card__analysis">${escapeHtml(tip.analysis)}</p>
@@ -1503,7 +1518,10 @@ function getTeamLogo(raw, side) {
     nested?.image ||
     nested?.logo ||
     nested?.badge ||
-    nested?.crest
+    nested?.crest ||
+    nested?.image_url ||
+    nested?.team_logo ||
+    nested?.team_badge
   );
 }
 
@@ -1674,8 +1692,8 @@ function tableTeam(name, goals, color, image = null, showScore = true) {
   return `<div class="table-match__team">${teamCrest(name, color, image)}<span>${escapeHtml(name)}</span><b>${score}</b></div>`;
 }
 
-function tipTeam(name, color) {
-  return `<div class="tip-team">${teamCrest(name, color)}<strong>${escapeHtml(name)}</strong></div>`;
+function tipTeam(name, color, image = null) {
+  return `<div class="tip-team">${teamCrest(name, color, image)}<strong>${escapeHtml(name)}</strong></div>`;
 }
 
 function stars(value) {
