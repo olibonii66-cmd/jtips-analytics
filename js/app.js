@@ -1397,23 +1397,20 @@ async function openMatchModal(matchId) {
   els.matchModal.setAttribute("aria-hidden", "false");
   document.body.style.overflow = "hidden";
   els.modalTitle.textContent = `${match.homeName} x ${match.awayName}`;
-  els.matchModalBody.innerHTML = `<div class="skeleton-card" style="height:410px;border-radius:14px"></div>`;
 
-  let detailedMatch = match;
-  if (state.mode === "api") {
-    try {
-      const payload = await apiFetch("/match", { match_id: match.id });
-      const detail = Array.isArray(payload?.data) ? payload.data[0] : (payload?.data || payload);
-      detailedMatch = normalizeMatch({ ...match, ...detail });
-    } catch (error) {
-      console.error(error);
-      showToast("Detalhes parciais", "A análise usa os dados já carregados da partida.", "error");
-    }
-  } else {
-    await wait(250);
+  try {
+    // Não depende de endpoint ao vivo. O modal usa dados oficiais já carregados
+    // de partidas, times e jogadores para abrir imediatamente.
+    els.matchModalBody.innerHTML = matchModalTemplate(match);
+  } catch (error) {
+    console.error(error);
+    els.matchModalBody.innerHTML = `
+      <div class="numbers-section">
+        <div class="numbers-section__head"><i class="fa-solid fa-triangle-exclamation"></i><strong>Dados indisponíveis</strong></div>
+        <p class="numbers-empty-note">Não foi possível montar os números desta partida com os dados oficiais disponíveis.</p>
+      </div>
+    `;
   }
-
-  els.matchModalBody.innerHTML = matchModalTemplate(detailedMatch);
 }
 
 function matchModalTemplate(match) {
@@ -1484,6 +1481,17 @@ function matchModalTemplate(match) {
           <div>${playersList("Visitante", awayPlayers)}</div>
         </div>
       `)}
+    </div>
+  `;
+}
+
+
+function modalMarket(label, value) {
+  const safeValue = value === null || value === undefined || value === "" ? "—" : value;
+  return `
+    <div class="modal-market">
+      <small>${escapeHtml(label)}</small>
+      <strong>${escapeHtml(String(safeValue))}</strong>
     </div>
   `;
 }
