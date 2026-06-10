@@ -309,7 +309,7 @@ function resolveTargetLeagues(rawLeagues) {
 function normalizeMatch(raw) {
   const league = findLeagueForRawMatch(raw);
   const timestamp = getMatchTimestamp(raw);
-  const status = normalizeStatus(raw.status, timestamp);
+  const status = normalizeStatus(raw.status, timestamp, raw);
   const homeId = Number(raw.homeID || raw.home_id || raw.homeTeam?.id || 0);
   const awayId = Number(raw.awayID || raw.away_id || raw.awayTeam?.id || 0);
   const homeTeam = findMatchTeam(homeId);
@@ -340,7 +340,7 @@ function normalizeMatch(raw) {
     timestamp,
     date: new Date(timestamp),
     status,
-    minute: Number(raw.minute || raw.match_minute || raw.elapsed || 0),
+    minute: normalizeMinute(raw.minute ?? raw.match_minute ?? raw.elapsed ?? raw.game_minute),
     odds: {
       home: nullablePositiveNumber(raw.odds_ft_1 || raw.odds_1 || raw.odds?.home),
       draw: nullablePositiveNumber(raw.odds_ft_X || raw.odds_x || raw.odds?.draw),
@@ -589,7 +589,7 @@ function matchTableRow(match) {
   return `
     <tr>
       <td class="table-time"><strong>${formatTime(match.date)}</strong><small>${formatDate(match.date, { day: "2-digit", month: "short" })}</small></td>
-      <td><div class="table-league">${leagueIcon(getLeague(match.leagueKey))}<span>${escapeHtml(match.league)}</span></div></td>
+      <td><div class="table-league table-league--plain"><span>${escapeHtml(match.league)}</span></div></td>
       <td><div class="table-match">
         ${tableTeam(match.homeName, match.homeGoals, match.leagueColor, match.homeLogo, match.status === "complete")}
         ${tableTeam(match.awayName, match.awayGoals, secondaryColor(match.leagueColor), match.awayLogo, match.status === "complete")}
@@ -1449,27 +1449,53 @@ function getMatchTimestamp(raw) {
   return Number.isNaN(parsed) ? Date.now() : parsed;
 }
 
-function normalizeStatus(status, timestamp) {
+function normalizeMinute(value) {
+  const raw = String(value ?? "").trim();
+  if (!raw || normalizeText(raw) === "ft") return 0;
+  const match = raw.match(/\d{1,3}/);
+  return match ? Number(match[0]) : 0;
+}
+
+function normalizeStatus(status, timestamp, raw = {}) {
   const value = normalizeText(status || "");
+  const minuteValue = String(raw.minute ?? raw.match_minute ?? raw.elapsed ?? raw.game_minute ?? "").trim();
+  const normalizedMinute = normalizeText(minuteValue);
   const kickoff = Number(timestamp) || 0;
   const now = Date.now();
   const fiveMinutes = 5 * 60 * 1000;
-  const threeHours = 3 * 60 * 60 * 1000;
+  const liveWindow = 3.25 * 60 * 60 * 1000;
 
-  if (["cancelled", "canceled"].some((item) => value.includes(item))) return "cancelled";
-  if (["postponed"].some((item) => value.includes(item))) return "postponed";
-  if (["suspended", "abandoned"].some((item) => value.includes(item))) return "suspended";
+  const isCancelled = ["cancelled", "canceled"].some((item) => value.includes(item));
+  const isPostponed = ["postponed"].some((item) => value.includes(item));
+  const isSuspended = ["suspended", "abandoned"].some((item) => value.includes(item));
+  const minuteSaysFinished = ["ft", "full time", "full-time"].some((item) => normalizedMinute === item || normalizedMinute.includes(item));
+  const minuteSaysLive = /^\d{1,3}(\+\d{1,2})?$/.test(normalizedMinute) || ["ht", "half time", "1h", "2h"].includes(normalizedMinute);
+  const isLive = minuteSaysLive || ["live", "in play", "inplay", "playing", "half time", "1h", "2h", "ht"].some((item) => value.includes(item));
+  const isFinished = minuteSaysFinished || ["complete", "finished", "full time", "full-time", "ft", "ended"].some((item) => value.includes(item));
+  const isScheduled = ["scheduled", "incomplete", "pre match", "pre-match", "not started", "pending"].some((item) => value.includes(item));
 
-  // Se o horário da partida ainda está no futuro, não mostrar como encerrado
-  // mesmo que a API retorne algum status inconsistente.
-  if (kickoff && kickoff > now + fiveMinutes) return "scheduled";
+  if (isCancelled) return "cancelled";
+  if (isPostponed) return "postponed";
+  if (isSuspended) return "suspended";
 
-  if (["live", "in play", "inplay", "playing", "half time", "1h", "2h", "ht"].some((item) => value.includes(item))) return "live";
-  if (["complete", "finished", "full time", "full-time", "ft", "ended"].some((item) => value.includes(item))) return "complete";
-  if (["scheduled", "incomplete", "pre match", "pre-match", "not started", "pending"].some((item) => value.includes(item))) return "scheduled";
+  // O live score da FootyStats usa minuto para atualizar partidas ao vivo.
+  // Quando existir minuto numérico, ele tem prioridade sobre status inconsistente.
+  if (isLive && !minuteSaysFinished) return "live";
 
-  // Sem status confiável: só considera encerrado quando já passou bastante do horário.
-  if (kickoff && now > kickoff + threeHours) return "complete";
+  if (kickoff) {
+    if (kickoff > now + fiveMinutes) return "scheduled";
+
+    // Durante a janela natural da partida, tratar como ao vivo mesmo se a lista
+    // vier com status antigo como complete/finished.
+    if (now >= kickoff - fiveMinutes && now <= kickoff + liveWindow && !minuteSaysFinished) {
+      return "live";
+    }
+  }
+
+  if (isFinished) return "complete";
+  if (isScheduled) return "scheduled";
+
+  if (kickoff && now > kickoff + liveWindow) return "complete";
   return "scheduled";
 }
 
