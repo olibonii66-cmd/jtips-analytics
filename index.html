@@ -1,140 +1,175 @@
-<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="description" content="Dashboard de análises esportivas para apostas de futebol com dados via FootyStats." />
-  <title>FootyEdge Analytics</title>
-  <link rel="preconnect" href="https://cdnjs.cloudflare.com" />
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" />
-  <link rel="stylesheet" href="/css/styles.css" />
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-</head>
-<body>
-  <aside class="sidebar" id="sidebar" aria-label="Navegação lateral">
-    <div class="brand">
-      <i class="fa-solid fa-chart-line"></i>
-      <span>FootyEdge</span>
-    </div>
-    <nav class="nav-links">
-      <a href="#dashboard" class="nav-link active"><i class="fa-solid fa-house"></i> Dashboard</a>
-      <a href="#matches" class="nav-link"><i class="fa-regular fa-calendar-days"></i> Jogos</a>
-      <a href="#stats" class="nav-link"><i class="fa-solid fa-ranking-star"></i> Estatísticas</a>
-      <a href="#odds" class="nav-link"><i class="fa-solid fa-scale-balanced"></i> Odds</a>
-      <a href="#h2h" class="nav-link"><i class="fa-solid fa-people-arrows"></i> H2H</a>
-      <a href="#tips" class="nav-link"><i class="fa-solid fa-lightbulb"></i> Tips</a>
-    </nav>
-    <div class="sidebar-note">
-      <strong>Uso responsável</strong>
-      <small>Conteúdo informativo. Aposte apenas se for permitido em sua região e com responsabilidade.</small>
-    </div>
-  </aside>
+:root {
+  --bg: #0f1117;
+  --surface: #1a1d27;
+  --surface-2: #222635;
+  --text: #f3f6fb;
+  --muted: #9aa4b2;
+  --accent: #00c853;
+  --danger: #ff5c7a;
+  --warning: #ffd166;
+  --border: rgba(255,255,255,.08);
+  --shadow: 0 20px 50px rgba(0,0,0,.25);
+}
 
-  <div class="app-shell">
-    <header class="topbar">
-      <button class="icon-btn mobile-only" id="menuToggle" aria-label="Abrir menu"><i class="fa-solid fa-bars"></i></button>
-      <div>
-        <p class="eyebrow">Análises esportivas</p>
-        <h1>Dashboard de futebol para apostas</h1>
-      </div>
-      <div class="header-actions">
-        <button class="theme-toggle" id="themeToggle" aria-label="Alternar tema">
-          <i class="fa-solid fa-moon"></i><span>Dark</span>
-        </button>
-      </div>
-    </header>
+[data-theme="light"] {
+  --bg: #f4f7fb;
+  --surface: #ffffff;
+  --surface-2: #eef2f7;
+  --text: #101624;
+  --muted: #526070;
+  --border: rgba(16,22,36,.1);
+  --shadow: 0 18px 38px rgba(16,22,36,.08);
+}
 
-    <main class="content">
-      <section class="hero" id="dashboard">
-        <div>
-          <p class="eyebrow">Jogos do dia</p>
-          <h2>Leitura rápida de oportunidades</h2>
-          <p>Dados reais via FootyStats, cards de value bet, mercado sugerido e indicadores pré-jogo.</p>
-        </div>
-        <div class="hero-controls">
-          <label for="matchDate">Data</label>
-          <input type="date" id="matchDate" />
-          <button class="primary-btn" id="refreshBtn"><i class="fa-solid fa-rotate"></i> Atualizar</button>
-        </div>
-      </section>
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0;
+  font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  background: var(--bg);
+  color: var(--text);
+}
+a { color: inherit; text-decoration: none; }
+button, input, select { font: inherit; }
 
-      <section class="kpi-grid" aria-label="Resumo de indicadores">
-        <article class="kpi-card"><span>Jogos carregados</span><strong id="kpiMatches">--</strong><small>agenda filtrada</small></article>
-        <article class="kpi-card"><span>Over 2.5 médio</span><strong id="kpiOver25">--</strong><small>potencial pré-jogo</small></article>
-        <article class="kpi-card"><span>BTTS médio</span><strong id="kpiBtts">--</strong><small>ambas marcam</small></article>
-        <article class="kpi-card"><span>Value bets</span><strong id="kpiValue">--</strong><small>estimativa interna</small></article>
-      </section>
+.sidebar {
+  position: fixed;
+  inset: 0 auto 0 0;
+  width: 260px;
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+  z-index: 50;
+}
+.brand { display: flex; align-items: center; gap: 12px; font-size: 1.35rem; font-weight: 800; }
+.brand i { color: var(--accent); }
+.nav-links { display: grid; gap: 8px; }
+.nav-link { padding: 12px 14px; border-radius: 14px; color: var(--muted); display: flex; gap: 12px; align-items: center; }
+.nav-link:hover, .nav-link.active { color: var(--text); background: var(--surface-2); }
+.sidebar-note { margin-top: auto; padding: 16px; border: 1px solid var(--border); border-radius: 18px; color: var(--muted); display: grid; gap: 6px; }
+.sidebar-note strong { color: var(--text); }
 
-      <section class="grid-2">
-        <article class="panel">
-          <div class="panel-header">
-            <div><p class="eyebrow">Destaques</p><h3>Partidas em evidência</h3></div>
-            <span class="status-pill" id="apiStatus">API</span>
-          </div>
-          <div id="featuredMatches" class="match-list skeleton-area"></div>
-        </article>
-        <article class="panel">
-          <div class="panel-header">
-            <div><p class="eyebrow">Tendência</p><h3>Distribuição de mercados</h3></div>
-          </div>
-          <canvas id="marketsChart" height="230"></canvas>
-        </article>
-      </section>
+.app-shell { margin-left: 260px; min-height: 100vh; }
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  min-height: 86px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 18px 32px;
+  background: color-mix(in srgb, var(--bg) 88%, transparent);
+  backdrop-filter: blur(16px);
+  border-bottom: 1px solid var(--border);
+}
+.topbar h1 { margin: 0; font-size: clamp(1.3rem, 2vw, 1.9rem); }
+.eyebrow { margin: 0 0 4px; color: var(--accent); text-transform: uppercase; letter-spacing: .12em; font-size: .74rem; font-weight: 800; }
+.content { padding: 28px 32px 60px; display: grid; gap: 24px; }
 
-      <section class="panel" id="matches">
-        <div class="panel-header wrap">
-          <div><p class="eyebrow">Calendário</p><h3>Tabela de jogos e resultados</h3></div>
-          <div class="filters">
-            <input type="search" id="leagueFilter" placeholder="Filtrar por campeonato" />
-            <select id="statusFilter">
-              <option value="all">Todos</option>
-              <option value="complete">Finalizados</option>
-              <option value="incomplete">Agendados/ao vivo</option>
-            </select>
-          </div>
-        </div>
-        <div class="table-wrap">
-          <table>
-            <thead><tr><th>Horário</th><th>Campeonato</th><th>Mandante</th><th>Placar</th><th>Visitante</th><th>Status</th><th>Mercados</th></tr></thead>
-            <tbody id="matchesTable"></tbody>
-          </table>
-        </div>
-      </section>
+.hero, .panel, .kpi-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  box-shadow: var(--shadow);
+}
+.hero { padding: 28px; display: flex; align-items: center; justify-content: space-between; gap: 24px; }
+.hero h2 { margin: 0 0 8px; font-size: clamp(1.8rem, 4vw, 3rem); }
+.hero p { margin: 0; color: var(--muted); }
+.hero-controls, .filters, .h2h-form { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+input, select {
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text);
+  border-radius: 12px;
+  padding: 11px 12px;
+  outline: none;
+}
+.primary-btn, .theme-toggle, .icon-btn {
+  border: 0;
+  border-radius: 14px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 11px 14px;
+}
+.primary-btn { background: var(--accent); color: #04110a; font-weight: 800; }
+.theme-toggle, .icon-btn { background: var(--surface-2); color: var(--text); border: 1px solid var(--border); }
+.mobile-only { display: none; }
 
-      <section class="grid-2" id="stats">
-        <article class="panel">
-          <div class="panel-header"><div><p class="eyebrow">Times</p><h3>Estatísticas dos times</h3></div></div>
-          <div id="teamStats" class="card-grid skeleton-area"></div>
-        </article>
-        <article class="panel">
-          <div class="panel-header"><div><p class="eyebrow">Jogadores</p><h3>Artilheiros e assistências</h3></div></div>
-          <div id="playerStats" class="leaderboard skeleton-area"></div>
-        </article>
-      </section>
+.kpi-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; }
+.kpi-card { padding: 20px; display: grid; gap: 8px; }
+.kpi-card span, .muted { color: var(--muted); }
+.kpi-card strong { font-size: 2rem; }
+.kpi-card small { color: var(--accent); }
+.grid-2 { display: grid; grid-template-columns: 1.2fr .8fr; gap: 24px; }
+.panel { padding: 22px; min-width: 0; }
+.panel-header { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 18px; }
+.panel-header h3 { margin: 0; font-size: 1.2rem; }
+.wrap { flex-wrap: wrap; }
+.status-pill, .tag, .stars { border-radius: 999px; padding: 6px 10px; background: var(--surface-2); color: var(--muted); font-size: .82rem; }
+.status-pill.ok { color: var(--accent); }
+.status-pill.error { color: var(--danger); }
 
-      <section class="panel" id="odds">
-        <div class="panel-header"><div><p class="eyebrow">Odds</p><h3>Probabilidades e value bet</h3></div></div>
-        <div id="oddsGrid" class="odds-grid skeleton-area"></div>
-      </section>
+.match-list, .card-grid, .odds-grid, .tips-list { display: grid; gap: 12px; }
+.match-card, .stat-card, .odds-card, .tip-card, .leader-row, .h2h-card {
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  border-radius: 18px;
+  padding: 16px;
+}
+.match-card { display: grid; gap: 10px; }
+.match-teams, .scoreline, .odds-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.scoreline strong { font-size: 1.3rem; color: var(--accent); }
+.table-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; min-width: 860px; }
+th, td { text-align: left; border-bottom: 1px solid var(--border); padding: 13px 10px; }
+th { color: var(--muted); font-size: .82rem; text-transform: uppercase; letter-spacing: .05em; }
+.card-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.stat-card strong { font-size: 1.4rem; display: block; margin: 4px 0; }
+.leader-row { display: grid; grid-template-columns: 1fr auto; gap: 12px; align-items: center; }
+.odds-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.value { color: var(--accent); font-weight: 800; }
+.no-value { color: var(--muted); }
+.tip-card { display: grid; gap: 8px; }
+.stars { color: var(--warning); width: fit-content; }
+.error-box { border: 1px solid color-mix(in srgb, var(--danger) 40%, transparent); background: color-mix(in srgb, var(--danger) 12%, var(--surface)); color: var(--text); border-radius: 16px; padding: 14px; }
 
-      <section class="grid-2" id="h2h">
-        <article class="panel">
-          <div class="panel-header"><div><p class="eyebrow">Confrontos</p><h3>Histórico H2H</h3></div></div>
-          <form id="h2hForm" class="h2h-form">
-            <input type="number" id="matchIdInput" placeholder="ID da partida para buscar H2H" min="1" />
-            <button class="primary-btn" type="submit"><i class="fa-solid fa-search"></i> Buscar</button>
-          </form>
-          <p class="muted">No FootyStats, o H2H vem no endpoint de detalhes da partida. Nesta versão inicial usamos o ID da partida.</p>
-          <div id="h2hResults" class="h2h-results"></div>
-        </article>
-        <article class="panel" id="tips">
-          <div class="panel-header"><div><p class="eyebrow">Tips</p><h3>Dicas de apostas</h3></div></div>
-          <div id="tipsList" class="tips-list skeleton-area"></div>
-        </article>
-      </section>
-    </main>
-  </div>
+.skeleton { position: relative; overflow: hidden; height: 78px; border-radius: 18px; background: var(--surface-2); }
+.skeleton::after { content: ""; position: absolute; inset: 0; transform: translateX(-100%); background: linear-gradient(90deg, transparent, rgba(255,255,255,.08), transparent); animation: shimmer 1.3s infinite; }
+@keyframes shimmer { 100% { transform: translateX(100%); } }
 
-  <script type="module" src="/js/app.js"></script>
-</body>
-</html>
+@media (max-width: 1100px) {
+  .grid-2 { grid-template-columns: 1fr; }
+  .odds-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 760px) {
+  .mobile-only { display: inline-flex; }
+  .sidebar { transform: translateX(-105%); transition: transform .2s ease; }
+  .sidebar.open { transform: translateX(0); }
+  .app-shell { margin-left: 0; }
+  .topbar, .content { padding-left: 18px; padding-right: 18px; }
+  .hero { align-items: stretch; flex-direction: column; }
+  .kpi-grid, .card-grid, .odds-grid { grid-template-columns: 1fr; }
+}
+
+.api-diagnostics {
+  margin-top: 18px;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: rgba(255,255,255,0.03);
+  color: var(--muted);
+  font-size: 0.82rem;
+  max-width: 760px;
+}
+.diag-line { margin: 3px 0; }
+.diag-line.ok { color: var(--accent); }
+.diag-line.warn { color: #fbbf24; }
+.diag-line.error { color: #f87171; }
