@@ -12,6 +12,10 @@
   ];
 
   const COMPACT_LAYOUT_CSS = `
+    .anti-conflict {
+      display: none !important;
+    }
+
     @media (min-width: 1180px) {
       .dashboard {
         padding: 12px 18px 18px !important;
@@ -65,8 +69,7 @@
       .team-side em,
       .line-heading span,
       .ticket-row em,
-      .ticket-row strong,
-      .anti-conflict small {
+      .ticket-row strong {
         font-size: 0.64rem !important;
       }
 
@@ -119,7 +122,6 @@
         gap: 5px !important;
       }
 
-      .anti-conflict,
       .ticket-row,
       .ticket-total {
         min-height: 30px !important;
