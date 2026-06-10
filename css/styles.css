@@ -3073,3 +3073,64 @@ svg {
     grid-template-columns: 46px 1fr 46px;
   }
 }
+
+
+/* Ajuste Ver números - estatísticas reais por seção */
+.numbers-modal--real {
+  gap: 18px;
+}
+
+.numbers-hero--real {
+  margin-bottom: 2px;
+}
+
+.numbers-comparison {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.numbers-team-stat {
+  padding: 12px;
+  border: 1px solid var(--border-soft);
+  border-radius: 13px;
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.numbers-team-stat small,
+.numbers-team-stat span {
+  display: block;
+  color: var(--text-3);
+  font-size: 9px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.numbers-team-stat strong {
+  display: block;
+  margin: 5px 0 3px;
+  color: var(--accent);
+  font-size: 20px;
+  font-weight: 900;
+}
+
+.numbers-section {
+  scroll-margin-top: 16px;
+}
+
+.numbers-empty-note {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border: 1px dashed rgba(148, 163, 184, 0.24);
+  border-radius: 12px;
+  color: var(--text-3);
+  font-size: 12px;
+}
+
+@media (max-width: 760px) {
+  .numbers-comparison,
+  .numbers-grid--summary {
+    grid-template-columns: 1fr;
+  }
+}

@@ -442,7 +442,9 @@ function normalizeTeam(raw, league) {
       (played && goals !== null ? goals / played : null),
     possession: nullablePositiveNumber(stats.possessionAVG_overall ?? stats.average_possession),
     cards: nullablePositiveNumber(stats.cardsAVG_overall ?? stats.cards_per_match),
-    corners: nullablePositiveNumber(stats.cornersAVG_overall ?? stats.corners_per_match),
+    corners: nullablePositiveNumber(stats.cornersAVG_overall ?? stats.corners_per_match ?? stats.average_corners),
+    shots: nullablePositiveNumber(stats.shotsAVG_overall ?? stats.shots_per_match ?? stats.average_shots ?? stats.shotsAVG),
+    concededPerMatch: nullablePositiveNumber(stats.seasonConcededAVG_overall ?? stats.goals_conceded_per_match ?? stats.conceded_per_match),
     ppg: nullablePositiveNumber(stats.seasonPPG_overall ?? stats.ppg) ??
       (played && wins !== null && draws !== null ? ((wins * 3) + draws) / played : null)
   };
@@ -1558,6 +1560,156 @@ function playersList(title, players) {
       `).join("")}
     </div>
   `;
+}
+
+
+/* Modal Ver números - versão corrigida com estatísticas reais pré-jogo */
+function matchModalTemplate(match) {
+  const market = bestMarketForMatch(match);
+  const homeStats = teamNumbersForMatch(match, "home");
+  const awayStats = teamNumbersForMatch(match, "away");
+  const homePlayers = matchPlayers(match, "home");
+  const awayPlayers = matchPlayers(match, "away");
+
+  return `
+    <div class="numbers-modal numbers-modal--real">
+      <div class="numbers-hero numbers-hero--real">
+        <div class="numbers-team">
+          ${teamCrest(match.homeName, match.leagueColor, match.homeLogo)}
+          <strong>${escapeHtml(match.homeName)}</strong>
+          <span>Mandante</span>
+        </div>
+        <div class="numbers-center">
+          <strong>${shouldShowMatchScore(match) ? `${match.homeGoals} – ${match.awayGoals}` : "VS"}</strong>
+          <span>${escapeHtml(formatMatchTime(match))}</span>
+          ${statusPill(match)}
+        </div>
+        <div class="numbers-team">
+          ${teamCrest(match.awayName, secondaryColor(match.leagueColor), match.awayLogo)}
+          <strong>${escapeHtml(match.awayName)}</strong>
+          <span>Visitante</span>
+        </div>
+      </div>
+
+      ${numbersSection("Resumo", "fa-solid fa-chart-simple", `
+        <div class="numbers-grid numbers-grid--summary">
+          ${modalMarket("Campeonato", match.league || "—")}
+          ${modalMarket("Status", statusLabel(match))}
+          ${modalMarket("Mercado", market.label)}
+          ${modalMarket("Probabilidade", formatProbability(market.probability))}
+        </div>
+        <div class="numbers-note"><small>Insight da aposta</small><strong>${escapeHtml(modalAnalysis(match, market))}</strong></div>
+      `)}
+
+      ${numbersSection("Gols", "fa-solid fa-futbol", `
+        <div class="numbers-comparison">
+          ${teamStatCard(match.homeName, "Gols por jogo", homeStats.goalsPerMatch)}
+          ${teamStatCard(match.awayName, "Gols por jogo", awayStats.goalsPerMatch)}
+          ${teamStatCard(match.homeName, "Sofridos por jogo", homeStats.concededPerMatch)}
+          ${teamStatCard(match.awayName, "Sofridos por jogo", awayStats.concededPerMatch)}
+        </div>
+        ${probabilityLine("Mais de 1.5 gols", match.probabilities.over15)}
+        ${probabilityLine("Mais de 2.5 gols", match.probabilities.over25)}
+        ${probabilityLine("Mais de 3.5 gols", match.probabilities.over35)}
+        ${probabilityLine("Ambas marcam", match.probabilities.btts)}
+      `)}
+
+      ${numbersSection("Escanteios", "fa-solid fa-flag", `
+        <div class="numbers-comparison">
+          ${teamStatCard(match.homeName, "Escanteios por jogo", homeStats.corners)}
+          ${teamStatCard(match.awayName, "Escanteios por jogo", awayStats.corners)}
+        </div>
+        ${probabilityLine("Mais de 8.5 escanteios", match.probabilities.cornersOver85)}
+        ${probabilityLine("Mais de 9.5 escanteios", match.probabilities.cornersOver95)}
+        ${probabilityLine("Mais de 10.5 escanteios", match.probabilities.cornersOver105)}
+        ${numbersStatRow("Escanteios registrados", match.stats.cornersHome, match.stats.cornersAway)}
+        ${officialDataNote(match.stats.cornersHome, match.stats.cornersAway, homeStats.corners, awayStats.corners, "A API não retornou escanteios oficiais para esta partida ou para estes times.")}
+      `)}
+
+      ${numbersSection("Cartões", "fa-solid fa-square", `
+        <div class="numbers-comparison">
+          ${teamStatCard(match.homeName, "Cartões por jogo", homeStats.cards)}
+          ${teamStatCard(match.awayName, "Cartões por jogo", awayStats.cards)}
+        </div>
+        ${probabilityLine("Mais de 3.5 cartões", match.probabilities.cardsOver35)}
+        ${probabilityLine("Mais de 4.5 cartões", match.probabilities.cardsOver45)}
+        ${probabilityLine("Mais de 5.5 cartões", match.probabilities.cardsOver55)}
+        ${numbersStatRow("Cartões registrados", match.stats.cardsHome, match.stats.cardsAway)}
+        ${officialDataNote(match.stats.cardsHome, match.stats.cardsAway, homeStats.cards, awayStats.cards, "A API não retornou cartões oficiais para esta partida ou para estes times.")}
+      `)}
+
+      ${numbersSection("Finalizações", "fa-solid fa-bullseye", `
+        <div class="numbers-comparison">
+          ${teamStatCard(match.homeName, "Finalizações por jogo", homeStats.shots)}
+          ${teamStatCard(match.awayName, "Finalizações por jogo", awayStats.shots)}
+          ${teamStatCard(match.homeName, "Posse média", homeStats.possession, "%")}
+          ${teamStatCard(match.awayName, "Posse média", awayStats.possession, "%")}
+        </div>
+        ${numbersStatRow("Finalizações registradas", match.stats.shotsHome, match.stats.shotsAway)}
+        ${numbersStatRow("Posse registrada", match.stats.possessionHome, match.stats.possessionAway, "%")}
+        ${officialDataNote(match.stats.shotsHome, match.stats.shotsAway, homeStats.shots, awayStats.shots, "A API não retornou finalizações oficiais para esta partida ou para estes times.")}
+      `)}
+
+      ${numbersSection("Jogadores", "fa-solid fa-user-group", `
+        <div class="numbers-players">
+          <div>${playersList("Mandante", homePlayers)}</div>
+          <div>${playersList("Visitante", awayPlayers)}</div>
+        </div>
+      `)}
+    </div>
+  `;
+}
+
+function teamNumbersForMatch(match, side) {
+  const teamId = side === "home" ? match.homeId : match.awayId;
+  const teamName = side === "home" ? match.homeName : match.awayName;
+  const team = findTeamStatsRecord(teamId, teamName, match.leagueKey);
+  const played = nullablePositiveNumber(team?.played ?? team?.seasonMatchesPlayed_overall ?? team?.matches_played);
+  const goals = nullablePositiveNumber(team?.goals ?? team?.seasonGoals_overall ?? team?.goals_scored);
+  const conceded = nullablePositiveNumber(team?.conceded ?? team?.seasonConceded_overall ?? team?.goals_conceded);
+  return {
+    goalsPerMatch: firstNumber(team?.goalsPerMatch, team?.seasonScoredAVG_overall, team?.goals_per_match, goals !== null && played ? goals / played : null),
+    concededPerMatch: firstNumber(team?.concededPerMatch, team?.seasonConcededAVG_overall, team?.goals_conceded_per_match, conceded !== null && played ? conceded / played : null),
+    corners: firstNumber(team?.corners, team?.cornersAVG_overall, team?.corners_per_match, team?.average_corners),
+    cards: firstNumber(team?.cards, team?.cardsAVG_overall, team?.cards_per_match, team?.average_cards),
+    shots: firstNumber(team?.shots, team?.shotsAVG_overall, team?.shots_per_match, team?.average_shots),
+    possession: firstNumber(team?.possession, team?.possessionAVG_overall, team?.average_possession)
+  };
+}
+
+function findTeamStatsRecord(teamId, teamName, leagueKey) {
+  const normalized = normalizeText(teamName || "");
+  return state.teams.find((team) => teamId && Number(team.id) === Number(teamId)) ||
+    state.teams.find((team) => leagueKey && team.leagueKey === leagueKey && normalizeText(team.name || team.fullName || "") === normalized) ||
+    state.teams.find((team) => normalizeText(team.name || team.fullName || "") === normalized) ||
+    state.matchTeams.find((team) => teamId && Number(team.id) === Number(teamId)) ||
+    state.matchTeams.find((team) => normalizeText(team.name || team.fullName || "") === normalized) || null;
+}
+
+function firstNumber(...values) {
+  for (const value of values) {
+    const number = nullablePositiveNumber(value);
+    if (number !== null) return number;
+  }
+  return null;
+}
+
+function teamStatCard(teamName, label, value, suffix = "") {
+  const hasValue = value !== null && value !== undefined && Number.isFinite(Number(value));
+  return `
+    <div class="numbers-team-stat">
+      <small>${escapeHtml(label)}</small>
+      <strong>${hasValue ? `${round(Number(value), suffix ? 0 : 2)}${suffix}` : "—"}</strong>
+      <span>${escapeHtml(teamName)}</span>
+    </div>
+  `;
+}
+
+function officialDataNote(...args) {
+  const message = args[args.length - 1];
+  const values = args.slice(0, -1);
+  const hasAny = values.some((value) => value !== null && value !== undefined && Number.isFinite(Number(value)));
+  return hasAny ? "" : `<p class="numbers-empty-note">${escapeHtml(message)}</p>`;
 }
 
 function closeModal() {
