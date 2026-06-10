@@ -7,7 +7,6 @@
   ];
   const STYLE_PARTS = [
     "./assets/runtime/styles-v3-01.part",
-    "./assets/runtime/styles-v3-02.part",
   ];
 
   async function readCompressed(parts) {
