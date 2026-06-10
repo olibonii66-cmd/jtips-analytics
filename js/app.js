@@ -27,6 +27,7 @@ const state = {
   mode: "api",
   selectedDate: startOfDay(new Date()),
   leagues: [],
+  leagueIndex: [],
   matchTeams: [],
   matches: [],
   teams: [],
@@ -114,6 +115,7 @@ async function loadApplicationData({ refresh = false } = {}) {
 async function loadRealData() {
   const leaguePayload = await apiFetch("/league-list", { chosen_leagues_only: "true" });
   const availableLeagues = getDataArray(leaguePayload);
+  state.leagueIndex = buildLeagueIndex(availableLeagues);
   state.leagues = resolveTargetLeagues(availableLeagues);
 
   if (!state.leagues.length) {
@@ -259,23 +261,44 @@ async function apiFetch(endpoint, params = {}) {
   }
 }
 
-function resolveTargetLeagues(rawLeagues) {
-  const normalizedAvailable = rawLeagues.flatMap((league) => {
+function buildLeagueIndex(rawLeagues) {
+  return rawLeagues.flatMap((league) => {
     const seasons = Array.isArray(league.season)
       ? league.season
       : Array.isArray(league.seasons)
         ? league.seasons
         : [league.season || league];
 
-    return seasons.map((season) => ({
-      raw: league,
-      season,
-      name: league.name || league.league_name || season.name || "",
-      country: league.country || season.country || "",
-      seasonId: Number(season.id || season.season_id || league.season_id || league.id),
-      year: Number(season.year || season.ending_year || league.ending_year || 0)
-    }));
-  });
+    return seasons.map((season) => {
+      const name = cleanLeagueName(
+        league.name ||
+        league.league_name ||
+        league.competition_name ||
+        season.name ||
+        season.league_name ||
+        season.competition_name ||
+        "Campeonato"
+      );
+      const country = league.country || season.country || "";
+      const seasonId = Number(season.id || season.season_id || league.season_id || league.id || 0);
+      return {
+        raw: league,
+        season,
+        id: Number(league.id || league.league_id || seasonId || 0),
+        seasonId,
+        key: slugify(`${name}-${seasonId || country}`),
+        name,
+        short: initials(name).slice(0, 3).toUpperCase(),
+        country,
+        color: colorFromString(name),
+        year: Number(season.year || season.ending_year || league.ending_year || 0)
+      };
+    });
+  }).filter((league) => league.seasonId || league.id || league.name !== "Campeonato");
+}
+
+function resolveTargetLeagues(rawLeagues) {
+  const normalizedAvailable = buildLeagueIndex(rawLeagues);
 
   return TARGET_LEAGUES.map((target) => {
     const candidates = normalizedAvailable.filter((available) => {
@@ -310,24 +333,28 @@ function normalizeMatch(raw) {
   const league = findLeagueForRawMatch(raw);
   const timestamp = getMatchTimestamp(raw);
   const status = normalizeStatus(raw.status, timestamp, raw);
-  const homeId = Number(raw.homeID || raw.home_id || raw.homeTeam?.id || 0);
-  const awayId = Number(raw.awayID || raw.away_id || raw.awayTeam?.id || 0);
-  const homeTeam = findMatchTeam(homeId);
-  const awayTeam = findMatchTeam(awayId);
-  const homeName = raw.home_name || raw.homeTeam?.name || raw.home_team_name || raw.team_a_name || homeTeam?.name || "Mandante";
-  const awayName = raw.away_name || raw.awayTeam?.name || raw.away_team_name || raw.team_b_name || awayTeam?.name || "Visitante";
-  const homeGoals = numberOrNull(raw.homeGoalCount ?? raw.home_score ?? raw.homeGoals?.length);
-  const awayGoals = numberOrNull(raw.awayGoalCount ?? raw.away_score ?? raw.awayGoals?.length);
+  const homeId = Number(raw.homeID || raw.home_id || raw.homeTeam?.id || raw.team_a_id || raw.team_a?.id || 0);
+  const awayId = Number(raw.awayID || raw.away_id || raw.awayTeam?.id || raw.team_b_id || raw.team_b?.id || 0);
+  const rawHomeName = raw.home_name || raw.homeTeam?.name || raw.home_team_name || raw.team_a_name || raw.team_a?.name || "Mandante";
+  const rawAwayName = raw.away_name || raw.awayTeam?.name || raw.away_team_name || raw.team_b_name || raw.team_b?.name || "Visitante";
+  const homeTeam = findMatchTeam(homeId, rawHomeName);
+  const awayTeam = findMatchTeam(awayId, rawAwayName);
+  const homeName = rawHomeName || homeTeam?.name || "Mandante";
+  const awayName = rawAwayName || awayTeam?.name || "Visitante";
+  const homeGoals = numberOrNull(raw.homeGoalCount ?? raw.home_score ?? raw.team_a_score ?? raw.homeGoals?.length);
+  const awayGoals = numberOrNull(raw.awayGoalCount ?? raw.away_score ?? raw.team_b_score ?? raw.awayGoals?.length);
   const homeLogo = getTeamLogo(raw, "home") || homeTeam?.image || getNationalTeamFlagUrl(homeName) || null;
   const awayLogo = getTeamLogo(raw, "away") || awayTeam?.image || getNationalTeamFlagUrl(awayName) || null;
+  const leagueName = extractLeagueName(raw, league);
+  const leagueKey = league?.key || slugify(`${leagueName}-${raw.competition_id || raw.season_id || "outros"}`);
 
   return {
     ...raw,
     id: raw.id || raw.match_id || hashString(`${homeName}${awayName}${timestamp}`),
-    leagueKey: league?.key || slugify(raw.competition_name || raw.league_name || "outros"),
-    league: league?.name || raw.competition_name || raw.league_name || "Campeonato",
-    leagueShort: league?.short || "FUT",
-    leagueColor: league?.color || "#00c853",
+    leagueKey,
+    league: leagueName,
+    leagueShort: league?.short || initials(leagueName).slice(0, 3).toUpperCase(),
+    leagueColor: league?.color || colorFromString(leagueName),
     competitionId: Number(raw.competition_id || raw.season_id || raw.competition?.id || 0),
     homeId,
     awayId,
@@ -435,6 +462,7 @@ function normalizePlayer(raw, teams) {
 
 function clearApiData() {
   state.leagues = [];
+  state.leagueIndex = [];
   state.matchTeams = [];
   state.matches = [];
   state.teams = [];
@@ -458,12 +486,12 @@ function renderAll() {
 function populateLeagueFilters() {
   const allOption = `<option value="all">Todos os campeonatos</option>`;
   const options = state.leagues.map((league) => `<option value="${league.key}">${escapeHtml(league.name)}</option>`).join("");
-  els.matchLeagueFilter.innerHTML = allOption + options;
+  if (els.matchLeagueFilter) els.matchLeagueFilter.innerHTML = allOption + options;
   els.oddsLeagueFilter.innerHTML = allOption + options;
   els.statsLeagueFilter.innerHTML = state.leagues.map((league) => `
     <option value="${league.key}" ${league.key === state.statsLeagueKey ? "selected" : ""}>${escapeHtml(league.name)}</option>
   `).join("");
-  els.matchLeagueFilter.value = state.matchLeague;
+  if (els.matchLeagueFilter) els.matchLeagueFilter.value = state.matchLeague;
   els.oddsLeagueFilter.value = state.oddsLeague;
 }
 
@@ -1148,10 +1176,12 @@ function setupFilters() {
     state.matchSearch = event.target.value;
     renderMatches();
   });
-  els.matchLeagueFilter.addEventListener("change", (event) => {
-    state.matchLeague = event.target.value;
-    renderMatches();
-  });
+  if (els.matchLeagueFilter) {
+    els.matchLeagueFilter.addEventListener("change", (event) => {
+      state.matchLeague = event.target.value;
+      renderMatches();
+    });
+  }
   els.matchStatusFilter.querySelectorAll("button").forEach((button) => {
     button.addEventListener("click", () => {
       state.matchStatus = button.dataset.status;
@@ -1373,23 +1403,83 @@ function getDataArray(payload) {
   return [];
 }
 
+function cleanLeagueName(value) {
+  const raw = String(value || "").trim();
+  if (!raw) return "Campeonato";
+  const generic = ["campeonato", "league", "liga", "competition", "torneio"];
+  const normalized = normalizeText(raw);
+  if (generic.includes(normalized)) return "Campeonato";
+  return raw;
+}
+
+function extractLeagueName(raw, league = null) {
+  const candidates = [
+    raw.competition_name,
+    raw.league_name,
+    raw.season_name,
+    raw.competition?.name,
+    raw.league?.name,
+    raw.season?.name,
+    raw.competition?.cleanName,
+    raw.league?.cleanName,
+    raw.country_name && raw.competition_name ? `${raw.country_name} · ${raw.competition_name}` : null,
+    raw.country && raw.competition_name ? `${raw.country} · ${raw.competition_name}` : null,
+    league?.name
+  ];
+
+  for (const candidate of candidates) {
+    const name = cleanLeagueName(candidate);
+    if (name !== "Campeonato") return name;
+  }
+
+  if (league?.name) return league.name;
+  return "Campeonato";
+}
+
 function findLeagueForRawMatch(raw) {
-  const competitionId = Number(raw.competition_id || raw.season_id || raw.competition?.id || 0);
-  const byId = state.leagues.find((league) => league.seasonId === competitionId || league.id === competitionId);
+  const competitionId = Number(raw.competition_id || raw.season_id || raw.league_id || raw.competition?.id || raw.league?.id || 0);
+  const allLeagues = [...state.leagues, ...(state.leagueIndex || [])];
+  const byId = allLeagues.find((league) => league.seasonId === competitionId || league.id === competitionId);
   if (byId) return byId;
-  const rawName = normalizeText(raw.competition_name || raw.league_name || "");
-  return state.leagues.find((league) => league.aliases.some((alias) => rawName.includes(normalizeText(alias))));
+
+  const rawName = normalizeText(extractLeagueName(raw, null));
+  if (!rawName) return null;
+
+  return allLeagues.find((league) => {
+    const leagueName = normalizeText(league.name || league.apiName || "");
+    const aliases = league.aliases || [];
+    return leagueName === rawName || leagueName.includes(rawName) || rawName.includes(leagueName) ||
+      aliases.some((alias) => rawName.includes(normalizeText(alias)));
+  }) || null;
 }
 
 function getLeague(key) {
   return state.leagues.find((league) => league.key === key) || TARGET_LEAGUES.find((league) => league.key === key) || TARGET_LEAGUES[0];
 }
 
-function findMatchTeam(teamId) {
-  if (!teamId) return null;
-  return state.matchTeams.find((team) => team.id === Number(teamId)) ||
-    state.teams.find((team) => team.id === Number(teamId)) ||
-    null;
+function findMatchTeam(teamId, name = "") {
+  const id = Number(teamId || 0);
+  const normalizedName = normalizeText(name);
+  const pools = [state.matchTeams, state.teams];
+
+  if (id) {
+    for (const pool of pools) {
+      const byId = pool.find((team) => team.id === id || Number(team.team_id) === id);
+      if (byId) return byId;
+    }
+  }
+
+  if (normalizedName) {
+    for (const pool of pools) {
+      const byName = pool.find((team) => {
+        const names = [team.name, team.fullName, team.english_name, team.cleanName, team.shortHand].filter(Boolean).map(normalizeText);
+        return names.some((teamName) => teamName === normalizedName || teamName.includes(normalizedName) || normalizedName.includes(teamName));
+      });
+      if (byName) return byName;
+    }
+  }
+
+  return null;
 }
 
 function getTeamLogo(raw, side) {
@@ -1399,12 +1489,21 @@ function getTeamLogo(raw, side) {
   return sanitizeImageUrl(
     raw[`${prefix}_image`] ||
     raw[`${prefix}_logo`] ||
+    raw[`${prefix}_badge`] ||
+    raw[`${prefix}_crest`] ||
+    raw[`${prefix}_team_image`] ||
     raw[`${prefix}_team_logo`] ||
+    raw[`${prefix}_team_badge`] ||
     raw[`${teamPrefix}_image`] ||
     raw[`${teamPrefix}_logo`] ||
     raw[`${teamPrefix}_badge`] ||
+    raw[`${teamPrefix}_crest`] ||
+    raw[`${teamPrefix}_team_logo`] ||
+    raw[`${teamPrefix}_team_image`] ||
     nested?.image ||
-    nested?.logo
+    nested?.logo ||
+    nested?.badge ||
+    nested?.crest
   );
 }
 
@@ -1514,7 +1613,7 @@ function statusLabel(match) {
 }
 
 function shouldShowMatchScore(match) {
-  return ["live", "complete"].includes(match.status) &&
+  return match.status === "complete" &&
     match.homeGoals !== null &&
     match.awayGoals !== null;
 }
