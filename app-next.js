@@ -4,13 +4,10 @@
  * Este arquivo NAO esta conectado ao index.html ainda.
  * Objetivo: preparar uma versao legivel para substituir o runtime compactado depois.
  *
- * Responsabilidades:
- * - buscar dados da API;
- * - normalizar jogos;
- * - extrair mercados acima de 70%;
- * - montar Linhas de Conforto;
- * - montar Bilhete com base nas linhas elegiveis;
- * - renderizar cards de forma clara e controlavel.
+ * Regras principais:
+ * - Melhores do Dia renderiza cards completos com Linhas de Conforto e Bilhete.
+ * - Jogos do Dia renderiza lista simples por liga/horario, sem cards de bilhete.
+ * - A API fica centralizada em uma normalizacao unica.
  */
 
 (() => {
@@ -33,94 +30,37 @@
     {
       id: "double_chance",
       label: "Chance dupla",
-      aliases: [
-        "chance dupla",
-        "dupla chance",
-        "double chance",
-        "1x",
-        "x2",
-        "12",
-      ],
+      aliases: ["chance dupla", "dupla chance", "double chance", "1x", "x2", "12"],
       priority: 10,
     },
     {
       id: "winner",
       label: "Vencedor",
-      aliases: [
-        "vencedor",
-        "winner",
-        "resultado",
-        "resultado final",
-        "1x2",
-        "casa vence",
-        "fora vence",
-        "home win",
-        "away win",
-      ],
+      aliases: ["vencedor", "winner", "resultado", "resultado final", "1x2", "casa vence", "fora vence", "home win", "away win"],
       priority: 20,
     },
     {
       id: "goals_total",
       label: "Gols Mais/Menos",
-      aliases: [
-        "gols",
-        "goals",
-        "over goals",
-        "under goals",
-        "over",
-        "under",
-        "mais de gols",
-        "menos de gols",
-        "mais de 0.5",
-        "mais de 1.5",
-        "mais de 2.5",
-        "menos de 0.5",
-        "menos de 1.5",
-        "menos de 2.5",
-      ],
+      aliases: ["gols", "goals", "over goals", "under goals", "over", "under", "mais de gols", "menos de gols", "mais de 0.5", "mais de 1.5", "mais de 2.5", "menos de 0.5", "menos de 1.5", "menos de 2.5"],
       priority: 30,
     },
     {
       id: "btts",
       label: "Ambas marcam",
-      aliases: [
-        "ambas marcam",
-        "btts",
-        "both teams score",
-        "both teams to score",
-      ],
+      aliases: ["ambas marcam", "btts", "both teams score", "both teams to score"],
       priority: 40,
     },
     {
       id: "corners_total",
       label: "Escanteios Mais/Menos",
-      aliases: [
-        "escanteios",
-        "cantos",
-        "corners",
-        "corner",
-        "over corners",
-        "under corners",
-        "mais de escanteios",
-        "menos de escanteios",
-      ],
+      aliases: ["escanteios", "cantos", "corners", "corner", "over corners", "under corners", "mais de escanteios", "menos de escanteios"],
       priority: 50,
     },
     {
       id: "cards_total",
       label: "Cartões Mais/Menos",
-      aliases: [
-        "cartoes",
-        "cartões",
-        "cards",
-        "yellow cards",
-        "cartao",
-        "cartão",
-        "over cards",
-        "under cards",
-        "mais de cartões",
-        "menos de cartões",
-      ],
+      aliases: ["cartoes", "cartões", "cards", "yellow cards", "cartao", "cartão", "over cards", "under cards", "mais de cartões", "menos de cartões"],
       priority: 60,
     },
   ];
@@ -134,7 +74,6 @@
     date: ["date", "match_date", "fixture.date", "starting_at", "start_time", "kickoff"],
     time: ["time", "match_time", "fixture.time", "starting_at", "start_time", "kickoff"],
     status: ["status", "status.short", "fixture.status.short", "state"],
-    markets: ["markets", "predictions", "probabilities", "odds", "tips", "analysis", "stats"],
   };
 
   const state = {
@@ -164,10 +103,7 @@
   function getPath(object, path) {
     return String(path)
       .split(".")
-      .reduce((current, key) => {
-        if (current == null) return undefined;
-        return current[key];
-      }, object);
+      .reduce((current, key) => current == null ? undefined : current[key], object);
   }
 
   function pick(object, aliases, fallback = "") {
@@ -236,12 +172,8 @@
     if (group.id === "btts") return "Ambas marcam";
 
     if (group.id === "winner") {
-      if (normalized.includes("home") || normalized.includes("casa") || normalized.includes("1")) {
-        return `${match.home} vence`;
-      }
-      if (normalized.includes("away") || normalized.includes("fora") || normalized.includes("2")) {
-        return `${match.away} vence`;
-      }
+      if (normalized.includes("home") || normalized.includes("casa") || normalized === "1") return `${match.home} vence`;
+      if (normalized.includes("away") || normalized.includes("fora") || normalized === "2") return `${match.away} vence`;
       return name || "Vencedor";
     }
 
@@ -252,17 +184,9 @@
       return name || "Chance dupla";
     }
 
-    if (group.id === "goals_total") {
-      return name.replace(/over/gi, "Mais de").replace(/under/gi, "Menos de") || "Gols Mais/Menos";
-    }
-
-    if (group.id === "corners_total") {
-      return name.replace(/over/gi, "Mais de").replace(/under/gi, "Menos de") || "Escanteios Mais/Menos";
-    }
-
-    if (group.id === "cards_total") {
-      return name.replace(/over/gi, "Mais de").replace(/under/gi, "Menos de") || "Cartões Mais/Menos";
-    }
+    if (group.id === "goals_total") return name.replace(/over/gi, "Mais de").replace(/under/gi, "Menos de") || "Gols Mais/Menos";
+    if (group.id === "corners_total") return name.replace(/over/gi, "Mais de").replace(/under/gi, "Menos de") || "Escanteios Mais/Menos";
+    if (group.id === "cards_total") return name.replace(/over/gi, "Mais de").replace(/under/gi, "Menos de") || "Cartões Mais/Menos";
 
     return name || group.label;
   }
@@ -281,26 +205,13 @@
   }
 
   function findPercentCandidate(object) {
-    const percentKeys = [
-      "probability",
-      "probabilidade",
-      "chance",
-      "confidence",
-      "confianca",
-      "confiança",
-      "percent",
-      "percentage",
-      "pct",
-      "value",
-    ];
-
+    const percentKeys = ["probability", "probabilidade", "chance", "confidence", "confianca", "confiança", "percent", "percentage", "pct", "value"];
     for (const key of percentKeys) {
       if (object && key in object) {
         const percent = toPercent(object[key]);
         if (percent !== null) return percent;
       }
     }
-
     return null;
   }
 
@@ -316,34 +227,15 @@
   }
 
   function findNameCandidate(object, fallback = "") {
-    const nameKeys = [
-      "market",
-      "mercado",
-      "selection",
-      "selecao",
-      "seleção",
-      "pick",
-      "tip",
-      "name",
-      "nome",
-      "label",
-      "title",
-      "titulo",
-      "type",
-      "tipo",
-    ];
-
+    const nameKeys = ["market", "mercado", "selection", "selecao", "seleção", "pick", "tip", "name", "nome", "label", "title", "titulo", "type", "tipo"];
     for (const key of nameKeys) {
       if (typeof object?.[key] === "string" && object[key].trim()) return object[key];
     }
-
     return fallback;
   }
 
   function inferMarketNameFromKey(key, object) {
-    const directName = findNameCandidate(object, "");
-    if (directName) return directName;
-    return String(key || "").replace(/[_-]+/g, " ");
+    return findNameCandidate(object, "") || String(key || "").replace(/[_-]+/g, " ");
   }
 
   function extractMarketsFromFlatObject(source, match) {
@@ -416,17 +308,11 @@
   }
 
   function hasConflict(candidate, selected) {
-    const groupSelections = selected.filter((item) => item.groupId === candidate.groupId);
-
-    if (!groupSelections.length) return false;
-
-    // Permite mais de uma linha Mais/Menos de grupos diferentes,
-    // mas evita duplicar mercado do mesmo grupo no bilhete final.
+    const sameGroup = selected.filter((item) => item.groupId === candidate.groupId);
+    if (!sameGroup.length) return false;
     if (["goals_total", "corners_total", "cards_total"].includes(candidate.groupId)) {
-      return groupSelections.some((item) => normalizeText(item.selection) === normalizeText(candidate.selection));
+      return sameGroup.some((item) => normalizeText(item.selection) === normalizeText(candidate.selection));
     }
-
-    // No bilhete principal, evita vencedor + chance dupla conflitantes ou duplicados.
     return true;
   }
 
@@ -465,22 +351,18 @@
 
     match.markets = extractMarketsFromFlatObject(raw, match);
     match.ticket = buildTicket(match.markets);
-
     return match;
   }
 
   function extractMatchArray(payload) {
     if (Array.isArray(payload)) return payload;
-
     const likelyKeys = ["matches", "fixtures", "games", "data", "items", "results"];
     for (const key of likelyKeys) {
       if (Array.isArray(payload?.[key])) return payload[key];
     }
-
     const arrays = collectObjects(payload)
       .flatMap((object) => Object.values(object).filter(Array.isArray))
       .sort((a, b) => b.length - a.length);
-
     return arrays[0] || [];
   }
 
@@ -488,8 +370,7 @@
     const rows = extractMatchArray(payload);
     return rows
       .map(normalizeMatch)
-      .filter((match) => match.home && match.away)
-      .filter((match) => match.markets.length > 0);
+      .filter((match) => match.home && match.away);
   }
 
   function renderMarketLine(market) {
@@ -530,7 +411,6 @@
 
   function renderBestCard(match) {
     const hasTicket = match.ticket.length > 0;
-
     return `
       <article class="market-card" data-match-id="${escapeHtml(match.id)}">
         <header class="market-card-header">
@@ -593,7 +473,6 @@
   function renderBestMatches(matches) {
     const board = document.querySelector(CONFIG.selectors.bestBoard);
     if (!board) return;
-
     const best = matches
       .filter((match) => match.markets.some((market) => market.confidence >= CONFIG.minConfidence))
       .sort((a, b) => {
@@ -601,7 +480,6 @@
         const bTop = Math.max(...b.markets.map((market) => market.confidence));
         return bTop - aTop;
       });
-
     board.innerHTML = best.length
       ? best.map(renderBestCard).join("")
       : `
@@ -613,6 +491,63 @@
           </div>
         </article>
       `;
+  }
+
+  function getStatusLabel(status) {
+    const normalized = normalizeText(status);
+    if (["ft", "finished", "finalizado", "encerrado"].some((word) => normalized.includes(word))) return "Encerrado";
+    if (["live", "ao vivo", "inplay", "1h", "2h", "ht"].some((word) => normalized.includes(word))) return "Ao vivo";
+    return "Pré-jogo";
+  }
+
+  function groupByLeague(matches) {
+    return matches.reduce((groups, match) => {
+      const key = match.country ? `${match.country} • ${match.league}` : match.league;
+      if (!groups[key]) groups[key] = [];
+      groups[key].push(match);
+      return groups;
+    }, {});
+  }
+
+  function renderDailyGameRow(match) {
+    const topMarket = match.markets[0];
+    const marketText = topMarket ? `${topMarket.selection} • ${topMarket.confidence}%` : "Sem linha acima de 70%";
+    return `
+      <button class="daily-game-row" type="button" data-match-id="${escapeHtml(match.id)}">
+        <span class="daily-game-time">${escapeHtml(match.time)}</span>
+        <span class="daily-game-main">
+          <strong>${escapeHtml(match.home)} x ${escapeHtml(match.away)}</strong>
+          <small>${escapeHtml(marketText)}</small>
+        </span>
+        <em class="daily-game-status">${escapeHtml(getStatusLabel(match.status))}</em>
+      </button>
+    `;
+  }
+
+  function renderDailyGames(matches) {
+    const list = document.querySelector(CONFIG.selectors.dailyList);
+    if (!list) return;
+
+    const ordered = [...matches].sort((a, b) => `${a.date} ${a.time}`.localeCompare(`${b.date} ${b.time}`));
+    const groups = groupByLeague(ordered);
+    const html = Object.entries(groups)
+      .map(([league, leagueMatches]) => `
+        <article class="daily-league-group">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">Liga</p>
+              <h3>${escapeHtml(league)}</h3>
+            </div>
+            <span>${leagueMatches.length} jogos</span>
+          </div>
+          <div class="daily-game-list">
+            ${leagueMatches.map(renderDailyGameRow).join("")}
+          </div>
+        </article>
+      `)
+      .join("");
+
+    list.innerHTML = html || `<p class="empty-state">Nenhum jogo encontrado para o dia.</p>`;
   }
 
   function updateStatus(message, detail) {
@@ -641,6 +576,7 @@
 
     updateStatus("API conectada", `${state.matches.length} jogos carregados`);
     renderBestMatches(state.matches);
+    renderDailyGames(state.matches);
   }
 
   function init() {
@@ -665,6 +601,7 @@
     extractMarketsFromFlatObject,
     buildTicket,
     renderBestMatches,
+    renderDailyGames,
     loadApiData,
   };
 
