@@ -3,100 +3,110 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>JTIPS Analytics</title>
+    <title>Jtips | Dashboard de Análises</title>
+    <link rel="preconnect" href="https://images.unsplash.com" />
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
-    <main class="login" id="loginView">
-      <section class="login__hero">
-        <div class="brand-pill">
+    <main class="login-view" id="loginView">
+      <section class="login-market" aria-label="Login Jtips">
+        <div class="welcome-pill">
           <img src="./assets/jtips-logo.png" alt="" />
-          JTIPS Analytics
+          Bem-vindo ao Jtips
         </div>
-        <h1>Análise estatística para futebol</h1>
-        <p>Pré-jogo, mercados, probabilidades e bilhetes baseados nos dados reais da API.</p>
-      </section>
 
-      <section class="login__card">
-        <img class="login__logo" src="./assets/jtips-logo.png" alt="JTIPS" />
-        <form id="loginForm" class="login-form">
-          <label>
-            E-mail
-            <input type="email" autocomplete="email" placeholder="seu@email.com" />
-          </label>
-          <label>
-            Senha
-            <input type="password" autocomplete="current-password" placeholder="Digite sua senha" />
-          </label>
-          <button type="submit">Entrar no painel</button>
-        </form>
+        <div class="login-title">
+          <img class="login-logo" src="./assets/jtips-logo.png" alt="Jtips" />
+          <h1>ANÁLISE DE <span>FUTEBOL</span></h1>
+          <p>Entre no módulo de futebol para acompanhar jogos, mercados, probabilidades e análises.</p>
+        </div>
+
+        <div class="market-login-grid">
+          <article class="football-access-card" aria-label="Módulo Futebol">
+            <div class="card-shade"></div>
+            <div class="sport-icon" aria-hidden="true"><span></span></div>
+            <div class="football-card-copy">
+              <p>Football analysis</p>
+              <h2>FUTEBOL</h2>
+              <span>Análise pré-jogo, gols, escanteios, cartões, casa/fora e desempenho de times.</span>
+            </div>
+            <div class="access-row"><strong>Acessar agora</strong><span>→</span></div>
+          </article>
+
+          <section class="login-card" aria-label="Acesso">
+            <div class="login-heading">
+              <img class="brand-logo small" src="./assets/jtips-logo.png" alt="Jtips" />
+              <div>
+                <p class="eyebrow">Acesso seguro</p>
+                <h2>Entrar no painel</h2>
+              </div>
+            </div>
+
+            <form id="loginForm" class="login-form">
+              <label>E-mail<input type="email" autocomplete="email" placeholder="seu@email.com" /></label>
+              <label>Senha<input type="password" autocomplete="current-password" placeholder="Digite sua senha" /></label>
+              <button type="submit">Entrar no futebol</button>
+            </form>
+          </section>
+        </div>
       </section>
     </main>
 
-    <div class="app is-hidden" id="appShell">
+    <div class="app-shell is-hidden" id="appShell">
       <aside class="sidebar">
-        <div class="sidebar__brand">
-          <img src="./assets/jtips-logo.png" alt="JTIPS" />
-          <div>
-            <strong>JTIPS</strong>
-            <span>Football intelligence</span>
-          </div>
+        <div class="sidebar-brand">
+          <img class="brand-logo small" src="./assets/jtips-logo.png" alt="Jtips" />
+          <div><strong>Jtips</strong><span>Football intelligence</span></div>
         </div>
 
-        <nav class="nav" aria-label="Navegação principal">
-          <button class="active" type="button" data-view="best">Melhores do Dia</button>
-          <button type="button" data-view="games">Jogos do Dia</button>
-          <button type="button" data-view="settings">Configurações</button>
+        <nav class="nav-list" aria-label="Navegação principal">
+          <a class="active" href="#melhores-do-dia" data-view="best" aria-current="page">Melhores do dia</a>
+          <a href="#jogos-do-dia" data-view="games">Jogos do Dia</a>
+          <a href="#configuracoes" data-view="settings">Configurações</a>
         </nav>
 
         <div class="api-status" id="apiStatus">
           <span class="status-dot"></span>
-          <div>
-            <strong>API aguardando</strong>
-            <small>Entre no painel</small>
-          </div>
+          <div><strong>API aguardando</strong><small>Entre no painel</small></div>
         </div>
       </aside>
 
-      <main class="dashboard">
+      <main class="dashboard" id="dashboard">
         <header class="topbar">
           <div>
-            <p>Futebol • Pré-jogo</p>
-            <h2 id="pageTitle">Melhores do Dia</h2>
+            <p class="eyebrow">Futebol • Pré-jogo</p>
+            <h1 id="pageTitle">Melhores do Dia</h1>
           </div>
-          <div class="topbar__actions">
-            <button id="refreshButton" type="button" title="Atualizar dados">↻</button>
-            <button id="logoutButton" type="button">Sair</button>
+          <div class="top-actions">
+            <button class="icon-button" id="refreshButton" title="Atualizar dados" aria-label="Atualizar dados">↻</button>
+            <button class="profile-button" id="logoutButton">Sair</button>
           </div>
         </header>
 
-        <section class="view" id="bestView" data-view-panel="best">
+        <section class="market-board app-view" id="bestView" data-view-panel="best" aria-label="Melhores jogos do dia acima de 70%">
           <div class="cards-grid" id="bestGrid"></div>
         </section>
 
-        <section class="view is-hidden" id="gamesView" data-view-panel="games">
-          <div class="status-tabs" aria-label="Status dos jogos">
+        <section class="daily-games-view app-view is-hidden" id="gamesView" data-view-panel="games" aria-label="Jogos do dia">
+          <div class="daily-status-tabs" aria-label="Status dos jogos">
             <button class="active" type="button" data-status="all">Todos</button>
             <button type="button" data-status="upcoming">Próximos</button>
             <button type="button" data-status="live">Ao vivo</button>
             <button type="button" data-status="finished">Encerrados</button>
           </div>
-          <div class="daily-list" id="dailyList"></div>
+          <div class="daily-league-list" id="dailyList" aria-live="polite"></div>
         </section>
 
-        <section class="view is-hidden" id="settingsView" data-view-panel="settings">
-          <article class="settings-card">
+        <section class="settings-view app-view is-hidden" id="settingsView" data-view-panel="settings" aria-label="Configurações">
+          <div class="settings-shell">
             <p class="eyebrow">Configurações</p>
-            <h3>Conexão da API</h3>
+            <h2>Conexão da API</h2>
             <p>Informe a URL real da API para carregar os jogos. Ela ficará salva no navegador para testes.</p>
-            <form id="apiForm" class="api-form">
-              <label>
-                URL da API
-                <input id="apiUrlInput" type="url" placeholder="https://..." />
-              </label>
+            <form id="apiForm" class="login-form">
+              <label>URL da API<input id="apiUrlInput" type="url" placeholder="https://..." /></label>
               <button type="submit">Salvar e carregar</button>
             </form>
-          </article>
+          </div>
         </section>
       </main>
     </div>
