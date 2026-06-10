@@ -1,175 +1,309 @@
-:root {
-  --bg: #0f1117;
-  --surface: #1a1d27;
-  --surface-2: #222635;
-  --text: #f3f6fb;
-  --muted: #9aa4b2;
-  --accent: #00c853;
-  --danger: #ff5c7a;
-  --warning: #ffd166;
-  --border: rgba(255,255,255,.08);
-  --shadow: 0 20px 50px rgba(0,0,0,.25);
-}
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Central de análises, estatísticas, odds e tips para apostas em futebol.">
+  <meta name="theme-color" content="#0f1117">
+  <title>ScoutBet | Inteligência para apostas esportivas</title>
+  <link rel="icon" type="image/svg+xml" href="./assets/favicon.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+  <link rel="stylesheet" href="./css/styles.css">
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar" id="sidebar" aria-label="Navegação principal">
+      <div class="sidebar__top">
+        <a class="brand" href="#dashboard" aria-label="ScoutBet - Início">
+          <span class="brand__mark" aria-hidden="true">
+            <svg viewBox="0 0 40 40" role="img">
+              <path d="M7 25.5 14.5 18l5.2 5.2L31.8 11" />
+              <path d="M23.2 11h8.6v8.6" />
+              <circle cx="11" cy="30" r="3" />
+            </svg>
+          </span>
+          <span class="brand__text">SCOUT<span>BET</span></span>
+        </a>
+        <button class="icon-button sidebar__close" id="closeSidebar" type="button" aria-label="Fechar menu">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
 
-[data-theme="light"] {
-  --bg: #f4f7fb;
-  --surface: #ffffff;
-  --surface-2: #eef2f7;
-  --text: #101624;
-  --muted: #526070;
-  --border: rgba(16,22,36,.1);
-  --shadow: 0 18px 38px rgba(16,22,36,.08);
-}
+      <nav class="main-nav">
+        <p class="nav-label">Análises</p>
+        <a class="nav-item active" href="#dashboard" data-section="dashboard">
+          <i class="fa-solid fa-border-all"></i><span>Visão geral</span>
+        </a>
+        <a class="nav-item" href="#jogos" data-section="jogos">
+          <i class="fa-regular fa-calendar"></i><span>Jogos e resultados</span>
+          <span class="nav-badge" id="liveNavBadge">3</span>
+        </a>
+        <a class="nav-item" href="#estatisticas" data-section="estatisticas">
+          <i class="fa-solid fa-chart-column"></i><span>Estatísticas</span>
+        </a>
+        <a class="nav-item" href="#odds" data-section="odds">
+          <i class="fa-solid fa-arrow-trend-up"></i><span>Odds e valor</span>
+        </a>
+        <a class="nav-item" href="#h2h" data-section="h2h">
+          <i class="fa-solid fa-code-compare"></i><span>Confrontos H2H</span>
+        </a>
+        <a class="nav-item" href="#tips" data-section="tips">
+          <i class="fa-regular fa-lightbulb"></i><span>Tips do dia</span>
+        </a>
 
-* { box-sizing: border-box; }
-html { scroll-behavior: smooth; }
-body {
-  margin: 0;
-  font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  background: var(--bg);
-  color: var(--text);
-}
-a { color: inherit; text-decoration: none; }
-button, input, select { font: inherit; }
+      </nav>
 
-.sidebar {
-  position: fixed;
-  inset: 0 auto 0 0;
-  width: 260px;
-  background: var(--surface);
-  border-right: 1px solid var(--border);
-  padding: 24px;
-  display: flex;
-  flex-direction: column;
-  gap: 28px;
-  z-index: 50;
-}
-.brand { display: flex; align-items: center; gap: 12px; font-size: 1.35rem; font-weight: 800; }
-.brand i { color: var(--accent); }
-.nav-links { display: grid; gap: 8px; }
-.nav-link { padding: 12px 14px; border-radius: 14px; color: var(--muted); display: flex; gap: 12px; align-items: center; }
-.nav-link:hover, .nav-link.active { color: var(--text); background: var(--surface-2); }
-.sidebar-note { margin-top: auto; padding: 16px; border: 1px solid var(--border); border-radius: 18px; color: var(--muted); display: grid; gap: 6px; }
-.sidebar-note strong { color: var(--text); }
+      <div class="sidebar__footer">
+        <div class="api-status" id="apiStatus">
+          <span class="status-dot" style="background:var(--warning);box-shadow:0 0 0 4px var(--warning-soft)"></span>
+          <div>
+            <strong>Aguardando FootyStats</strong>
+            <small>Conecte pelo ambiente Vercel</small>
+          </div>
+        </div>
+        <div class="responsible-note">
+          <i class="fa-solid fa-shield-heart"></i>
+          <p><strong>Jogue com responsabilidade.</strong><br>As análises não garantem retorno.</p>
+        </div>
+      </div>
+    </aside>
 
-.app-shell { margin-left: 260px; min-height: 100vh; }
-.topbar {
-  position: sticky;
-  top: 0;
-  z-index: 20;
-  min-height: 86px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 18px;
-  padding: 18px 32px;
-  background: color-mix(in srgb, var(--bg) 88%, transparent);
-  backdrop-filter: blur(16px);
-  border-bottom: 1px solid var(--border);
-}
-.topbar h1 { margin: 0; font-size: clamp(1.3rem, 2vw, 1.9rem); }
-.eyebrow { margin: 0 0 4px; color: var(--accent); text-transform: uppercase; letter-spacing: .12em; font-size: .74rem; font-weight: 800; }
-.content { padding: 28px 32px 60px; display: grid; gap: 24px; }
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
 
-.hero, .panel, .kpi-card {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 24px;
-  box-shadow: var(--shadow);
-}
-.hero { padding: 28px; display: flex; align-items: center; justify-content: space-between; gap: 24px; }
-.hero h2 { margin: 0 0 8px; font-size: clamp(1.8rem, 4vw, 3rem); }
-.hero p { margin: 0; color: var(--muted); }
-.hero-controls, .filters, .h2h-form { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-input, select {
-  border: 1px solid var(--border);
-  background: var(--surface-2);
-  color: var(--text);
-  border-radius: 12px;
-  padding: 11px 12px;
-  outline: none;
-}
-.primary-btn, .theme-toggle, .icon-btn {
-  border: 0;
-  border-radius: 14px;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 11px 14px;
-}
-.primary-btn { background: var(--accent); color: #04110a; font-weight: 800; }
-.theme-toggle, .icon-btn { background: var(--surface-2); color: var(--text); border: 1px solid var(--border); }
-.mobile-only { display: none; }
+    <div class="app-main">
+      <header class="topbar">
+        <div class="topbar__left">
+          <button class="icon-button menu-toggle" id="menuToggle" type="button" aria-label="Abrir menu">
+            <i class="fa-solid fa-bars"></i>
+          </button>
+          <div>
+            <p class="eyebrow" id="pageEyebrow">Central de análise</p>
+            <h1 id="pageTitle">Visão geral</h1>
+          </div>
+        </div>
+        <div class="topbar__right">
+          <div class="data-sync">
+            <span class="status-dot status-dot--pulse"></span>
+            <div><strong>Dados atualizados</strong><small id="lastUpdate">agora</small></div>
+          </div>
+          <button class="icon-button" id="refreshButton" type="button" aria-label="Atualizar dados" title="Atualizar dados">
+            <i class="fa-solid fa-rotate"></i>
+          </button>
+          <button class="theme-toggle" id="themeToggle" type="button" aria-label="Alternar tema">
+            <i class="fa-solid fa-moon"></i>
+            <span class="theme-toggle__track"><span></span></span>
+            <i class="fa-solid fa-sun"></i>
+          </button>
+          <button class="profile-button" type="button" aria-label="Perfil">
+            <span>SB</span>
+            <div><strong>Analista</strong><small>Plano gratuito</small></div>
+            <i class="fa-solid fa-chevron-down"></i>
+          </button>
+        </div>
+      </header>
 
-.kpi-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; }
-.kpi-card { padding: 20px; display: grid; gap: 8px; }
-.kpi-card span, .muted { color: var(--muted); }
-.kpi-card strong { font-size: 2rem; }
-.kpi-card small { color: var(--accent); }
-.grid-2 { display: grid; grid-template-columns: 1.2fr .8fr; gap: 24px; }
-.panel { padding: 22px; min-width: 0; }
-.panel-header { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 18px; }
-.panel-header h3 { margin: 0; font-size: 1.2rem; }
-.wrap { flex-wrap: wrap; }
-.status-pill, .tag, .stars { border-radius: 999px; padding: 6px 10px; background: var(--surface-2); color: var(--muted); font-size: .82rem; }
-.status-pill.ok { color: var(--accent); }
-.status-pill.error { color: var(--danger); }
+      <main class="content">
+        <section class="page-section active" id="dashboard" aria-labelledby="dashboard-title">
+          <div class="hero-row">
+            <div>
+              <p class="eyebrow">Quarta-feira, <span id="todayLabel">10 de junho</span></p>
+              <h2 id="dashboard-title">Boa análise começa com <span>bons dados.</span></h2>
+              <p>Acompanhe partidas, tendências e oportunidades em um só lugar.</p>
+            </div>
+            <div class="hero-actions">
+              <button class="button button--ghost" type="button" data-go-to="jogos">
+                <i class="fa-regular fa-calendar"></i> Ver calendário
+              </button>
+              <button class="button button--primary" type="button" data-go-to="tips">
+                <i class="fa-solid fa-bolt"></i> Tips de hoje
+              </button>
+            </div>
+          </div>
 
-.match-list, .card-grid, .odds-grid, .tips-list { display: grid; gap: 12px; }
-.match-card, .stat-card, .odds-card, .tip-card, .leader-row, .h2h-card {
-  border: 1px solid var(--border);
-  background: var(--surface-2);
-  border-radius: 18px;
-  padding: 16px;
-}
-.match-card { display: grid; gap: 10px; }
-.match-teams, .scoreline, .odds-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
-.scoreline strong { font-size: 1.3rem; color: var(--accent); }
-.table-wrap { overflow-x: auto; }
-table { width: 100%; border-collapse: collapse; min-width: 860px; }
-th, td { text-align: left; border-bottom: 1px solid var(--border); padding: 13px 10px; }
-th { color: var(--muted); font-size: .82rem; text-transform: uppercase; letter-spacing: .05em; }
-.card-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-.stat-card strong { font-size: 1.4rem; display: block; margin: 4px 0; }
-.leader-row { display: grid; grid-template-columns: 1fr auto; gap: 12px; align-items: center; }
-.odds-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-.value { color: var(--accent); font-weight: 800; }
-.no-value { color: var(--muted); }
-.tip-card { display: grid; gap: 8px; }
-.stars { color: var(--warning); width: fit-content; }
-.error-box { border: 1px solid color-mix(in srgb, var(--danger) 40%, transparent); background: color-mix(in srgb, var(--danger) 12%, var(--surface)); color: var(--text); border-radius: 16px; padding: 14px; }
+          <div class="metrics-grid" id="dashboardMetrics">
+            <div class="metric-card skeleton-card"><span class="skeleton-line w-40"></span><span class="skeleton-line w-70 lg"></span></div>
+            <div class="metric-card skeleton-card"><span class="skeleton-line w-40"></span><span class="skeleton-line w-70 lg"></span></div>
+            <div class="metric-card skeleton-card"><span class="skeleton-line w-40"></span><span class="skeleton-line w-70 lg"></span></div>
+            <div class="metric-card skeleton-card"><span class="skeleton-line w-40"></span><span class="skeleton-line w-70 lg"></span></div>
+          </div>
 
-.skeleton { position: relative; overflow: hidden; height: 78px; border-radius: 18px; background: var(--surface-2); }
-.skeleton::after { content: ""; position: absolute; inset: 0; transform: translateX(-100%); background: linear-gradient(90deg, transparent, rgba(255,255,255,.08), transparent); animation: shimmer 1.3s infinite; }
-@keyframes shimmer { 100% { transform: translateX(100%); } }
+          <div class="dashboard-grid">
+            <article class="panel panel--matches">
+              <div class="panel__header">
+                <div>
+                  <div class="title-with-live"><h3>Jogos em destaque</h3><span class="live-pill"><i></i> AO VIVO</span></div>
+                  <p>Partidas e oportunidades de hoje</p>
+                </div>
+                <button class="text-button" type="button" data-go-to="jogos">Ver todos <i class="fa-solid fa-arrow-right"></i></button>
+              </div>
+              <div class="featured-matches" id="featuredMatches">
+                <div class="match-skeleton skeleton-card"></div>
+                <div class="match-skeleton skeleton-card"></div>
+              </div>
+            </article>
 
-@media (max-width: 1100px) {
-  .grid-2 { grid-template-columns: 1fr; }
-  .odds-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-}
-@media (max-width: 760px) {
-  .mobile-only { display: inline-flex; }
-  .sidebar { transform: translateX(-105%); transition: transform .2s ease; }
-  .sidebar.open { transform: translateX(0); }
-  .app-shell { margin-left: 0; }
-  .topbar, .content { padding-left: 18px; padding-right: 18px; }
-  .hero { align-items: stretch; flex-direction: column; }
-  .kpi-grid, .card-grid, .odds-grid { grid-template-columns: 1fr; }
-}
+            <article class="panel panel--tip">
+              <div class="panel__header">
+                <div><h3>Tip em evidência</h3><p>Nossa leitura mais forte do dia</p></div>
+                <span class="pro-badge"><i class="fa-solid fa-crown"></i> DESTAQUE</span>
+              </div>
+              <div id="featuredTip" class="featured-tip">
+                <div class="skeleton-card tip-skeleton"></div>
+              </div>
+            </article>
 
-.api-diagnostics {
-  margin-top: 18px;
-  padding: 12px 14px;
-  border: 1px solid var(--border);
-  border-radius: 14px;
-  background: rgba(255,255,255,0.03);
-  color: var(--muted);
-  font-size: 0.82rem;
-  max-width: 760px;
-}
-.diag-line { margin: 3px 0; }
-.diag-line.ok { color: var(--accent); }
-.diag-line.warn { color: #fbbf24; }
-.diag-line.error { color: #f87171; }
+          </div>
+        </section>
+
+        <section class="page-section" id="jogos" aria-labelledby="matches-title">
+          <div class="section-heading">
+            <div><p class="eyebrow">Agenda completa</p><h2 id="matches-title">Jogos e resultados</h2><p>Navegue por data, campeonato e status da partida.</p></div>
+            <div class="section-actions">
+              <button class="button button--ghost" id="goToday" type="button"><i class="fa-solid fa-calendar-day"></i> Hoje</button>
+            </div>
+          </div>
+
+          <div class="date-navigator panel">
+            <button class="icon-button" id="previousDate" type="button" aria-label="Dia anterior"><i class="fa-solid fa-chevron-left"></i></button>
+            <div class="date-strip" id="dateStrip"></div>
+            <button class="icon-button" id="nextDate" type="button" aria-label="Próximo dia"><i class="fa-solid fa-chevron-right"></i></button>
+          </div>
+
+          <div class="filter-bar">
+            <label class="search-field"><i class="fa-solid fa-magnifying-glass"></i><input id="matchSearch" type="search" placeholder="Buscar time ou campeonato"></label>
+            <select id="matchLeagueFilter" aria-label="Filtrar campeonato"><option value="all">Todos os campeonatos</option></select>
+            <div class="segmented-control" id="matchStatusFilter">
+              <button class="active" type="button" data-status="all">Todos</button>
+              <button type="button" data-status="live">Ao vivo</button>
+              <button type="button" data-status="scheduled">Agendados</button>
+              <button type="button" data-status="complete">Encerrados</button>
+            </div>
+          </div>
+
+          <div class="matches-table-card panel">
+            <div class="table-scroll">
+              <table class="data-table">
+                <thead><tr><th>Horário</th><th>Campeonato</th><th>Partida</th><th>Status</th><th>Mercado principal</th><th>Odd</th><th></th></tr></thead>
+                <tbody id="matchesTableBody"></tbody>
+              </table>
+            </div>
+            <div class="empty-state hidden" id="matchesEmpty"><i class="fa-regular fa-calendar-xmark"></i><h3>Nenhuma partida encontrada</h3><p>Ajuste os filtros ou escolha outra data.</p></div>
+          </div>
+        </section>
+
+        <section class="page-section" id="estatisticas" aria-labelledby="stats-title">
+          <div class="section-heading">
+            <div><p class="eyebrow">Performance em números</p><h2 id="stats-title">Times e jogadores</h2><p>Compare forma, produção ofensiva e disciplina.</p></div>
+            <select id="statsLeagueFilter" class="large-select" aria-label="Campeonato das estatísticas"></select>
+          </div>
+
+          <div class="stats-tabs">
+            <button class="active" type="button" data-stats-tab="teams"><i class="fa-solid fa-shield-halved"></i> Times</button>
+            <button type="button" data-stats-tab="players"><i class="fa-solid fa-person-running"></i> Jogadores</button>
+          </div>
+
+          <div class="stats-view active" id="teamsStatsView">
+            <div class="stats-overview" id="statsOverview"></div>
+            <div class="stats-layout">
+              <article class="panel">
+                <div class="panel__header"><div><h3>Ranking de performance</h3><p>Produção geral na temporada</p></div></div>
+                <div class="ranking-list" id="teamRanking"></div>
+              </article>
+              <article class="panel">
+                <div class="panel__header"><div><h3>Comparativo de forças</h3><p>Médias das equipes líderes</p></div></div>
+                <div class="chart-wrap chart-wrap--radar"><canvas id="teamRadarChart"></canvas></div>
+              </article>
+            </div>
+          </div>
+
+          <div class="stats-view" id="playersStatsView">
+            <div class="player-leaders" id="playerLeaders"></div>
+            <article class="panel">
+              <div class="panel__header"><div><h3>Ranking de jogadores</h3><p>Gols, assistências e participação direta</p></div></div>
+              <div class="table-scroll">
+                <table class="data-table player-table">
+                  <thead><tr><th>#</th><th>Jogador</th><th>Time</th><th>Jogos</th><th>Gols</th><th>Assist.</th><th>Min./gol</th><th>Nota</th></tr></thead>
+                  <tbody id="playersTableBody"></tbody>
+                </table>
+              </div>
+            </article>
+          </div>
+        </section>
+
+        <section class="page-section" id="odds" aria-labelledby="odds-title">
+          <div class="section-heading">
+            <div><p class="eyebrow">Encontre vantagem</p><h2 id="odds-title">Probabilidades e odds</h2><p>Compare a probabilidade estimada com a odd de mercado.</p></div>
+            <div class="value-legend"><span><i class="legend-dot legend-dot--high"></i> Alto valor</span><span><i class="legend-dot legend-dot--medium"></i> Valor moderado</span></div>
+          </div>
+
+          <div class="odds-summary" id="oddsSummary"></div>
+          <div class="filter-bar">
+            <select id="oddsLeagueFilter" aria-label="Campeonato"><option value="all">Todos os campeonatos</option></select>
+            <select id="oddsMarketFilter" aria-label="Mercado">
+              <option value="all">Todos os mercados</option>
+              <option value="1x2">Resultado final</option>
+              <option value="goals">Total de gols</option>
+              <option value="btts">Ambas marcam</option>
+            </select>
+            <label class="range-filter">Value mínimo <strong id="valueRangeLabel">3%</strong><input id="valueRange" type="range" min="0" max="15" value="3"></label>
+          </div>
+          <div class="value-bets-grid" id="valueBetsGrid"></div>
+        </section>
+
+        <section class="page-section" id="h2h" aria-labelledby="h2h-title">
+          <div class="section-heading">
+            <div><p class="eyebrow">Frente a frente</p><h2 id="h2h-title">Histórico de confrontos</h2><p>Compare dois times e encontre padrões nos últimos 10 encontros.</p></div>
+          </div>
+
+          <div class="h2h-selector panel">
+            <label><span>Time da casa</span><select id="homeTeamSelect"></select></label>
+            <div class="versus-badge">VS</div>
+            <label><span>Time visitante</span><select id="awayTeamSelect"></select></label>
+            <button class="button button--primary" id="compareTeamsButton" type="button"><i class="fa-solid fa-code-compare"></i> Comparar</button>
+          </div>
+          <div id="h2hContent"></div>
+        </section>
+
+        <section class="page-section" id="tips" aria-labelledby="tips-title">
+          <div class="section-heading">
+            <div><p class="eyebrow">Leituras editoriais</p><h2 id="tips-title">Tips de apostas</h2><p>Mercados sugeridos com contexto, odd e nível de confiança.</p></div>
+            <div class="tips-score"><i class="fa-solid fa-chart-line"></i><div><small>ROI simulado, 30 dias</small><strong>+12,8%</strong></div></div>
+          </div>
+
+          <div class="tips-disclaimer"><i class="fa-solid fa-circle-info"></i><p>As tips são análises informativas baseadas em estatísticas. Odds variam e não há garantia de lucro. Aposte apenas o que puder perder.</p></div>
+          <div class="filter-bar">
+            <div class="segmented-control" id="tipsFilter">
+              <button class="active" type="button" data-tip-filter="all">Todas</button>
+              <button type="button" data-tip-filter="high">Alta confiança</button>
+              <button type="button" data-tip-filter="value">Value bets</button>
+              <button type="button" data-tip-filter="live">Ao vivo</button>
+            </div>
+          </div>
+          <div class="tips-grid" id="tipsGrid"></div>
+        </section>
+      </main>
+
+      <footer class="footer">
+        <p>© 2026 ScoutBet. Dados esportivos via FootyStats.</p>
+        <div><a href="#tips">Jogo responsável</a><a href="https://footystats.org/api" target="_blank" rel="noopener">Fonte dos dados</a></div>
+      </footer>
+    </div>
+  </div>
+
+  <div class="modal" id="matchModal" aria-hidden="true">
+    <div class="modal__backdrop" data-close-modal></div>
+    <div class="modal__dialog" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+      <div class="modal__header"><div><p class="eyebrow">Análise da partida</p><h2 id="modalTitle">Detalhes</h2></div><button class="icon-button" type="button" data-close-modal aria-label="Fechar"><i class="fa-solid fa-xmark"></i></button></div>
+      <div class="modal__body" id="matchModalBody"></div>
+    </div>
+  </div>
+
+  <div class="toast-region" id="toastRegion" aria-live="polite"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+  <script src="./js/app.js" defer></script>
+</body>
+</html>
