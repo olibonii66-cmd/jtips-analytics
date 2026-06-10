@@ -1451,15 +1451,25 @@ function getMatchTimestamp(raw) {
 
 function normalizeStatus(status, timestamp) {
   const value = normalizeText(status || "");
+  const kickoff = Number(timestamp) || 0;
+  const now = Date.now();
+  const fiveMinutes = 5 * 60 * 1000;
+  const threeHours = 3 * 60 * 60 * 1000;
 
   if (["cancelled", "canceled"].some((item) => value.includes(item))) return "cancelled";
   if (["postponed"].some((item) => value.includes(item))) return "postponed";
   if (["suspended", "abandoned"].some((item) => value.includes(item))) return "suspended";
+
+  // Se o horário da partida ainda está no futuro, não mostrar como encerrado
+  // mesmo que a API retorne algum status inconsistente.
+  if (kickoff && kickoff > now + fiveMinutes) return "scheduled";
+
   if (["live", "in play", "inplay", "playing", "half time", "1h", "2h", "ht"].some((item) => value.includes(item))) return "live";
   if (["complete", "finished", "full time", "full-time", "ft", "ended"].some((item) => value.includes(item))) return "complete";
   if (["scheduled", "incomplete", "pre match", "pre-match", "not started", "pending"].some((item) => value.includes(item))) return "scheduled";
 
-  // Não deduzir encerrado apenas pelo horário. Só mostra Encerrado quando a API retornar status finalizado.
+  // Sem status confiável: só considera encerrado quando já passou bastante do horário.
+  if (kickoff && now > kickoff + threeHours) return "complete";
   return "scheduled";
 }
 
@@ -1509,9 +1519,8 @@ function modalAnalysis(match, market) {
   return `A combinação de probabilidade estimada, preço de mercado e indicadores recentes destaca ${market.label.toLowerCase()} como a opção de maior interesse estatístico.`;
 }
 
-function leagueIcon(league) {
-  const safe = league || TARGET_LEAGUES[0];
-  return `<span class="league-icon" style="--league-color:${safe.color}">${escapeHtml(safe.short)}</span>`;
+function leagueIcon() {
+  return "";
 }
 
 function teamCrest(name, color = "#00c853", image = null) {
@@ -1525,12 +1534,12 @@ function teamCrest(name, color = "#00c853", image = null) {
 }
 
 function compactTeamRow(name, goals, color, image = null, showScore = true) {
-  const score = showScore && goals !== null && goals !== undefined ? goals : "–";
+  const score = showScore && goals !== null && goals !== undefined ? goals : "";
   return `<div class="match-team">${teamCrest(name, color, image)}<span>${escapeHtml(name)}</span><strong>${score}</strong></div>`;
 }
 
 function tableTeam(name, goals, color, image = null, showScore = true) {
-  const score = showScore && goals !== null && goals !== undefined ? goals : "–";
+  const score = showScore && goals !== null && goals !== undefined ? goals : "";
   return `<div class="table-match__team">${teamCrest(name, color, image)}<span>${escapeHtml(name)}</span><b>${score}</b></div>`;
 }
 
