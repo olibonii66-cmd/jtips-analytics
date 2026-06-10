@@ -379,8 +379,16 @@ function normalizeMatch(raw) {
       home: clampProbability(raw.home_win_percentage || raw.homeWinProbability),
       draw: clampProbability(raw.draw_percentage || raw.drawProbability),
       away: clampProbability(raw.away_win_percentage || raw.awayWinProbability),
-      over25: clampProbability(raw.over_25_percentage || raw.o25_potential || raw.over25Probability),
-      btts: clampProbability(raw.btts_percentage || raw.btts_potential || raw.bttsProbability)
+      over15: firstProbability(raw.over15, raw.over_15_percentage, raw.o15_potential, raw.over15Probability),
+      over25: firstProbability(raw.over25, raw.over_25_percentage, raw.o25_potential, raw.over25Probability),
+      over35: firstProbability(raw.over35, raw.over_35_percentage, raw.o35_potential, raw.over35Probability),
+      btts: firstProbability(raw.btts_percentage, raw.btts_potential, raw.bttsProbability),
+      cornersOver85: firstProbability(raw.corners_o85_potential, raw.corners_over_85_percentage, raw.cornersOver85Probability),
+      cornersOver95: firstProbability(raw.corners_o95_potential, raw.corners_over_95_percentage, raw.cornersOver95Probability),
+      cornersOver105: firstProbability(raw.corners_o105_potential, raw.corners_over_105_percentage, raw.cornersOver105Probability),
+      cardsOver35: firstProbability(raw.cards_o35_potential, raw.cards_over_35_percentage, raw.cardsOver35Probability, raw.cards_potential),
+      cardsOver45: firstProbability(raw.cards_o45_potential, raw.cards_over_45_percentage, raw.cardsOver45Probability),
+      cardsOver55: firstProbability(raw.cards_o55_potential, raw.cards_over_55_percentage, raw.cardsOver55Probability)
     },
     stats: {
       possessionHome: nullablePositiveNumber(raw.team_a_possession),
@@ -834,9 +842,10 @@ function buildValueBets(matches) {
 }
 
 function buildTips(matches) {
-  return state.valueBets.slice(0, 9).map((bet, index) => {
+  return state.valueBets.slice(0, 9).map((bet) => {
     const confidence = clamp(Math.round(2.6 + (bet.value / 4)), 2, 5);
     const isLive = bet.match.status === "live";
+    const comfortLines = buildComfortLines(bet.match);
     return {
       id: bet.id,
       matchId: bet.match.id,
@@ -855,13 +864,79 @@ function buildTips(matches) {
       value: bet.value,
       isLive,
       time: formatMatchTime(bet.match),
-      analysis: analysisText(bet, index)
+      comfortLines,
+      insight: bettingInsight(bet, comfortLines),
+      analysis: analysisText(bet)
     };
   });
 }
 
 function analysisText(bet) {
   return `A FootyStats informa ${round(bet.probability * 100, 1)}% de probabilidade para este mercado. Com odd ${formatOdd(bet.odd)}, a diferença matemática calculada é de +${round(bet.value, 1)}%.`;
+}
+
+function buildComfortLines(match) {
+  const p = match.probabilities || {};
+  const goals = strongestSide("Gols", [
+    { label: "Mais de 1.5", probability: p.over15 },
+    { label: "Menos de 2.5", probability: invertProbability(p.over25) },
+    { label: "Mais de 2.5", probability: p.over25 },
+    { label: "Menos de 3.5", probability: invertProbability(p.over35) },
+    { label: "Mais de 3.5", probability: p.over35 }
+  ], "fa-solid fa-futbol");
+
+  const corners = strongestSide("Escanteios", [
+    { label: "Mais de 8.5", probability: p.cornersOver85 },
+    { label: "Menos de 8.5", probability: invertProbability(p.cornersOver85) },
+    { label: "Mais de 9.5", probability: p.cornersOver95 },
+    { label: "Menos de 9.5", probability: invertProbability(p.cornersOver95) },
+    { label: "Mais de 10.5", probability: p.cornersOver105 },
+    { label: "Menos de 10.5", probability: invertProbability(p.cornersOver105) }
+  ], "fa-regular fa-flag");
+
+  const cards = strongestSide("Cartões", [
+    { label: "Mais de 3.5", probability: p.cardsOver35 },
+    { label: "Menos de 3.5", probability: invertProbability(p.cardsOver35) },
+    { label: "Mais de 4.5", probability: p.cardsOver45 },
+    { label: "Menos de 4.5", probability: invertProbability(p.cardsOver45) },
+    { label: "Mais de 5.5", probability: p.cardsOver55 },
+    { label: "Menos de 5.5", probability: invertProbability(p.cardsOver55) }
+  ], "fa-solid fa-square");
+
+  const homeProtection = safeProbability(p.home) + safeProbability(p.draw);
+  const awayProtection = safeProbability(p.away) + safeProbability(p.draw);
+  const doubleChance = strongestSide("Vencer ou empatar", [
+    { label: match.homeName, probability: homeProtection > 0 ? Math.min(homeProtection, 0.99) : null },
+    { label: match.awayName, probability: awayProtection > 0 ? Math.min(awayProtection, 0.99) : null }
+  ], "fa-solid fa-shield-halved");
+
+  return [goals, corners, cards, doubleChance];
+}
+
+function strongestSide(title, options, icon) {
+  const valid = options
+    .filter((option) => Number.isFinite(option.probability))
+    .sort((a, b) => b.probability - a.probability);
+  if (!valid.length) {
+    return { title, label: "Dados insuficientes", probability: null, icon };
+  }
+  return { title, label: valid[0].label, probability: valid[0].probability, icon };
+}
+
+function invertProbability(probability) {
+  return Number.isFinite(probability) ? clamp(1 - probability, 0.01, 0.99) : null;
+}
+
+function safeProbability(probability) {
+  return Number.isFinite(probability) ? probability : 0;
+}
+
+function bettingInsight(bet, comfortLines) {
+  const strongLines = comfortLines.filter((line) => Number.isFinite(line.probability) && line.probability >= 0.7);
+  const lineText = strongLines.length
+    ? strongLines.slice(0, 2).map((line) => `${line.title.toLowerCase()} em ${line.label}`).join(" e ")
+    : "os dados disponíveis";
+  return `A entrada ${bet.market.toLowerCase()} ganha força porque ${lineText} sustentam uma leitura confortável. A odd ${formatOdd(bet.odd)} fica interessante frente à probabilidade estimada de ${round(bet.probability * 100, 1)}%.`;
 }
 
 function renderTips() {
@@ -881,25 +956,60 @@ function renderTips() {
 
 function tipCard(tip) {
   return `
-    <article class="tip-card">
+    <article class="tip-card tip-card--comfort">
       <div class="tip-card__top">
         <span>${escapeHtml(tip.league)} · ${escapeHtml(tip.time)}</span>
         ${tip.isLive ? `<span class="live-pill"><i></i> Ao vivo</span>` : `<span>${stars(tip.confidence)}</span>`}
       </div>
       <div class="tip-card__body">
-        <div class="tip-card__teams">
-          ${teamCrest(tip.homeName, tip.homeColor, tip.homeLogo)}<span>${escapeHtml(tip.homeName)}</span>
-          <i class="fa-solid fa-xmark"></i>
-          ${teamCrest(tip.awayName, tip.awayColor, tip.awayLogo)}<span>${escapeHtml(tip.awayName)}</span>
+        <div class="tip-card__match-panel">
+          <div class="tip-card__side">
+            <small>Mandante</small>
+            ${teamCrest(tip.homeName, tip.homeColor, tip.homeLogo)}
+            <strong>${escapeHtml(tip.homeName)}</strong>
+            <span>Dados insuficientes</span>
+          </div>
+          <div class="tip-card__versus">VS</div>
+          <div class="tip-card__side tip-card__side--right">
+            <small>Visitante</small>
+            ${teamCrest(tip.awayName, tip.awayColor, tip.awayLogo)}
+            <strong>${escapeHtml(tip.awayName)}</strong>
+            <span>Dados insuficientes</span>
+          </div>
         </div>
+
+        <div class="comfort-lines">
+          <div class="comfort-lines__head"><i class="fa-solid fa-bolt"></i><strong>Linhas de Conforto</strong></div>
+          ${tip.comfortLines.map(comfortLineTemplate).join("")}
+        </div>
+
+        <div class="tip-card__insight">
+          <small><i class="fa-regular fa-lightbulb"></i> Insight da aposta</small>
+          <p>${escapeHtml(tip.insight)}</p>
+        </div>
+
         <div class="tip-card__pick"><small>Entrada sugerida</small><strong>${escapeHtml(tip.market)}</strong></div>
-        <p class="tip-card__analysis">${escapeHtml(tip.analysis)}</p>
         <div class="tip-card__footer">
           <div><small>Odd de referência</small><strong>${formatOdd(tip.odd)}</strong></div>
           <button class="button button--ghost" type="button" data-match-id="${tip.matchId}">Ver números</button>
         </div>
       </div>
     </article>
+  `;
+}
+
+function comfortLineTemplate(line) {
+  const probabilityText = Number.isFinite(line.probability) ? `${round(line.probability * 100, 1)}%` : "—";
+  const progress = Number.isFinite(line.probability) ? Math.round(line.probability * 100) : 0;
+  return `
+    <div class="comfort-line">
+      <div class="comfort-line__meta">
+        <span><i class="${line.icon}"></i>${escapeHtml(line.title)}</span>
+        <strong>${escapeHtml(line.label)}</strong>
+        <em>${probabilityText}</em>
+      </div>
+      <div class="comfort-line__track"><span style="width:${progress}%"></span></div>
+    </div>
   `;
 }
 
@@ -1745,6 +1855,14 @@ function numberOrNull(value) {
   if (value === null || value === undefined || value === "" || Number(value) < 0) return null;
   const number = Number(value);
   return Number.isFinite(number) ? number : null;
+}
+
+function firstProbability(...values) {
+  for (const value of values) {
+    const probability = clampProbability(value);
+    if (Number.isFinite(probability)) return probability;
+  }
+  return null;
 }
 
 function clampProbability(value) {
