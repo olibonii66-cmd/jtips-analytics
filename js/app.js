@@ -1,6 +1,9 @@
 const FOOTYSTATS_API_KEY = 'example';
-const FOOTYSTATS_BASE_URL = 'https://api.football-data-api.com';
+const FOOTYSTATS_REMOTE_URL = 'https://api.football-data-api.com';
+const FOOTYSTATS_PROXY_URL = '/api/footystats';
+const FOOTYSTATS_BASE_URL = window.location.protocol === 'file:' ? FOOTYSTATS_REMOTE_URL : FOOTYSTATS_PROXY_URL;
 const DEFAULT_SEASON_ID = 2012;
+const FALLBACK_LEAGUE_ID = 1625; // EPL 2018/2019, usado pela chave example em parte da documentação
 const APP_TIMEZONE = 'America/Sao_Paulo';
 
 const state = {
@@ -14,27 +17,55 @@ const $ = (selector) => document.querySelector(selector);
 const $$ = (selector) => [...document.querySelectorAll(selector)];
 
 const endpoints = {
-  todaysMatches: (date) => `/todays-matches?date=${date}&timezone=${APP_TIMEZONE}`,
+  todaysMatches: (date) => `/todays-matches?date=${date}&timezone=${encodeURIComponent(APP_TIMEZONE)}`,
   leagueMatches: (seasonId = DEFAULT_SEASON_ID) => `/league-matches?season_id=${seasonId}&max_per_page=500`,
+  leagueMatchesByLeagueId: (leagueId = FALLBACK_LEAGUE_ID) => `/league-matches?league_id=${leagueId}&max_per_page=500`,
   leagueTeams: (seasonId = DEFAULT_SEASON_ID) => `/league-teams?season_id=${seasonId}&include=stats`,
+  leagueTeamsByLeagueId: (leagueId = FALLBACK_LEAGUE_ID) => `/league-teams?league_id=${leagueId}&include=stats`,
   leaguePlayers: (seasonId = DEFAULT_SEASON_ID) => `/league-players?season_id=${seasonId}&include=stats`,
+  leaguePlayersByLeagueId: (leagueId = FALLBACK_LEAGUE_ID) => `/league-players?league_id=${leagueId}&include=stats`,
   match: (matchId) => `/match?match_id=${matchId}`,
 };
 
-async function footyFetch(path) {
+async function footyFetch(path, { raw = false } = {}) {
   const glue = path.includes('?') ? '&' : '?';
   const url = `${FOOTYSTATS_BASE_URL}${path}${glue}key=${encodeURIComponent(FOOTYSTATS_API_KEY)}`;
-  const response = await fetch(url);
-  if (!response.ok) throw new Error(`Erro HTTP ${response.status}`);
+  const response = await fetch(url, { headers: { Accept: 'application/json' } });
+  if (!response.ok) throw new Error(`Erro HTTP ${response.status} em ${path}`);
   const payload = await response.json();
-  if (payload?.success === false) throw new Error(payload.message || 'A API recusou a requisição.');
-  return normalizeApiArray(payload);
+
+  // A API pode retornar success=false, error, message ou apenas data vazia dependendo do endpoint/plano.
+  if (payload?.success === false || payload?.error) {
+    throw new Error(payload.message || payload.error || `A API recusou a requisição em ${path}.`);
+  }
+
+  if (raw) return payload;
+  const normalized = normalizeApiArray(payload);
+  console.info('[FootyStats]', path, { total: normalized.length, payload });
+  return normalized;
+}
+
+async function footyFetchFirst(paths) {
+  const errors = [];
+  for (const path of paths) {
+    try {
+      const data = await footyFetch(path);
+      if (data.length) return data;
+      errors.push(`${path}: retornou 0 registros`);
+    } catch (error) {
+      errors.push(`${path}: ${error.message}`);
+    }
+  }
+  console.warn('[FootyStats] Nenhum endpoint retornou registros', errors);
+  return [];
 }
 
 function normalizeApiArray(payload) {
   if (Array.isArray(payload)) return payload;
   if (Array.isArray(payload?.data)) return payload.data;
   if (Array.isArray(payload?.matches)) return payload.matches;
+  if (Array.isArray(payload?.fixtures)) return payload.fixtures;
+  if (Array.isArray(payload?.result)) return payload.result;
   if (payload?.data && typeof payload.data === 'object') return [payload.data];
   if (payload && typeof payload === 'object') return [payload];
   return [];
@@ -114,23 +145,35 @@ async function loadDashboard() {
 
   const date = $('#matchDate').value || todayISO();
   try {
-    const [todayMatches, leagueMatches, teams, players] = await Promise.allSettled([
-      footyFetch(endpoints.todaysMatches(date)),
-      footyFetch(endpoints.leagueMatches()),
-      footyFetch(endpoints.leagueTeams()),
-      footyFetch(endpoints.leaguePlayers()),
+    const [todayMatches, leagueMatches, teams, players] = await Promise.all([
+      footyFetchFirst([
+        endpoints.todaysMatches(date),
+        endpoints.leagueMatches(),
+        endpoints.leagueMatchesByLeagueId(),
+      ]),
+      footyFetchFirst([
+        endpoints.leagueMatches(),
+        endpoints.leagueMatchesByLeagueId(),
+      ]),
+      footyFetchFirst([
+        endpoints.leagueTeams(),
+        endpoints.leagueTeamsByLeagueId(),
+      ]),
+      footyFetchFirst([
+        endpoints.leaguePlayers(),
+        endpoints.leaguePlayersByLeagueId(),
+      ]),
     ]);
 
-    const matchesData = todayMatches.status === 'fulfilled' && todayMatches.value.length
-      ? todayMatches.value
-      : (leagueMatches.status === 'fulfilled' ? leagueMatches.value.slice(0, 80) : []);
+    // Primeiro tentamos jogos do dia. Se a chave example não trouxer jogos de hoje, caímos na temporada teste.
+    const matchesData = todayMatches.length ? todayMatches : leagueMatches;
 
-    state.matches = matchesData;
-    state.teams = teams.status === 'fulfilled' ? teams.value.slice(0, 12) : [];
-    state.players = players.status === 'fulfilled' ? players.value.slice(0, 30) : [];
+    state.matches = matchesData.slice(0, 120);
+    state.teams = teams.slice(0, 12);
+    state.players = players.slice(0, 30);
 
     renderAll();
-    setApiStatus('ok');
+    setApiStatus(state.matches.length ? 'ok' : 'vazio');
   } catch (error) {
     setApiStatus('erro');
     ['#featuredMatches', '#teamStats', '#playerStats', '#oddsGrid', '#tipsList'].forEach((selector) => showError(selector, error.message));
@@ -143,6 +186,7 @@ function setApiStatus(status) {
   apiStatus.className = 'status-pill';
   if (status === 'ok') { apiStatus.textContent = 'API online'; apiStatus.classList.add('ok'); }
   else if (status === 'erro') { apiStatus.textContent = 'API com falha'; apiStatus.classList.add('error'); }
+  else if (status === 'vazio') { apiStatus.textContent = 'API sem jogos'; apiStatus.classList.add('error'); }
   else { apiStatus.textContent = 'Carregando'; }
 }
 
