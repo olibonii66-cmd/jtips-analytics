@@ -457,6 +457,7 @@ function normalizePlayer(raw, teams) {
   return {
     ...raw,
     id: Number(raw.id || raw.player_id),
+    teamId: Number(raw.club_team_id || raw.team_id || 0),
     name: raw.known_as || raw.full_name || [raw.first_name, raw.last_name].filter(Boolean).join(" ") || "Jogador",
     team: team?.name || raw.club_team_name || raw.team_name || "Clube",
     appearances,
@@ -1415,54 +1416,148 @@ async function openMatchModal(matchId) {
 
 function matchModalTemplate(match) {
   const market = bestMarketForMatch(match);
-  return `
-    <div class="modal-match-header">
-      <div class="modal-team">${teamCrest(match.homeName, match.leagueColor)}<strong>${escapeHtml(match.homeName)}</strong></div>
-      <div class="modal-score">${scoreText(match)}<small>${escapeHtml(statusLabel(match))}</small></div>
-      <div class="modal-team">${teamCrest(match.awayName, secondaryColor(match.leagueColor))}<strong>${escapeHtml(match.awayName)}</strong></div>
-    </div>
-    <div class="modal-stats">
-      ${modalStatRow("Posse", match.stats.possessionHome, match.stats.possessionAway, "%")}
-      ${modalStatRow("Finalizações", match.stats.shotsHome, match.stats.shotsAway)}
-      ${modalStatRow("Escanteios", match.stats.cornersHome, match.stats.cornersAway)}
-      ${modalStatRow("Cartões", match.stats.cardsHome, match.stats.cardsAway)}
-    </div>
-    <div class="modal-market-grid">
-      ${modalMarket("Melhor mercado", market.label)}
-      ${modalMarket("Odd", formatOdd(market.odd))}
-      ${modalMarket("Probabilidade", `${round(market.probability * 100, 0)}%`)}
-    </div>
-    <div class="tip-market-box" style="margin-top:15px">
-      <small>Leitura do modelo</small>
-      <strong>${escapeHtml(modalAnalysis(match, market))}</strong>
-    </div>
-  `;
-}
+  const homePlayers = matchPlayers(match, "home");
+  const awayPlayers = matchPlayers(match, "away");
 
-function modalStatRow(label, home, away, suffix = "") {
-  if (home === null || away === null) {
-    return `
-      <div class="modal-stat-row">
-        <strong>—</strong>
-        <div><span>${escapeHtml(label)}</span><div class="modal-stat-bar"></div></div>
-        <strong>—</strong>
+  return `
+    <div class="numbers-modal">
+      <div class="numbers-hero">
+        <div class="numbers-team">
+          ${teamCrest(match.homeName, match.leagueColor, match.homeLogo)}
+          <strong>${escapeHtml(match.homeName)}</strong>
+          <span>Mandante</span>
+        </div>
+        <div class="numbers-center">
+          <strong>${shouldShowMatchScore(match) ? `${match.homeGoals} – ${match.awayGoals}` : "VS"}</strong>
+          <span>${escapeHtml(formatMatchTime(match))}</span>
+          ${statusPill(match)}
+        </div>
+        <div class="numbers-team">
+          ${teamCrest(match.awayName, secondaryColor(match.leagueColor), match.awayLogo)}
+          <strong>${escapeHtml(match.awayName)}</strong>
+          <span>Visitante</span>
+        </div>
       </div>
-    `;
-  }
 
-  const total = Math.max(Number(home) + Number(away), 1);
-  const homeWidth = (Number(home) / total) * 100;
-  return `
-    <div class="modal-stat-row">
-      <strong>${round(home, 0)}${suffix}</strong>
-      <div><span>${escapeHtml(label)}</span><div class="modal-stat-bar"><span style="width:${homeWidth}%"></span><span style="width:${100 - homeWidth}%"></span></div></div>
-      <strong>${round(away, 0)}${suffix}</strong>
+      ${numbersSection("Resumo", "fa-solid fa-chart-simple", `
+        <div class="numbers-grid numbers-grid--summary">
+          ${modalMarket("Mercado", market.label)}
+          ${modalMarket("Odd", formatOdd(market.odd))}
+          ${modalMarket("Probabilidade", formatProbability(market.probability))}
+          ${modalMarket("Status", statusLabel(match))}
+        </div>
+        <div class="numbers-note"><small>Leitura do modelo</small><strong>${escapeHtml(modalAnalysis(match, market))}</strong></div>
+      `)}
+
+      ${numbersSection("Gols", "fa-solid fa-futbol", `
+        ${probabilityLine("Mais de 1.5 gols", match.probabilities.over15)}
+        ${probabilityLine("Mais de 2.5 gols", match.probabilities.over25)}
+        ${probabilityLine("Mais de 3.5 gols", match.probabilities.over35)}
+        ${probabilityLine("Ambas marcam", match.probabilities.btts)}
+      `)}
+
+      ${numbersSection("Escanteios", "fa-solid fa-flag", `
+        ${probabilityLine("Mais de 8.5 escanteios", match.probabilities.cornersOver85)}
+        ${probabilityLine("Mais de 9.5 escanteios", match.probabilities.cornersOver95)}
+        ${probabilityLine("Mais de 10.5 escanteios", match.probabilities.cornersOver105)}
+        ${numbersStatRow("Escanteios no jogo", match.stats.cornersHome, match.stats.cornersAway)}
+      `)}
+
+      ${numbersSection("Cartões", "fa-solid fa-square", `
+        ${probabilityLine("Mais de 3.5 cartões", match.probabilities.cardsOver35)}
+        ${probabilityLine("Mais de 4.5 cartões", match.probabilities.cardsOver45)}
+        ${probabilityLine("Mais de 5.5 cartões", match.probabilities.cardsOver55)}
+        ${numbersStatRow("Cartões no jogo", match.stats.cardsHome, match.stats.cardsAway)}
+      `)}
+
+      ${numbersSection("Finalizações", "fa-solid fa-bullseye", `
+        ${numbersStatRow("Finalizações", match.stats.shotsHome, match.stats.shotsAway)}
+        ${numbersStatRow("Posse de bola", match.stats.possessionHome, match.stats.possessionAway, "%")}
+        ${statAvailabilityNote(match.stats.shotsHome, match.stats.shotsAway, "Finalizações aparecem quando a FootyStats retornar estatísticas oficiais para esta partida.")}
+      `)}
+
+      ${numbersSection("Jogadores", "fa-solid fa-user-group", `
+        <div class="numbers-players">
+          <div>${playersList("Mandante", homePlayers)}</div>
+          <div>${playersList("Visitante", awayPlayers)}</div>
+        </div>
+      `)}
     </div>
   `;
 }
 
-function modalMarket(label, value) {
-  return `<div class="modal-market"><small>${escapeHtml(label)}</small><strong>${escapeHtml(String(value))}</strong></div>`;
+function numbersSection(title, icon, content) {
+  return `
+    <section class="numbers-section">
+      <div class="numbers-section__head"><i class="${icon}"></i><strong>${escapeHtml(title)}</strong></div>
+      ${content}
+    </section>
+  `;
+}
+
+function formatProbability(probability) {
+  return Number.isFinite(probability) ? `${round(probability * 100, 0)}%` : "—";
+}
+
+function probabilityLine(label, probability) {
+  const percent = Number.isFinite(probability) ? Math.round(probability * 100) : 0;
+  const value = Number.isFinite(probability) ? `${round(probability * 100, 1)}%` : "Dados indisponíveis";
+  return `
+    <div class="numbers-line">
+      <div class="numbers-line__meta"><span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong></div>
+      <div class="numbers-line__track"><span style="width:${percent}%"></span></div>
+    </div>
+  `;
+}
+
+function numbersStatRow(label, home, away, suffix = "") {
+  const hasData = home !== null && away !== null && home !== undefined && away !== undefined;
+  const homeValue = hasData ? `${round(home, 0)}${suffix}` : "—";
+  const awayValue = hasData ? `${round(away, 0)}${suffix}` : "—";
+  const homeWidth = hasData ? Math.round((Number(home) / Math.max(Number(home) + Number(away), 1)) * 100) : 0;
+  return `
+    <div class="numbers-stat-row">
+      <strong>${escapeHtml(homeValue)}</strong>
+      <div>
+        <span>${escapeHtml(label)}</span>
+        <div class="numbers-stat-bar">${hasData ? `<i style="width:${homeWidth}%"></i><b style="width:${100 - homeWidth}%"></b>` : ""}</div>
+      </div>
+      <strong>${escapeHtml(awayValue)}</strong>
+    </div>
+  `;
+}
+
+function statAvailabilityNote(home, away, message) {
+  if (home !== null && away !== null && home !== undefined && away !== undefined) return "";
+  return `<p class="numbers-empty-note">${escapeHtml(message)}</p>`;
+}
+
+function matchPlayers(match, side) {
+  const teamId = side === "home" ? match.homeId : match.awayId;
+  const teamName = side === "home" ? match.homeName : match.awayName;
+  const normalizedName = normalizeText(teamName);
+  return state.players
+    .filter((player) => (teamId && player.teamId === teamId) || normalizeText(player.team) === normalizedName)
+    .sort((a, b) => ((b.goals || 0) + (b.assists || 0)) - ((a.goals || 0) + (a.assists || 0)))
+    .slice(0, 5);
+}
+
+function playersList(title, players) {
+  if (!players.length) {
+    return `<div class="numbers-player-list"><h4>${escapeHtml(title)}</h4><p class="numbers-empty-note">Jogadores indisponíveis para este time na API atual.</p></div>`;
+  }
+  return `
+    <div class="numbers-player-list">
+      <h4>${escapeHtml(title)}</h4>
+      ${players.map((player) => `
+        <div class="numbers-player-row">
+          <span>${escapeHtml(initials(player.name))}</span>
+          <div><strong>${escapeHtml(player.name)}</strong><small>${displayApiValue(player.appearances)} jogos</small></div>
+          <em>${displayApiValue(player.goals)}G · ${displayApiValue(player.assists)}A</em>
+        </div>
+      `).join("")}
+    </div>
+  `;
 }
 
 function closeModal() {
