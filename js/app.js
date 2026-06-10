@@ -1622,39 +1622,56 @@ function goalsProbabilityAverage(match, key) {
   return null;
 }
 
-function goalsPercentCell(value) {
+function goalsPercentTone(value) {
   const percent = percentForDisplay(value);
-  const className = percent === null ? "is-empty" : percent >= 70 ? "is-good" : percent >= 40 ? "is-mid" : "is-low";
-  return `<td class="numbers-percent-cell ${className}">${percent === null ? "—" : `${percent}%`}</td>`;
+  if (percent === null) return { percent: null, className: "is-empty", label: "—" };
+  return {
+    percent,
+    className: percent >= 70 ? "is-good" : percent >= 40 ? "is-mid" : "is-low",
+    label: `${percent}%`
+  };
+}
+
+function goalsMetricValue(label, value) {
+  const tone = goalsPercentTone(value);
+  return `
+    <div class="numbers-goal-metric ${tone.className}">
+      <small>${escapeHtml(label)}</small>
+      <strong>${escapeHtml(tone.label)}</strong>
+    </div>
+  `;
+}
+
+function goalsNumbersCard(row, match) {
+  const average = goalsProbabilityAverage(match, row.key);
+  return `
+    <article class="numbers-goal-card" data-stat-key="${escapeHtml(row.key)}">
+      <div class="numbers-goal-card__label">
+        <span>${escapeHtml(row.label)}</span>
+      </div>
+      <div class="numbers-goal-card__metrics">
+        ${goalsMetricValue(match.homeName, row.home)}
+        ${goalsMetricValue(match.awayName, row.away)}
+        ${goalsMetricValue("Média", average)}
+      </div>
+    </article>
+  `;
 }
 
 function goalsNumbersTable(title, rows, match) {
   return `
-    <div class="numbers-goals-table">
-      <div class="numbers-goals-table__title">${escapeHtml(title)}</div>
-      <div class="numbers-goals-scroll">
-        <table>
-          <thead>
-            <tr>
-              <th>${escapeHtml(title)}</th>
-              <th>${escapeHtml(match.homeName)}</th>
-              <th>${escapeHtml(match.awayName)}</th>
-              <th>Média</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${rows.map((row) => `
-              <tr data-stat-key="${escapeHtml(row.key)}">
-                <td>${escapeHtml(row.label)}</td>
-                ${goalsPercentCell(row.home)}
-                ${goalsPercentCell(row.away)}
-                ${goalsPercentCell(goalsProbabilityAverage(match, row.key))}
-              </tr>
-            `).join("")}
-          </tbody>
-        </table>
+    <section class="numbers-goals-group">
+      <div class="numbers-goals-group__head">
+        <div>
+          <small>Categoria</small>
+          <strong>${escapeHtml(title)}</strong>
+        </div>
+        <span>${rows.length} linhas</span>
       </div>
-    </div>
+      <div class="numbers-goals-cards">
+        ${rows.map((row) => goalsNumbersCard(row, match)).join("")}
+      </div>
+    </section>
   `;
 }
 
@@ -1707,7 +1724,7 @@ function renderGoalsNumbersTab(match) {
 
   return `
     <div class="numbers-goals-note">
-      Títulos da aba Gols configurados conforme o modelo enviado. As células ficam em branco quando ainda não houver endpoint oficial mapeado para aquele campo.
+      Linhas de gols configuradas no padrão visual do JTIPS. Onde ainda não houver endpoint oficial mapeado, mostramos — sem inventar número.
     </div>
     ${goalsNumbersTable("Gols da partida", matchRows, match)}
     ${goalsNumbersTable("Gols do primeiro tempo", firstHalfRows, match)}

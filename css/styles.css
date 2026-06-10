@@ -3198,89 +3198,161 @@ svg {
 }
 
 
-/* Aba Gols - tabelas de títulos FootyStats */
+/* Aba Gols - padrão visual JTIPS */
 .numbers-goals-note {
-  margin-bottom: 12px;
-  padding: 12px 14px;
+  margin-bottom: 14px;
+  padding: 13px 15px;
   border: 1px solid rgba(0, 220, 105, 0.18);
-  border-radius: 12px;
+  border-radius: 14px;
   color: var(--text-2);
-  background: rgba(0, 220, 105, 0.06);
+  background: linear-gradient(135deg, rgba(0, 220, 105, 0.09), rgba(0, 220, 105, 0.025));
   font-size: 12px;
   line-height: 1.45;
 }
 
-.numbers-goals-table + .numbers-goals-table {
+.numbers-goals-group + .numbers-goals-group {
   margin-top: 14px;
 }
 
-.numbers-goals-table__title {
-  padding: 9px 10px;
-  border-radius: 10px 10px 0 0;
+.numbers-goals-group {
+  padding: 14px;
+  border: 1px solid var(--border-soft);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.numbers-goals-group__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border-soft);
+}
+
+.numbers-goals-group__head small,
+.numbers-goal-metric small {
+  display: block;
+  color: var(--text-3);
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.numbers-goals-group__head strong {
+  display: block;
+  margin-top: 3px;
   color: var(--text);
-  background: rgba(255, 255, 255, 0.05);
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 900;
 }
 
-.numbers-goals-scroll {
-  overflow-x: auto;
+.numbers-goals-group__head > span {
+  flex: 0 0 auto;
+  padding: 7px 10px;
+  border-radius: 999px;
+  color: var(--accent);
+  background: rgba(0, 220, 105, 0.1);
+  font-size: 10px;
+  font-weight: 900;
 }
 
-.numbers-goals-table table {
-  width: 100%;
-  min-width: 560px;
-  border-collapse: separate;
-  border-spacing: 3px;
-  font-size: 11px;
+.numbers-goals-cards {
+  display: grid;
+  gap: 10px;
 }
 
-.numbers-goals-table th,
-.numbers-goals-table td {
-  padding: 8px 9px;
+.numbers-goal-card {
+  display: grid;
+  grid-template-columns: minmax(160px, 1fr) minmax(0, 1.6fr);
+  gap: 12px;
+  align-items: stretch;
+  padding: 12px;
+  border: 1px solid rgba(148, 163, 184, 0.12);
+  border-radius: 15px;
+  background: rgba(15, 23, 42, 0.38);
+}
+
+.numbers-goal-card__label {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+
+.numbers-goal-card__label span {
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 850;
+  line-height: 1.3;
+}
+
+.numbers-goal-card__metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.numbers-goal-metric {
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid rgba(148, 163, 184, 0.12);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.035);
   text-align: center;
 }
 
-.numbers-goals-table th:first-child,
-.numbers-goals-table td:first-child {
-  width: 36%;
-  text-align: left;
+.numbers-goal-metric small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.numbers-goals-table th {
-  color: #06100c;
-  background: #e9eef2;
-  font-weight: 800;
+.numbers-goal-metric strong {
+  display: block;
+  margin-top: 6px;
+  font-size: 16px;
+  font-weight: 950;
 }
 
-.numbers-goals-table td:first-child {
-  color: #101820;
-  background: #eef2f4;
-  font-weight: 700;
+.numbers-goal-metric.is-good {
+  border-color: rgba(0, 220, 105, 0.24);
+  background: rgba(0, 220, 105, 0.09);
 }
 
-.numbers-percent-cell {
-  color: #06100c;
-  background: #eef2f4;
-  font-weight: 900;
+.numbers-goal-metric.is-good strong {
+  color: var(--accent);
 }
 
-.numbers-percent-cell.is-good {
-  color: #067a21;
-  background: #b7ed9b;
+.numbers-goal-metric.is-mid {
+  border-color: rgba(245, 158, 11, 0.22);
+  background: rgba(245, 158, 11, 0.08);
 }
 
-.numbers-percent-cell.is-mid {
-  color: #766800;
-  background: #f2f4bd;
+.numbers-goal-metric.is-mid strong {
+  color: #fbbf24;
 }
 
-.numbers-percent-cell.is-low {
-  color: #d2160d;
-  background: #fbe0dc;
+.numbers-goal-metric.is-low {
+  border-color: rgba(248, 113, 113, 0.22);
+  background: rgba(248, 113, 113, 0.08);
 }
 
-.numbers-percent-cell.is-empty {
-  color: #6f7785;
-  background: #eef2f4;
+.numbers-goal-metric.is-low strong {
+  color: #fb7185;
+}
+
+.numbers-goal-metric.is-empty strong {
+  color: var(--text-3);
+}
+
+@media (max-width: 760px) {
+  .numbers-goal-card {
+    grid-template-columns: 1fr;
+  }
+
+  .numbers-goal-card__metrics {
+    grid-template-columns: 1fr;
+  }
 }
