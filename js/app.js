@@ -28,6 +28,7 @@ const state = {
   selectedDate: startOfDay(new Date()),
   leagues: [],
   matches: [],
+  matchTeams: [],
   teams: [],
   players: [],
   tips: [],
@@ -123,6 +124,8 @@ async function loadRealData() {
     state.statsLeagueKey = state.leagues[0].key;
   }
 
+  await loadMatchTeams();
+
   const date = formatApiDate(state.selectedDate);
   const matchesPayload = await apiFetch("/todays-matches", {
     date,
@@ -139,6 +142,10 @@ async function loadMatchesForDate() {
   try {
     if (!isApiConfigured()) {
       throw new Error("Execute o projeto com vercel dev ou abra a versão publicada.");
+    }
+
+    if (!state.matchTeams.length) {
+      await loadMatchTeams();
     }
 
     const payload = await apiFetch("/todays-matches", {
@@ -163,6 +170,23 @@ async function loadMatchesForDate() {
   } finally {
     setLoading(false, "matches");
   }
+}
+
+async function loadMatchTeams() {
+  const teamRequests = state.leagues.map(async (league) => {
+    try {
+      const payload = await apiFetch("/league-teams", {
+        season_id: league.seasonId
+      });
+      return getDataArray(payload).map((team) => normalizeTeamIdentity(team, league));
+    } catch (error) {
+      console.warn(`Times indisponíveis para ${league.name}:`, error);
+      return [];
+    }
+  });
+
+  const groups = await Promise.all(teamRequests);
+  state.matchTeams = groups.flat();
 }
 
 async function loadLeagueStats(leagueKey, { silent = false } = {}) {
@@ -285,10 +309,16 @@ function normalizeMatch(raw) {
   const league = findLeagueForRawMatch(raw);
   const timestamp = getMatchTimestamp(raw);
   const status = normalizeStatus(raw.status, timestamp);
-  const homeName = raw.home_name || raw.homeTeam?.name || raw.home_team_name || raw.team_a_name || "Mandante";
-  const awayName = raw.away_name || raw.awayTeam?.name || raw.away_team_name || raw.team_b_name || "Visitante";
+  const homeId = Number(raw.homeID || raw.home_id || raw.homeTeam?.id || 0);
+  const awayId = Number(raw.awayID || raw.away_id || raw.awayTeam?.id || 0);
+  const homeTeam = findMatchTeam(homeId);
+  const awayTeam = findMatchTeam(awayId);
+  const homeName = raw.home_name || raw.homeTeam?.name || raw.home_team_name || raw.team_a_name || homeTeam?.name || "Mandante";
+  const awayName = raw.away_name || raw.awayTeam?.name || raw.away_team_name || raw.team_b_name || awayTeam?.name || "Visitante";
   const homeGoals = numberOrNull(raw.homeGoalCount ?? raw.home_score ?? raw.homeGoals?.length);
   const awayGoals = numberOrNull(raw.awayGoalCount ?? raw.away_score ?? raw.awayGoals?.length);
+  const homeLogo = getTeamLogo(raw, "home") || homeTeam?.image || null;
+  const awayLogo = getTeamLogo(raw, "away") || awayTeam?.image || null;
 
   return {
     ...raw,
@@ -298,10 +328,12 @@ function normalizeMatch(raw) {
     leagueShort: league?.short || "FUT",
     leagueColor: league?.color || "#00c853",
     competitionId: Number(raw.competition_id || raw.season_id || raw.competition?.id || 0),
-    homeId: Number(raw.homeID || raw.home_id || raw.homeTeam?.id || 0),
-    awayId: Number(raw.awayID || raw.away_id || raw.awayTeam?.id || 0),
+    homeId,
+    awayId,
     homeName,
     awayName,
+    homeLogo,
+    awayLogo,
     homeGoals,
     awayGoals,
     timestamp,
@@ -332,6 +364,20 @@ function normalizeMatch(raw) {
       cardsHome: nullablePositiveNumber(raw.team_a_cards_num),
       cardsAway: nullablePositiveNumber(raw.team_b_cards_num)
     }
+  };
+}
+
+function normalizeTeamIdentity(raw, league) {
+  const name = raw.cleanName || raw.name || raw.full_name || raw.english_name || "Time";
+  return {
+    ...raw,
+    id: Number(raw.id || raw.team_id),
+    name,
+    fullName: raw.full_name || raw.english_name || name,
+    shortHand: raw.shortHand || raw.short_name || initials(name),
+    image: sanitizeImageUrl(raw.image || raw.logo || raw.team_logo || raw.image_url),
+    leagueKey: league.key,
+    color: colorFromString(name)
   };
 }
 
@@ -389,6 +435,7 @@ function normalizePlayer(raw, teams) {
 function clearApiData() {
   state.leagues = [];
   state.matches = [];
+  state.matchTeams = [];
   state.teams = [];
   state.players = [];
   state.tips = [];
@@ -472,8 +519,8 @@ function featuredMatchTemplate(match) {
         <span>${escapeHtml(match.leagueShort)}</span>
       </div>
       <div class="match-teams">
-        ${compactTeamRow(match.homeName, match.homeGoals, match.leagueColor)}
-        ${compactTeamRow(match.awayName, match.awayGoals, secondaryColor(match.leagueColor))}
+        ${compactTeamRow(match.homeName, match.homeGoals, match.leagueColor, match.homeLogo, match.status === "complete")}
+        ${compactTeamRow(match.awayName, match.awayGoals, secondaryColor(match.leagueColor), match.awayLogo, match.status === "complete")}
       </div>
       <div class="match-insight">
         <small>Melhor leitura</small>
@@ -543,8 +590,8 @@ function matchTableRow(match) {
       <td class="table-time"><strong>${formatTime(match.date)}</strong><small>${formatDate(match.date, { day: "2-digit", month: "short" })}</small></td>
       <td><div class="table-league">${leagueIcon(getLeague(match.leagueKey))}<span>${escapeHtml(match.league)}</span></div></td>
       <td><div class="table-match">
-        ${tableTeam(match.homeName, match.homeGoals, match.leagueColor)}
-        ${tableTeam(match.awayName, match.awayGoals, secondaryColor(match.leagueColor))}
+        ${tableTeam(match.homeName, match.homeGoals, match.leagueColor, match.homeLogo, match.status === "complete")}
+        ${tableTeam(match.awayName, match.awayGoals, secondaryColor(match.leagueColor), match.awayLogo, match.status === "complete")}
       </div></td>
       <td>${statusPill(match)}</td>
       <td><span class="market-pill">${escapeHtml(market.label)}</span></td>
@@ -709,7 +756,7 @@ function valueCell(label, value, accent = false) {
 
 function buildValueBets(matches) {
   const bets = [];
-  matches.filter((match) => match.status !== "complete").forEach((match) => {
+  matches.filter((match) => ["scheduled", "live"].includes(match.status)).forEach((match) => {
     const model = {
       home: match.probabilities.home,
       draw: match.probabilities.draw,
@@ -1214,9 +1261,9 @@ function matchModalTemplate(match) {
   const market = bestMarketForMatch(match);
   return `
     <div class="modal-match-header">
-      <div class="modal-team">${teamCrest(match.homeName, match.leagueColor)}<strong>${escapeHtml(match.homeName)}</strong></div>
+      <div class="modal-team">${teamCrest(match.homeName, match.leagueColor, match.homeLogo)}<strong>${escapeHtml(match.homeName)}</strong></div>
       <div class="modal-score">${scoreText(match)}<small>${escapeHtml(statusLabel(match))}</small></div>
-      <div class="modal-team">${teamCrest(match.awayName, secondaryColor(match.leagueColor))}<strong>${escapeHtml(match.awayName)}</strong></div>
+      <div class="modal-team">${teamCrest(match.awayName, secondaryColor(match.leagueColor), match.awayLogo)}<strong>${escapeHtml(match.awayName)}</strong></div>
     </div>
     <div class="modal-stats">
       ${modalStatRow("Posse", match.stats.possessionHome, match.stats.possessionAway, "%")}
@@ -1337,6 +1384,36 @@ function getLeague(key) {
   return state.leagues.find((league) => league.key === key) || TARGET_LEAGUES.find((league) => league.key === key) || TARGET_LEAGUES[0];
 }
 
+function findMatchTeam(teamId) {
+  if (!teamId) return null;
+  return state.matchTeams.find((team) => team.id === Number(teamId)) ||
+    state.teams.find((team) => team.id === Number(teamId)) ||
+    null;
+}
+
+function getTeamLogo(raw, side) {
+  const prefix = side === "home" ? "home" : "away";
+  const teamPrefix = side === "home" ? "team_a" : "team_b";
+  const nested = side === "home" ? raw.homeTeam : raw.awayTeam;
+  return sanitizeImageUrl(
+    raw[`${prefix}_image`] ||
+    raw[`${prefix}_logo`] ||
+    raw[`${prefix}_team_logo`] ||
+    raw[`${teamPrefix}_image`] ||
+    raw[`${teamPrefix}_logo`] ||
+    raw[`${teamPrefix}_badge`] ||
+    nested?.image ||
+    nested?.logo
+  );
+}
+
+function sanitizeImageUrl(value) {
+  const url = String(value || "").trim();
+  if (!url || url === "0" || url.toLowerCase() === "null" || url.toLowerCase() === "undefined") return null;
+  if (!/^https?:\/\//i.test(url)) return null;
+  return url;
+}
+
 function getMatchTimestamp(raw) {
   const unix = Number(raw.date_unix || raw.timestamp || raw.match_timestamp || raw.time);
   if (Number.isFinite(unix) && unix > 100000000) return unix > 100000000000 ? unix : unix * 1000;
@@ -1346,9 +1423,12 @@ function getMatchTimestamp(raw) {
 
 function normalizeStatus(status, timestamp) {
   const value = normalizeText(status || "");
-  if (["live", "in play", "inplay", "playing", "half time"].some((item) => value.includes(item))) return "live";
-  if (["complete", "finished", "ft", "ended"].some((item) => value.includes(item))) return "complete";
-  if (["scheduled", "incomplete", "not started", "pending"].some((item) => value.includes(item))) return "scheduled";
+  if (["cancelled", "canceled"].some((item) => value.includes(item))) return "cancelled";
+  if (["postponed"].some((item) => value.includes(item))) return "postponed";
+  if (["suspended", "abandoned"].some((item) => value.includes(item))) return "suspended";
+  if (["live", "in play", "inplay", "playing", "half time", "1h", "2h", "ht"].some((item) => value.includes(item))) return "live";
+  if (["complete", "finished", "full time", "full-time", "ft", "ended"].some((item) => value.includes(item))) return "complete";
+  if (["scheduled", "incomplete", "pre match", "pre-match", "not started", "pending"].some((item) => value.includes(item))) return "scheduled";
   return timestamp < Date.now() - (3 * 60 * 60 * 1000) ? "complete" : "scheduled";
 }
 
@@ -1358,13 +1438,16 @@ function statusPill(match) {
 }
 
 function statusLabel(match) {
-  if (match.status === "live") return match.minute ? `${match.minute}'` : "Ao vivo";
+  if (match.status === "live") return match.minute ? `${match.minute}' · Ao vivo` : "Ao vivo";
   if (match.status === "complete") return "Encerrado";
-  return "Agendado";
+  if (match.status === "cancelled") return "Cancelado";
+  if (match.status === "postponed") return "Adiado";
+  if (match.status === "suspended") return "Suspenso";
+  return "Pré-jogo";
 }
 
 function scoreText(match) {
-  if (match.homeGoals === null || match.awayGoals === null) return formatTime(match.date);
+  if (match.status !== "complete" || match.homeGoals === null || match.awayGoals === null) return formatTime(match.date);
   return `${match.homeGoals} – ${match.awayGoals}`;
 }
 
@@ -1400,16 +1483,22 @@ function leagueIcon(league) {
   return `<span class="league-icon" style="--league-color:${safe.color}">${escapeHtml(safe.short)}</span>`;
 }
 
-function teamCrest(name, color = "#00c853") {
-  return `<span class="team-crest" style="--league-color:${color}">${initials(name)}</span>`;
+function teamCrest(name, color = "#00c853", image = null) {
+  const safeImage = sanitizeImageUrl(image);
+  const content = safeImage
+    ? `<img src="${escapeHtml(safeImage)}" alt="" loading="lazy">`
+    : escapeHtml(initials(name));
+  return `<span class="team-crest" style="--league-color:${color}">${content}</span>`;
 }
 
-function compactTeamRow(name, goals, color) {
-  return `<div class="match-team">${teamCrest(name, color)}<span>${escapeHtml(name)}</span><strong>${goals ?? "–"}</strong></div>`;
+function compactTeamRow(name, goals, color, image = null, showScore = true) {
+  const score = showScore && goals !== null && goals !== undefined ? goals : "–";
+  return `<div class="match-team">${teamCrest(name, color, image)}<span>${escapeHtml(name)}</span><strong>${score}</strong></div>`;
 }
 
-function tableTeam(name, goals, color) {
-  return `<div class="table-match__team">${teamCrest(name, color)}<span>${escapeHtml(name)}</span><b>${goals ?? "–"}</b></div>`;
+function tableTeam(name, goals, color, image = null, showScore = true) {
+  const score = showScore && goals !== null && goals !== undefined ? goals : "–";
+  return `<div class="table-match__team">${teamCrest(name, color, image)}<span>${escapeHtml(name)}</span><b>${score}</b></div>`;
 }
 
 function tipTeam(name, color) {
@@ -1426,7 +1515,7 @@ function winnerName(match) {
 }
 
 function statusWeight(status) {
-  return { live: 0, scheduled: 1, complete: 2 }[status] ?? 3;
+  return { live: 0, scheduled: 1, complete: 2, postponed: 3, suspended: 4, cancelled: 5 }[status] ?? 6;
 }
 
 function percentOf(items, predicate) {
