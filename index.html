@@ -129,122 +129,12 @@
             <p class="eyebrow">Configurações</p>
             <h2>Preferências do Jtips</h2>
             <p>Área reservada para filtros padrão, critérios de confiança e ajustes de visualização.</p>
+            <p class="empty-state">Para testar a API, defina a URL em <strong>localStorage.JTIPS_API_URL</strong> ou em <strong>window.JTIPS_API_URL</strong>.</p>
           </div>
         </section>
-
-        <div class="dashboard-later analysis-page app-view is-hidden" id="analise" data-view-panel="analise">
-        <section class="summary-grid" aria-label="Resumo">
-          <article class="summary-card">
-            <span>Jogos filtrados</span>
-            <strong id="totalMatches">0</strong>
-          </article>
-          <article class="summary-card">
-            <span>Apostas fortes</span>
-            <strong id="strongTips">0</strong>
-          </article>
-          <article class="summary-card">
-            <span>Confiança média</span>
-            <strong id="avgConfidence">0%</strong>
-          </article>
-          <article class="summary-card">
-            <span>Odd média</span>
-            <strong id="avgOdd">0.00</strong>
-          </article>
-        </section>
-
-        <section class="filters" aria-label="Filtros">
-          <label>
-            Data
-            <input type="date" id="dateFilter" />
-          </label>
-          <label>
-            País
-            <select id="countryFilter">
-              <option value="todos">Todos</option>
-            </select>
-          </label>
-          <label>
-            Liga
-            <select id="leagueFilter">
-              <option value="todos">Todas</option>
-            </select>
-          </label>
-          <label>
-            Time
-            <input type="search" id="teamFilter" placeholder="Buscar time" />
-          </label>
-          <label>
-            Mercado
-            <select id="marketFilter">
-              <option value="todos">Todos</option>
-              <option value="gols">Gols</option>
-              <option value="mais-menos">Mais/Menos</option>
-              <option value="escanteios">Escanteios</option>
-              <option value="cartoes">Cartões</option>
-              <option value="casa-fora">Casa/Fora</option>
-            </select>
-          </label>
-          <label>
-            Odd mínima
-            <input type="number" id="oddFilter" min="1" step="0.05" value="1.30" />
-          </label>
-          <label>
-            Confiança mínima
-            <input type="range" id="confidenceFilter" min="0" max="95" value="0" />
-            <span id="confidenceValue">0%</span>
-          </label>
-        </section>
-
-        <section class="content-grid">
-          <section class="fixtures-column" id="jogos" aria-label="Jogos por liga">
-            <div class="section-heading">
-              <div>
-                <p class="eyebrow">Agenda</p>
-                <h2>Jogos por liga</h2>
-              </div>
-              <span id="fixtureCount">0 jogos</span>
-            </div>
-
-            <div class="date-strip" aria-label="Atalhos de data">
-              <button class="date-chip" type="button" data-date-shift="-1">Ontem</button>
-              <button class="date-chip active" type="button" data-date-shift="0">Hoje</button>
-              <button class="date-chip" type="button" data-date-shift="1">Amanhã</button>
-              <button class="text-button" id="clearFilters" type="button">Limpar filtros</button>
-            </div>
-
-            <div class="fixtures-list" id="fixturesList"></div>
-          </section>
-
-          <section class="detail-panel" aria-label="Detalhes da partida">
-            <div class="match-cover">
-              <div>
-                <p class="eyebrow" id="detailLeague">Selecione uma partida</p>
-                <h2 id="detailTitle">Análise detalhada</h2>
-              </div>
-              <span id="detailTime">--:--</span>
-            </div>
-
-            <div class="match-tabs" id="matchTabs" role="tablist" aria-label="Abas da partida">
-              <button class="active" type="button" data-tab="resumo" role="tab">Resumo</button>
-              <button type="button" data-tab="casa-fora" role="tab">Casa/Fora</button>
-              <button type="button" data-tab="gols" role="tab">Gols</button>
-              <button type="button" data-tab="cartoes" role="tab">Cartões</button>
-              <button type="button" data-tab="escanteios" role="tab">Escanteios</button>
-              <button type="button" data-tab="finalizacoes" role="tab">Finalizações</button>
-              <button type="button" data-tab="jogadores" role="tab">Jogadores</button>
-            </div>
-
-            <div class="match-subtabs" id="matchSubtabs" aria-label="Subabas da partida"></div>
-
-            <div class="detail-body" id="detailBody">
-              <p class="empty-state">Clique em uma aposta ou partida para ver desempenho, casa/fora, gols, escanteios e cartões.</p>
-            </div>
-          </section>
-        </section>
-        </div>
       </main>
     </div>
 
-    <script src="./app.js"></script>
+    <script src="./app-next.js"></script>
   </body>
 </html>
