@@ -18,7 +18,7 @@
         <div class="login-title">
           <img class="login-logo" src="./assets/jtips-logo.png" alt="Jtips" />
           <h1>ANÁLISE DE <span>FUTEBOL</span></h1>
-          <p>Entre no módulo de futebol para acompanhar jogos, mercados, probabilidades e apostas prontas.</p>
+          <p>Entre no módulo de futebol para acompanhar jogos, mercados, probabilidades e análises.</p>
         </div>
 
         <div class="market-login-grid">
@@ -50,11 +50,11 @@
             <form id="loginForm" class="login-form">
               <label>
                 E-mail
-                <input type="email" value="admin@jtips.com" autocomplete="email" />
+                <input type="email" autocomplete="email" placeholder="seu@email.com" />
               </label>
               <label>
                 Senha
-                <input type="password" value="jtips" autocomplete="current-password" />
+                <input type="password" autocomplete="current-password" placeholder="Digite sua senha" />
               </label>
               <button type="submit">Entrar no futebol</button>
             </form>
@@ -82,8 +82,8 @@
         <div class="api-status">
           <span class="status-dot"></span>
           <div>
-            <strong>Modo mock</strong>
-            <span>Pronto para API</span>
+            <strong>API ativa</strong>
+            <span>Dados reais</span>
           </div>
         </div>
       </aside>
@@ -104,185 +104,11 @@
 
         <section class="market-board app-view" id="melhores-do-dia" data-view-panel="melhores" aria-label="Melhores jogos do dia acima de 70%">
           <article class="market-card featured">
-            <header class="market-card-header">
-              <div class="match-identity">
-                <span class="mini-crest am">AM</span>
-                <div>
-                  <strong>América Mineiro <span>vs</span> Atlético GO</strong>
-                  <small>Brasil • Serie B</small>
-                </div>
-              </div>
-              <button class="favorite-button" type="button" aria-label="Favoritar partida">★</button>
-              <span class="match-clock">20:00</span>
-            </header>
-
-            <div class="score-panel pregame-panel">
-              <div class="team-side">
-                <span class="team-logo am">AM</span>
-                <span>Casa</span>
-                <strong>América Mineiro</strong>
-                <em>Odd 3.20</em>
-              </div>
-              <div class="team-side right">
-                <span class="team-logo ago">AGO</span>
-                <span>Fora</span>
-                <strong>Atlético GO</strong>
-                <em>Odd 2.10</em>
-              </div>
+            <div class="settings-shell">
+              <p class="eyebrow">Melhores do dia</p>
+              <h2>Aguardando dados da API</h2>
+              <p>As melhores oportunidades serão exibidas aqui quando a API retornar jogos reais com confiança acima de 70%.</p>
             </div>
-
-            <div class="line-section">
-              <div class="line-heading">
-                <span>Linhas de Conforto</span>
-                <strong>+70%</strong>
-              </div>
-              <div class="signal-lines">
-                <div class="signal-line"><span>Cantos 8.5</span><div><i style="width: 80%"></i></div><strong>80%</strong></div>
-                <div class="signal-line"><span>Atlético marca</span><div><i style="width: 80%"></i></div><strong>80%</strong></div>
-              </div>
-            </div>
-
-            <div class="line-section players">
-              <div class="line-heading">
-                <span>Bilhete</span>
-                <strong>2 seleções</strong>
-              </div>
-              <div class="ticket-slip">
-                <div class="anti-conflict">
-                  <span class="ticket-teams">
-                    <b class="am">AM</b>
-                    <b class="ago">AGO</b>
-                  </span>
-                  <div>
-                    <strong>Anti-conflito</strong>
-                    <small>Sem seleções opostas no bilhete</small>
-                  </div>
-                  <em>OK</em>
-                </div>
-                <div class="ticket-row">
-                  <span class="ticket-teams">
-                    <b class="am">AM</b>
-                    <b class="ago">AGO</b>
-                  </span>
-                  <span class="ticket-pick">Cantos +8.5</span>
-                  <strong>80%</strong>
-                  <em>Odd 1.80</em>
-                </div>
-                <div class="ticket-row">
-                  <span class="ticket-teams">
-                    <b class="ago">AGO</b>
-                  </span>
-                  <span class="ticket-pick">Atlético GO marcar</span>
-                  <strong>80%</strong>
-                  <em>Odd 1.55</em>
-                </div>
-                <div class="ticket-total">
-                  <span>Odd total</span>
-                  <strong>2.79</strong>
-                </div>
-              </div>
-            </div>
-
-            <footer class="market-actions">
-              <button type="button" data-analysis-id="best-am-ago">Análise</button>
-              <button class="bet365-button" type="button"><span>bet</span>365</button>
-            </footer>
-          </article>
-
-          <article class="market-card">
-            <header class="market-card-header">
-              <div class="match-identity">
-                <span class="mini-crest pal">PAL</span>
-                <div>
-                  <strong>Palmeiras <span>vs</span> Fortaleza</strong>
-                  <small>Brasil • Serie A</small>
-                </div>
-              </div>
-              <button class="favorite-button" type="button" aria-label="Favoritar partida">★</button>
-              <span class="match-clock">19:00</span>
-            </header>
-
-            <div class="score-panel pregame-panel">
-              <div class="team-side">
-                <span class="team-logo pal">PAL</span>
-                <span>Casa</span>
-                <strong>Palmeiras</strong>
-                <em>Odd 1.63</em>
-              </div>
-              <div class="team-side right">
-                <span class="team-logo for">FOR</span>
-                <span>Fora</span>
-                <strong>Fortaleza</strong>
-                <em>Odd 5.20</em>
-              </div>
-            </div>
-
-            <div class="line-section">
-              <div class="line-heading">
-                <span>Linhas de Conforto</span>
-                <strong>+70%</strong>
-              </div>
-              <div class="signal-lines">
-                <div class="signal-line"><span>Over 1.5</span><div><i style="width: 84%"></i></div><strong>84%</strong></div>
-                <div class="signal-line"><span>Cantos 9.5</span><div><i style="width: 78%"></i></div><strong>78%</strong></div>
-                <div class="signal-line"><span>Palmeiras marca</span><div><i style="width: 82%"></i></div><strong>82%</strong></div>
-              </div>
-            </div>
-
-            <div class="line-section players">
-              <div class="line-heading">
-                <span>Bilhete</span>
-                <strong>3 seleções</strong>
-              </div>
-              <div class="ticket-slip">
-                <div class="anti-conflict">
-                  <span class="ticket-teams">
-                    <b class="pal">PAL</b>
-                    <b class="for">FOR</b>
-                  </span>
-                  <div>
-                    <strong>Anti-conflito</strong>
-                    <small>Mercados compatíveis entre si</small>
-                  </div>
-                  <em>OK</em>
-                </div>
-                <div class="ticket-row">
-                  <span class="ticket-teams">
-                    <b class="pal">PAL</b>
-                    <b class="for">FOR</b>
-                  </span>
-                  <span class="ticket-pick">Over 1.5 gols</span>
-                  <strong>84%</strong>
-                  <em>Odd 1.46</em>
-                </div>
-                <div class="ticket-row">
-                  <span class="ticket-teams">
-                    <b class="pal">PAL</b>
-                    <b class="for">FOR</b>
-                  </span>
-                  <span class="ticket-pick">Cantos +9.5</span>
-                  <strong>78%</strong>
-                  <em>Odd 1.83</em>
-                </div>
-                <div class="ticket-row">
-                  <span class="ticket-teams">
-                    <b class="pal">PAL</b>
-                  </span>
-                  <span class="ticket-pick">Palmeiras marcar</span>
-                  <strong>82%</strong>
-                  <em>Odd 1.35</em>
-                </div>
-                <div class="ticket-total">
-                  <span>Odd total</span>
-                  <strong>3.61</strong>
-                </div>
-              </div>
-            </div>
-
-            <footer class="market-actions">
-              <button type="button" data-analysis-id="best-pal-for">Análise</button>
-              <button class="bet365-button" type="button"><span>bet</span>365</button>
-            </footer>
           </article>
         </section>
 
@@ -302,7 +128,7 @@
           <div class="settings-shell">
             <p class="eyebrow">Configurações</p>
             <h2>Preferências do Jtips</h2>
-            <p>Depois vamos colocar conexão da API, filtros padrão, mercados favoritos e critérios de confiança.</p>
+            <p>Área reservada para filtros padrão, critérios de confiança e ajustes de visualização.</p>
           </div>
         </section>
 
