@@ -4,7 +4,7 @@
   const CONFIG = {
     minConfidence: 70,
     maxTicketSelections: 2,
-    apiUrl: window.JTIPS_API_URL || "/api/jtips/matches",
+    apiUrl: window.JTIPS_API_URL || "/api/jtips/auto-matches",
   };
 
   const state = {
@@ -297,7 +297,7 @@
   }
 
   async function loadData() {
-    setStatus("API carregando", "Buscando FootyStats", "loading");
+    setStatus("API carregando", "Buscando ligas automáticas", "loading");
 
     const response = await fetch(CONFIG.apiUrl, { cache: "no-store" });
     const payload = await response.json().catch(() => null);
@@ -309,7 +309,11 @@
     state.rawPayload = payload;
     state.matches = normalizePayload(payload);
 
-    setStatus("API conectada", `${state.matches.length} jogos carregados`, "ok");
+    const leagueText = payload?.total_leagues_available
+      ? `${payload.total_leagues_available} ligas encontradas`
+      : `${state.matches.length} jogos carregados`;
+
+    setStatus("API conectada", leagueText, "ok");
     renderAll();
   }
 
