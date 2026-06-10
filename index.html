@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BetAnalytics — Análises de Futebol</title>
+  <meta name="description" content="Análises esportivas e tips de apostas de futebol com dados em tempo real." />
+  <link rel="stylesheet" href="css/style.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+</head>
+<body>
+<div class="layout">
+
+  <!-- ============ SIDEBAR ============ -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-mark">
+        <div class="logo-icon">⚽</div>
+        <span class="logo-text">Bet<span>Analytics</span></span>
+      </div>
+    </div>
+
+    <nav class="sidebar-nav">
+      <div class="nav-label">Menu Principal</div>
+
+      <div class="nav-item active" data-section="home" onclick="navigate('home')">
+        <i class="fas fa-chart-pie"></i> Dashboard
+        <span class="nav-badge">5</span>
+      </div>
+
+      <div class="nav-item" data-section="matches" onclick="navigate('matches')">
+        <i class="fas fa-futbol"></i> Jogos & Resultados
+        <span class="nav-badge" style="background:var(--danger)">3 ao vivo</span>
+      </div>
+
+      <div class="nav-item" data-section="stats" onclick="navigate('stats')">
+        <i class="fas fa-bar-chart"></i> Estatísticas
+      </div>
+
+      <div class="nav-item" data-section="odds" onclick="navigate('odds')">
+        <i class="fas fa-percent"></i> Odds & Probabilidades
+      </div>
+
+      <div class="nav-item" data-section="h2h" onclick="navigate('h2h')">
+        <i class="fas fa-arrows-left-right"></i> Histórico H2H
+      </div>
+
+      <div class="nav-label" style="margin-top:8px">Apostas</div>
+
+      <div class="nav-item" data-section="tips" onclick="navigate('tips')">
+        <i class="fas fa-lightbulb"></i> Tips do Dia
+        <span class="nav-badge">5</span>
+      </div>
+    </nav>
+
+    <div class="sidebar-bottom">
+      <button class="theme-toggle" id="theme-btn" onclick="toggleTheme()">
+        <i class="fas fa-sun"></i> Modo Claro
+      </button>
+    </div>
+  </aside>
+
+  <!-- ============ OVERLAY (mobile) ============ -->
+  <div class="overlay" onclick="closeSidebar()"></div>
+
+  <!-- ============ MAIN ============ -->
+  <div class="main">
+
+    <!-- TOPBAR -->
+    <header class="topbar">
+      <div class="topbar-left">
+        <button class="hamburger" onclick="openSidebar()">
+          <span></span><span></span><span></span>
+        </button>
+        <h1 class="page-title" id="page-title">Dashboard</h1>
+      </div>
+      <div class="topbar-right">
+        <div class="live-badge">
+          <div class="live-dot"></div>
+          AO VIVO · <span id="live-clock">--:--</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- ============ CONTENT ============ -->
+    <main class="content">
+
+      <!-- ======== HOME ======== -->
+      <section class="section active" id="section-home">
+
+        <!-- Stats Cards -->
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-icon green"><i class="fas fa-futbol"></i></div>
+            <div class="stat-info">
+              <div class="stat-value">24</div>
+              <div class="stat-label">Jogos Hoje</div>
+              <div class="stat-delta">▲ 3 ao vivo</div>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon yellow"><i class="fas fa-lightbulb"></i></div>
+            <div class="stat-info">
+              <div class="stat-value">5</div>
+              <div class="stat-label">Tips do Dia</div>
+              <div class="stat-delta">73% acerto no mês</div>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon blue"><i class="fas fa-trophy"></i></div>
+            <div class="stat-info">
+              <div class="stat-value">8</div>
+              <div class="stat-label">Campeonatos Ativos</div>
+              <div class="stat-delta">BR + Europa</div>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon red"><i class="fas fa-fire"></i></div>
+            <div class="stat-info">
+              <div class="stat-value">12</div>
+              <div class="stat-label">Value Bets Hoje</div>
+              <div class="stat-delta">▲ Edge > 5%</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Grid principal -->
+        <div class="grid-2">
+          <!-- Jogos ao vivo / próximos -->
+          <div class="panel">
+            <div class="panel-header">
+              <span class="panel-title"><i class="fas fa-futbol"></i> Jogos em Destaque</span>
+              <button class="panel-action" onclick="navigate('matches')">Ver todos</button>
+            </div>
+            <div class="panel-body" id="home-matches">
+              <div class="skeleton skeleton-card"></div>
+              <div class="skeleton skeleton-card"></div>
+              <div class="skeleton skeleton-card"></div>
+            </div>
+          </div>
+
+          <!-- Tips do dia -->
+          <div class="panel">
+            <div class="panel-header">
+              <span class="panel-title"><i class="fas fa-lightbulb"></i> Tips do Dia</span>
+              <button class="panel-action" onclick="navigate('tips')">Ver todas</button>
+            </div>
+            <div class="panel-body" id="home-tips">
+              <div class="skeleton skeleton-card"></div>
+              <div class="skeleton skeleton-card"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Charts -->
+        <div class="grid-2">
+          <div class="panel">
+            <div class="panel-header">
+              <span class="panel-title"><i class="fas fa-chart-bar"></i> Gols — Brasileirão</span>
+            </div>
+            <div class="panel-body">
+              <div class="chart-container">
+                <canvas id="goalsChart"></canvas>
+              </div>
+            </div>
+          </div>
+          <div class="panel">
+            <div class="panel-header">
+              <span class="panel-title"><i class="fas fa-chart-line"></i> Forma Recente (pts/jogo)</span>
+            </div>
+            <div class="panel-body">
+              <div class="chart-container">
+                <canvas id="formChart"></canvas>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </section>
+
+      <!-- ======== JOGOS ======== -->
+      <section class="section" id="section-matches">
+        <div class="tabs">
+          <button class="tab active" onclick="switchLeagueTab(this,'all')">🌍 Todos</button>
+          <button class="tab" onclick="switchLeagueTab(this,'brasileirao')">🇧🇷 Brasileirão A</button>
+          <button class="tab" onclick="switchLeagueTab(this,'serie_b')">🇧🇷 Série B</button>
+          <button class="tab" onclick="switchLeagueTab(this,'copa_brasil')">🇧🇷 Copa do Brasil</button>
+          <button class="tab" onclick="switchLeagueTab(this,'libertadores')">🏆 Libertadores</button>
+          <button class="tab" onclick="switchLeagueTab(this,'premier_league')">🏴󠁧󠁢󠁥󠁮󠁧󠁿 Premier League</button>
+          <button class="tab" onclick="switchLeagueTab(this,'la_liga')">🇪🇸 La Liga</button>
+          <button class="tab" onclick="switchLeagueTab(this,'bundesliga')">🇩🇪 Bundesliga</button>
+          <button class="tab" onclick="switchLeagueTab(this,'serie_a')">🇮🇹 Serie A</button>
+          <button class="tab" onclick="switchLeagueTab(this,'ligue_1')">🇫🇷 Ligue 1</button>
+        </div>
+
+        <div id="matches-list">
+          <div class="skeleton skeleton-card"></div>
+          <div class="skeleton skeleton-card"></div>
+          <div class="skeleton skeleton-card"></div>
+        </div>
+      </section>
+
+      <!-- ======== ESTATÍSTICAS ======== -->
+      <section class="section" id="section-stats">
+
+        <div class="tabs">
+          <button class="tab active" onclick="switchLeagueTab(this,'brasileirao')">🇧🇷 Brasileirão A</button>
+          <button class="tab" onclick="switchLeagueTab(this,'premier_league')">🏴󠁧󠁢󠁥󠁮󠁧󠁿 Premier League</button>
+          <button class="tab" onclick="switchLeagueTab(this,'la_liga')">🇪🇸 La Liga</button>
+          <button class="tab" onclick="switchLeagueTab(this,'libertadores')">🏆 Libertadores</button>
+        </div>
+
+        <!-- Tabela de classificação -->
+        <div class="panel" style="margin-bottom:20px">
+          <div class="panel-header">
+            <span class="panel-title"><i class="fas fa-table"></i> Classificação</span>
+          </div>
+          <div style="overflow-x:auto">
+            <table class="standings-table">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Time</th>
+                  <th>Pts</th>
+                  <th>PG</th>
+                  <th style="color:var(--accent)">V</th>
+                  <th style="color:var(--warning)">E</th>
+                  <th style="color:var(--danger)">D</th>
+                  <th>GM</th>
+                  <th>GS</th>
+                  <th>SG</th>
+                  <th>Forma</th>
+                </tr>
+              </thead>
+              <tbody id="standings-body">
+                <tr><td colspan="11"><div class="skeleton skeleton-card"></div></td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div style="padding:12px 16px;border-top:1px solid var(--border);display:flex;gap:16px;flex-wrap:wrap">
+            <span style="font-size:11px;color:var(--text-muted);display:flex;align-items:center;gap:4px"><span class="pos-badge pos-1" style="width:10px;height:10px;border-radius:2px;display:inline-block"></span> Classificação Libertadores</span>
+            <span style="font-size:11px;color:var(--text-muted);display:flex;align-items:center;gap:4px"><span class="pos-badge pos-4" style="width:10px;height:10px;border-radius:2px;display:inline-block"></span> Pré-Libertadores / Sul-Americana</span>
+            <span style="font-size:11px;color:var(--text-muted);display:flex;align-items:center;gap:4px"><span class="pos-badge pos-rel" style="width:10px;height:10px;border-radius:2px;display:inline-block"></span> Rebaixamento</span>
+          </div>
+        </div>
+
+        <!-- Artilheiros / Assistências -->
+        <div class="grid-2">
+          <div class="panel">
+            <div class="panel-header">
+              <span class="panel-title"><i class="fas fa-shoe-prints"></i> Artilheiros</span>
+            </div>
+            <div style="overflow-x:auto">
+              <table class="player-table">
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th>Jogador</th>
+                    <th>Gols</th>
+                    <th>Ast</th>
+                    <th>Chutes</th>
+                    <th>Passes</th>
+                    <th>Nota</th>
+                  </tr>
+                </thead>
+                <tbody id="players-body">
+                  <tr><td colspan="7"><div class="skeleton skeleton-card"></div></td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Gráfico de forma -->
+          <div class="panel">
+            <div class="panel-header">
+              <span class="panel-title"><i class="fas fa-chart-line"></i> Aproveitamento por Rodada</span>
+            </div>
+            <div class="panel-body">
+              <div class="chart-container" style="height:260px">
+                <canvas id="statsFormChart"></canvas>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </section>
+
+      <!-- ======== ODDS ======== -->
+      <section class="section" id="section-odds">
+
+        <div class="stats-grid" style="margin-bottom:20px">
+          <div class="stat-card">
+            <div class="stat-icon green"><i class="fas fa-check-circle"></i></div>
+            <div class="stat-info">
+              <div class="stat-value">12</div>
+              <div class="stat-label">Value Bets Hoje</div>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon blue"><i class="fas fa-percent"></i></div>
+            <div class="stat-info">
+              <div class="stat-value">7.3%</div>
+              <div class="stat-label">Edge Médio</div>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon yellow"><i class="fas fa-building"></i></div>
+            <div class="stat-info">
+              <div class="stat-value">2</div>
+              <div class="stat-label">Casas Comparadas</div>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon red"><i class="fas fa-arrow-up"></i></div>
+            <div class="stat-info">
+              <div class="stat-value">2.80</div>
+              <div class="stat-label">Maior Odd Value</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-header">
+            <span class="panel-title"><i class="fas fa-percent"></i> Odds Comparativas</span>
+            <span style="font-size:11px;color:var(--text-muted)">Atualizado agora</span>
+          </div>
+          <div style="overflow-x:auto">
+            <table class="odds-table">
+              <thead>
+                <tr>
+                  <th>Partida</th>
+                  <th>Bet365 1</th>
+                  <th>Bet365 X</th>
+                  <th>Bet365 2</th>
+                  <th>Betano 1</th>
+                  <th>Betano X</th>
+                  <th>Betano 2</th>
+                </tr>
+              </thead>
+              <tbody id="odds-body">
+                <tr><td colspan="7"><div class="skeleton skeleton-card"></div></td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div style="padding:12px 16px;border-top:1px solid var(--border)">
+            <span style="font-size:11px;color:var(--text-muted)">
+              <span class="value-tag">VALUE</span> = Odd com edge positivo estimado acima de 5% em relação à probabilidade real calculada.
+            </span>
+          </div>
+        </div>
+
+      </section>
+
+      <!-- ======== H2H ======== -->
+      <section class="section" id="section-h2h">
+
+        <div class="h2h-search">
+          <i class="fas fa-search" style="color:var(--text-muted)"></i>
+          <input type="text" class="h2h-input" id="h2h-input-a" placeholder="Time A (ex: Flamengo)" />
+          <span class="h2h-vs">VS</span>
+          <input type="text" class="h2h-input" id="h2h-input-b" placeholder="Time B (ex: Palmeiras)" />
+          <button class="btn-primary" onclick="searchH2H()">
+            <i class="fas fa-search"></i> Buscar
+          </button>
+        </div>
+
+        <div id="h2h-content">
+          <div class="skeleton skeleton-card" style="height:120px;margin-bottom:10px"></div>
+          <div class="skeleton skeleton-card" style="height:300px"></div>
+        </div>
+
+      </section>
+
+      <!-- ======== TIPS ======== -->
+      <section class="section" id="section-tips">
+
+        <div class="stats-grid" style="margin-bottom:20px">
+          <div class="stat-card">
+            <div class="stat-icon green"><i class="fas fa-check"></i></div>
+            <div class="stat-info">
+              <div class="stat-value">5</div>
+              <div class="stat-label">Tips Hoje</div>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon yellow"><i class="fas fa-star"></i></div>
+            <div class="stat-info">
+              <div class="stat-value">73%</div>
+              <div class="stat-label">Acerto no Mês</div>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon blue"><i class="fas fa-coins"></i></div>
+            <div class="stat-info">
+              <div class="stat-value">+18.4u</div>
+              <div class="stat-label">Lucro (unidades)</div>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon red"><i class="fas fa-trophy"></i></div>
+            <div class="stat-info">
+              <div class="stat-value">2.24</div>
+              <div class="stat-label">Odd Média</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <div>
+            <div id="tips-list">
+              <div class="skeleton skeleton-card"></div>
+              <div class="skeleton skeleton-card"></div>
+            </div>
+          </div>
+          <div class="panel" style="align-self:start">
+            <div class="panel-header">
+              <span class="panel-title"><i class="fas fa-info-circle"></i> Como usar as Tips</span>
+            </div>
+            <div class="panel-body" style="line-height:1.9;color:var(--text-secondary);font-size:13px">
+              <p><strong style="color:var(--accent)">⭐⭐⭐⭐⭐</strong> — Confiança máxima. Aposte até 3u.</p>
+              <p><strong style="color:var(--warning)">⭐⭐⭐⭐</strong> — Alta confiança. Aposte até 2u.</p>
+              <p><strong style="color:var(--text-secondary)">⭐⭐⭐</strong> — Confiança moderada. Aposte 1u.</p>
+              <hr style="border-color:var(--border);margin:12px 0" />
+              <p style="color:var(--text-muted);font-size:12px">As análises são baseadas em dados estatísticos da API Footstats, histórico de confrontos, forma recente e condições dos times. Aposte com responsabilidade.</p>
+            </div>
+          </div>
+        </div>
+
+      </section>
+
+    </main>
+  </div>
+</div>
+
+<script src="js/app.js"></script>
+</body>
+</html>
