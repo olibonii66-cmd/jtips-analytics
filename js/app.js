@@ -1,7 +1,6 @@
 const API_BASE_URL = "/api/footystats";
 const APP_TIMEZONE = "America/Sao_Paulo";
 const API_TIMEOUT = 15000;
-const LIVE_SCORE_REFRESH_MS = 45000;
 
 const TARGET_LEAGUES = [
   { key: "brasileirao-a", name: "Brasileirão Série A", short: "BRA", country: "Brasil", color: "#00c853", aliases: ["serie a", "brasileirao", "brasileirão"] },
@@ -45,8 +44,6 @@ const state = {
   statsLeagueKey: "brasileirao-a",
   activeSection: "dashboard",
   loading: false,
-  livePollingTimer: null,
-  livePollingInFlight: false,
   charts: {
     radar: null
   }
@@ -111,7 +108,6 @@ async function loadApplicationData({ refresh = false } = {}) {
     renderAll();
     setLoading(false);
     updateLastSync();
-    scheduleLivePolling();
   }
 }
 
@@ -167,7 +163,6 @@ async function loadMatchesForDate() {
     renderOdds();
     renderTips();
     updateLastSync();
-    scheduleLivePolling();
   } catch (error) {
     console.error(error);
     renderMatchesError("Não foi possível carregar as partidas desta data.");
@@ -193,95 +188,6 @@ async function loadMatchTeams() {
 
   const groups = await Promise.all(teamRequests);
   state.matchTeams = groups.flat();
-}
-
-
-function scheduleLivePolling() {
-  if (state.livePollingTimer) {
-    window.clearInterval(state.livePollingTimer);
-    state.livePollingTimer = null;
-  }
-
-  if (state.mode !== "api" || !isSameDay(state.selectedDate, new Date())) return;
-
-  const candidates = getLiveRefreshCandidates();
-  if (!candidates.length) return;
-
-  console.info(`[JTIPS Live] ${candidates.length} partida(s) monitorada(s).`);
-  refreshLiveMatches({ silent: true });
-  state.livePollingTimer = window.setInterval(() => {
-    refreshLiveMatches({ silent: true });
-  }, LIVE_SCORE_REFRESH_MS);
-}
-
-function getLiveRefreshCandidates() {
-  const now = Date.now();
-  const beforeKickoff = 10 * 60 * 1000;
-  const liveWindow = 3.5 * 60 * 60 * 1000;
-
-  return state.matches.filter((match) => {
-    if (!match?.id) return false;
-    if (["cancelled", "postponed", "suspended"].includes(match.status)) return false;
-    if (match.status === "live") return true;
-    return now >= match.timestamp - beforeKickoff && now <= match.timestamp + liveWindow;
-  }).slice(0, 12);
-}
-
-async function refreshLiveMatches({ silent = false } = {}) {
-  if (state.livePollingInFlight || state.mode !== "api") return;
-
-  const candidates = getLiveRefreshCandidates();
-  if (!candidates.length) return;
-
-  state.livePollingInFlight = true;
-  try {
-    const updates = await Promise.allSettled(candidates.map(async (match) => {
-      const payload = await apiFetch("/match", { match_id: match.id });
-      const detail = extractMatchDetail(payload, match.id);
-      if (!detail) return null;
-      return normalizeMatch({
-        ...match,
-        ...detail,
-        homeLogo: match.homeLogo,
-        awayLogo: match.awayLogo
-      });
-    }));
-
-    const updatedMatches = updates
-      .filter((result) => result.status === "fulfilled" && result.value)
-      .map((result) => result.value);
-
-    if (!updatedMatches.length) return;
-
-    const byId = new Map(updatedMatches.map((match) => [String(match.id), match]));
-    state.matches = state.matches.map((match) => byId.get(String(match.id)) || match);
-    state.valueBets = buildValueBets(state.matches);
-    state.tips = buildTips(state.matches);
-
-    renderDashboard();
-    renderMatches();
-    renderOdds();
-    renderTips();
-    updateLastSync();
-
-    if (!silent) {
-      showToast("Ao vivo atualizado", "Placar e estatísticas foram sincronizados pela FootyStats.");
-    }
-  } catch (error) {
-    console.warn("[JTIPS Live] Não foi possível atualizar dados ao vivo:", error);
-  } finally {
-    state.livePollingInFlight = false;
-  }
-}
-
-function extractMatchDetail(payload, matchId) {
-  if (Array.isArray(payload)) return payload.find((item) => String(item.id || item.match_id) === String(matchId)) || payload[0] || null;
-  if (Array.isArray(payload?.data)) return payload.data.find((item) => String(item.id || item.match_id) === String(matchId)) || payload.data[0] || null;
-  if (payload?.data && typeof payload.data === "object") return payload.data;
-  if (payload && typeof payload === "object" && (payload.id || payload.match_id || payload.homeID || payload.awayID)) return payload;
-
-  const objects = collectMatchObjects(payload);
-  return objects.find((item) => String(item.id || item.match_id) === String(matchId)) || objects[0] || null;
 }
 
 async function loadLeagueStats(leagueKey, { silent = false } = {}) {
@@ -410,8 +316,8 @@ function normalizeMatch(raw) {
   const awayTeam = findMatchTeam(awayId);
   const homeName = raw.home_name || raw.homeTeam?.name || raw.home_team_name || raw.team_a_name || homeTeam?.name || "Mandante";
   const awayName = raw.away_name || raw.awayTeam?.name || raw.away_team_name || raw.team_b_name || awayTeam?.name || "Visitante";
-  const homeGoals = numberOrNull(raw.team_a_score ?? raw.homeGoalCount ?? raw.home_score ?? raw.homeGoals?.length);
-  const awayGoals = numberOrNull(raw.team_b_score ?? raw.awayGoalCount ?? raw.away_score ?? raw.awayGoals?.length);
+  const homeGoals = numberOrNull(raw.homeGoalCount ?? raw.home_score ?? raw.homeGoals?.length);
+  const awayGoals = numberOrNull(raw.awayGoalCount ?? raw.away_score ?? raw.awayGoals?.length);
   const homeLogo = getTeamLogo(raw, "home") || homeTeam?.image || getNationalTeamFlagUrl(homeName) || null;
   const awayLogo = getTeamLogo(raw, "away") || awayTeam?.image || getNationalTeamFlagUrl(awayName) || null;
 
@@ -450,19 +356,14 @@ function normalizeMatch(raw) {
       btts: clampProbability(raw.btts_percentage || raw.btts_potential || raw.bttsProbability)
     },
     stats: {
-      possessionHome: nullablePositiveNumber(raw.team_a_possession ?? raw.home_possession),
-      possessionAway: nullablePositiveNumber(raw.team_b_possession ?? raw.away_possession),
-      shotsHome: nullablePositiveNumber(raw.team_a_shots ?? raw.home_shots),
-      shotsAway: nullablePositiveNumber(raw.team_b_shots ?? raw.away_shots),
-      shotsOnTargetHome: nullablePositiveNumber(raw.team_a_shotsOnTarget ?? raw.team_a_shots_on_target ?? raw.home_shots_on_target),
-      shotsOnTargetAway: nullablePositiveNumber(raw.team_b_shotsOnTarget ?? raw.team_b_shots_on_target ?? raw.away_shots_on_target),
-      cornersHome: nullablePositiveNumber(raw.team_a_corners ?? raw.home_corners),
-      cornersAway: nullablePositiveNumber(raw.team_b_corners ?? raw.away_corners),
-      cardsHome: nullablePositiveNumber(raw.team_a_cards_num ?? sumNullable(raw.team_a_yellow_cards, raw.team_a_red_cards)),
-      cardsAway: nullablePositiveNumber(raw.team_b_cards_num ?? sumNullable(raw.team_b_yellow_cards, raw.team_b_red_cards)),
-      xgHome: nullablePositiveNumber(raw.team_a_xg),
-      xgAway: nullablePositiveNumber(raw.team_b_xg),
-      xgTotal: nullablePositiveNumber(raw.total_xg)
+      possessionHome: nullablePositiveNumber(raw.team_a_possession),
+      possessionAway: nullablePositiveNumber(raw.team_b_possession),
+      shotsHome: nullablePositiveNumber(raw.team_a_shots),
+      shotsAway: nullablePositiveNumber(raw.team_b_shots),
+      cornersHome: nullablePositiveNumber(raw.team_a_corners),
+      cornersAway: nullablePositiveNumber(raw.team_b_corners),
+      cardsHome: nullablePositiveNumber(raw.team_a_cards_num),
+      cardsAway: nullablePositiveNumber(raw.team_b_cards_num)
     }
   };
 }
@@ -1368,10 +1269,8 @@ function matchModalTemplate(match) {
     <div class="modal-stats">
       ${modalStatRow("Posse", match.stats.possessionHome, match.stats.possessionAway, "%")}
       ${modalStatRow("Finalizações", match.stats.shotsHome, match.stats.shotsAway)}
-      ${modalStatRow("No alvo", match.stats.shotsOnTargetHome, match.stats.shotsOnTargetAway)}
       ${modalStatRow("Escanteios", match.stats.cornersHome, match.stats.cornersAway)}
       ${modalStatRow("Cartões", match.stats.cardsHome, match.stats.cardsAway)}
-      ${modalStatRow("xG", match.stats.xgHome, match.stats.xgAway)}
     </div>
     <div class="modal-market-grid">
       ${modalMarket("Melhor mercado", market.label)}
@@ -1498,7 +1397,6 @@ function getTeamLogo(raw, side) {
   const teamPrefix = side === "home" ? "team_a" : "team_b";
   const nested = side === "home" ? raw.homeTeam : raw.awayTeam;
   return sanitizeImageUrl(
-    raw[`${prefix}Logo`] ||
     raw[`${prefix}_image`] ||
     raw[`${prefix}_logo`] ||
     raw[`${prefix}_team_logo`] ||
@@ -1718,13 +1616,6 @@ function formatAverage(value, decimals, suffix = "") {
 function positiveNumber(value, fallback = 0) {
   const number = Number(value);
   return Number.isFinite(number) && number >= 0 ? number : fallback;
-}
-
-function sumNullable(...values) {
-  const valid = values
-    .map((value) => Number(value))
-    .filter((value) => Number.isFinite(value) && value >= 0);
-  return valid.length ? valid.reduce((sum, value) => sum + value, 0) : null;
 }
 
 function nullablePositiveNumber(value) {
