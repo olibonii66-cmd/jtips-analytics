@@ -588,13 +588,24 @@ function renderAll() {
 function populateLeagueFilters() {
   const allOption = `<option value="all">Todos os campeonatos</option>`;
   const options = state.leagues.map((league) => `<option value="${league.key}">${escapeHtml(league.name)}</option>`).join("");
-  if (els.matchLeagueFilter) els.matchLeagueFilter.innerHTML = allOption + options;
-  els.oddsLeagueFilter.innerHTML = allOption + options;
-  els.statsLeagueFilter.innerHTML = state.leagues.map((league) => `
-    <option value="${league.key}" ${league.key === state.statsLeagueKey ? "selected" : ""}>${escapeHtml(league.name)}</option>
-  `).join("");
-  if (els.matchLeagueFilter) els.matchLeagueFilter.value = state.matchLeague;
-  els.oddsLeagueFilter.value = state.oddsLeague;
+
+  if (els.matchLeagueFilter) {
+    els.matchLeagueFilter.innerHTML = allOption + options;
+    els.matchLeagueFilter.value = state.matchLeague;
+  }
+
+  if (els.oddsLeagueFilter) {
+    els.oddsLeagueFilter.innerHTML = allOption + options;
+    els.oddsLeagueFilter.value = state.oddsLeague;
+  }
+
+  if (els.statsLeagueFilter) {
+    els.statsLeagueFilter.innerHTML = state.leagues.length
+      ? state.leagues.map((league) => `
+        <option value="${league.key}" ${league.key === state.statsLeagueKey ? "selected" : ""}>${escapeHtml(league.name)}</option>
+      `).join("")
+      : `<option value="all">Sem ligas carregadas</option>`;
+  }
 }
 
 function renderDashboard() {
