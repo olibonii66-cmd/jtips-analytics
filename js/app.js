@@ -1507,29 +1507,37 @@ async function openMatchModal(matchId) {
   els.matchModal.setAttribute("aria-hidden", "false");
   document.body.style.overflow = "hidden";
   els.modalTitle.textContent = `${baseMatch.homeName} x ${baseMatch.awayName}`;
-  els.matchModalBody.innerHTML = matchModalTemplate(baseMatch);
+  els.matchModalBody.innerHTML = `<div class="numbers-loading"><i class="fa-solid fa-spinner fa-spin"></i><strong>Buscando estatísticas oficiais...</strong><span>Consultando os dados reais desta partida na FootyStats.</span></div>`;
 
-  const results = await Promise.allSettled([
-    fetchOfficialMatchDetails(baseMatch),
-    ensureTeamsForMatch(baseMatch),
-    ensurePlayersForMatch(baseMatch)
-  ]);
+  try {
+    const detailedMatch = await fetchOfficialMatchDetails(baseMatch);
+    await Promise.allSettled([
+      ensureTeamsForMatch(detailedMatch),
+      ensurePlayersForMatch(detailedMatch)
+    ]);
 
-  const detailResult = results[0];
-  const detailedMatch = detailResult.status === "fulfilled" ? detailResult.value : baseMatch;
-
-  if (detailResult.status === "rejected") {
-    console.warn("Detalhe oficial indisponível, usando dados da agenda:", detailResult.reason);
+    if (!els.matchModal.classList.contains("open")) return;
+    els.modalTitle.textContent = `${detailedMatch.homeName} x ${detailedMatch.awayName}`;
+    els.matchModalBody.innerHTML = matchModalTemplate(detailedMatch);
+  } catch (error) {
+    console.error("Não foi possível carregar os dados oficiais da partida:", error);
+    if (!els.matchModal.classList.contains("open")) return;
+    els.matchModalBody.innerHTML = `
+      <div class="error-state">
+        <i class="fa-solid fa-cloud-arrow-down"></i>
+        <h3>Dados oficiais indisponíveis</h3>
+        <p>${escapeHtml(error.message || "A FootyStats não retornou os detalhes desta partida.")}</p>
+      </div>
+    `;
   }
-
-  if (!els.matchModal.classList.contains("open")) return;
-  els.modalTitle.textContent = `${detailedMatch.homeName} x ${detailedMatch.awayName}`;
-  els.matchModalBody.innerHTML = matchModalTemplate(detailedMatch);
 }
 
 async function fetchOfficialMatchDetails(match) {
   const payload = await apiFetch("/match", { match_id: match.id });
-  const raw = pickSingleRecord(payload) || payload;
+  const raw = pickSingleRecord(payload);
+  if (!raw || typeof raw !== "object" || (!raw.id && !raw.match_id)) {
+    throw new Error("A FootyStats não retornou os dados detalhados desta partida.");
+  }
   const normalized = normalizeMatch({ ...match, ...raw });
   const index = state.matches.findIndex((item) => String(item.id) === String(match.id));
   if (index >= 0) state.matches[index] = { ...state.matches[index], ...normalized };
