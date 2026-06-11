@@ -1381,6 +1381,12 @@ function setupTheme() {
 function setupModal() {
   els.matchModal.querySelectorAll("[data-close-modal]").forEach((item) => item.addEventListener("click", closeModal));
   els.matchModal.addEventListener("click", (event) => {
+    const subTabButton = event.target.closest("[data-numbers-subtab]");
+    if (subTabButton) {
+      switchNumbersSubtab(subTabButton.dataset.numbersSubtab, subTabButton.closest("[data-numbers-subtabs-root]"));
+      return;
+    }
+
     const tabButton = event.target.closest("[data-numbers-tab]");
     if (tabButton) switchNumbersTab(tabButton.dataset.numbersTab);
   });
@@ -1653,181 +1659,303 @@ function numbersDataNote(text) {
   return `<div class="numbers-goals-note">${escapeHtml(text)}</div>`;
 }
 
+
+function numbersSubtabs(groups, match) {
+  const safeGroups = groups.filter((group) => group && group.id && group.title);
+  if (!safeGroups.length) return "";
+  return `
+    <div class="numbers-subtabs-wrap" data-numbers-subtabs-root>
+      <div class="numbers-subtabs" role="tablist" aria-label="Subcategorias da estatística">
+        ${safeGroups.map((group, index) => `
+          <button type="button" class="numbers-subtab ${index === 0 ? "is-active" : ""}" data-numbers-subtab="${escapeHtml(group.id)}" role="tab" aria-selected="${index === 0 ? "true" : "false"}">${escapeHtml(group.title)}</button>
+        `).join("")}
+      </div>
+      <div class="numbers-subpanels">
+        ${safeGroups.map((group, index) => `
+          <div class="numbers-subpanel ${index === 0 ? "is-active" : ""}" data-numbers-subpanel="${escapeHtml(group.id)}" role="tabpanel">
+            ${metricGroup(group.title, group.rows || [], match, group.eyebrow || "Categoria")}
+          </div>
+        `).join("")}
+      </div>
+    </div>
+  `;
+}
+
+function switchNumbersSubtab(subtabId, root) {
+  if (!subtabId || !root) return;
+  root.querySelectorAll("[data-numbers-subtab]").forEach((button) => {
+    const isActive = button.dataset.numbersSubtab === subtabId;
+    button.classList.toggle("is-active", isActive);
+    button.setAttribute("aria-selected", isActive ? "true" : "false");
+  });
+  root.querySelectorAll("[data-numbers-subpanel]").forEach((panel) => {
+    panel.classList.toggle("is-active", panel.dataset.numbersSubpanel === subtabId);
+  });
+}
+
 function renderGoalsNumbersTab(match) {
   const blank = { home: null, away: null, average: null };
+  const groups = [
+    {
+      id: "gols-partida",
+      title: "Gols da partida",
+      rows: [
+        { key: "over05", label: "Mais de 0,5", ...blank },
+        { key: "over15", label: "Mais de 1,5", ...blank },
+        { key: "over25", label: "Mais de 2,5", ...blank },
+        { key: "over35", label: "Mais de 3,5", ...blank },
+        { key: "over45", label: "Mais de 4,5", ...blank },
+        { key: "btts", label: "BTTS", ...blank },
+        { key: "bttsWin", label: "Ambas as equipes marcam e ganhem.", ...blank },
+        { key: "bttsDraw", label: "Ambas as equipes marcam e empate", ...blank },
+        { key: "bttsOver25", label: "Ambas as equipes marcam e mais de 2,5 gols", ...blank },
+        { key: "bttsNoOver25", label: "Ambas as equipes marcam Não e Mais de 2,5", ...blank }
+      ]
+    },
+    {
+      id: "gols-primeiro-tempo",
+      title: "Gols do primeiro tempo",
+      rows: [
+        { key: "bttsFirstHalf", label: "Ambas as equipes marcam no primeiro tempo.", ...blank },
+        { key: "over05FH", label: "Mais de 0,5 FH", ...blank },
+        { key: "over15FH", label: "Mais de 1,5 FH", ...blank },
+        { key: "over25FH", label: "Mais de 2,5 FH", ...blank }
+      ]
+    },
+    {
+      id: "gols-segundo-tempo",
+      title: "Gols do segundo tempo",
+      rows: [
+        { key: "bttsSecondHalf", label: "Ambas as equipes marcam no segundo tempo.", ...blank },
+        { key: "bttsBothHalves", label: "Ambas as equipes marcam nos dois tempos.", ...blank },
+        { key: "over05SH", label: "Mais de 0,5 2H", ...blank },
+        { key: "over15SH", label: "Mais de 1,5 2H", ...blank },
+        { key: "over25SH", label: "Mais de 2,5 2H", ...blank }
+      ]
+    },
+    {
+      id: "menos-de-x-gols",
+      title: "Menos de X gols",
+      rows: [
+        { key: "under05", label: "Menos de 0,5", ...blank },
+        { key: "under15", label: "Menos de 1,5", ...blank },
+        { key: "under25", label: "Menos de 2,5", ...blank },
+        { key: "under35", label: "Menos de 3,5", ...blank },
+        { key: "under45", label: "Menos de 4,5", ...blank }
+      ]
+    },
+    {
+      id: "primeiro-segundo-tempo",
+      title: "Primeiro/Segundo Tempo",
+      rows: [
+        { key: "under05FH", label: "Menos de 0,5 FH", ...blank },
+        { key: "under15FH", label: "Menos de 1,5 FH", ...blank },
+        { key: "under25FH", label: "Menos de 2,5 FH", ...blank },
+        { key: "under05SH", label: "Menos de 0,5 2H", ...blank },
+        { key: "under15SH", label: "Menos de 1,5 2H", ...blank },
+        { key: "under25SH", label: "Menos de 2,5 2H", ...blank }
+      ]
+    }
+  ];
   return `
-    ${numbersDataNote("Linhas de gols configuradas no padrão visual do JTIPS. Onde ainda não houver endpoint oficial mapeado, mostramos — sem inventar número.")}
-    ${metricGroup("Gols da partida", [
-      { key: "over05", label: "Mais de 0,5", ...blank },
-      { key: "over15", label: "Mais de 1,5", ...blank },
-      { key: "over25", label: "Mais de 2,5", ...blank },
-      { key: "over35", label: "Mais de 3,5", ...blank },
-      { key: "over45", label: "Mais de 4,5", ...blank },
-      { key: "btts", label: "BTTS", ...blank },
-      { key: "bttsWin", label: "Ambas as equipes marcam e ganhem.", ...blank },
-      { key: "bttsDraw", label: "Ambas as equipes marcam e empate", ...blank },
-      { key: "bttsOver25", label: "Ambas as equipes marcam e mais de 2,5 gols", ...blank },
-      { key: "bttsNoOver25", label: "Ambas as equipes marcam Não e Mais de 2,5", ...blank }
-    ], match)}
-    ${metricGroup("Gols do primeiro tempo", [
-      { key: "bttsFirstHalf", label: "Ambas as equipes marcam no primeiro tempo.", ...blank },
-      { key: "over05FH", label: "Mais de 0,5 FH", ...blank },
-      { key: "over15FH", label: "Mais de 1,5 FH", ...blank },
-      { key: "over25FH", label: "Mais de 2,5 FH", ...blank }
-    ], match)}
-    ${metricGroup("Gols do segundo tempo", [
-      { key: "bttsSecondHalf", label: "Ambas as equipes marcam no segundo tempo.", ...blank },
-      { key: "bttsBothHalves", label: "Ambas as equipes marcam nos dois tempos.", ...blank },
-      { key: "over05SH", label: "Mais de 0,5 2H", ...blank },
-      { key: "over15SH", label: "Mais de 1,5 2H", ...blank },
-      { key: "over25SH", label: "Mais de 2,5 2H", ...blank }
-    ], match)}
-    ${metricGroup("Menos de X gols", [
-      { key: "under05", label: "Menos de 0,5", ...blank },
-      { key: "under15", label: "Menos de 1,5", ...blank },
-      { key: "under25", label: "Menos de 2,5", ...blank },
-      { key: "under35", label: "Menos de 3,5", ...blank },
-      { key: "under45", label: "Menos de 4,5", ...blank }
-    ], match)}
-    ${metricGroup("Primeiro/Segundo Tempo", [
-      { key: "under05FH", label: "Menos de 0,5 FH", ...blank },
-      { key: "under15FH", label: "Menos de 1,5 FH", ...blank },
-      { key: "under25FH", label: "Menos de 2,5 FH", ...blank },
-      { key: "under05SH", label: "Menos de 0,5 2H", ...blank },
-      { key: "under15SH", label: "Menos de 1,5 2H", ...blank },
-      { key: "under25SH", label: "Menos de 2,5 2H", ...blank }
-    ], match)}
+    ${numbersDataNote("Linhas de gols organizadas por subaba. Onde ainda não houver endpoint oficial mapeado, mostramos — sem inventar número.")}
+    ${numbersSubtabs(groups, match)}
   `;
 }
 
 function renderCornersNumbersTab(match) {
   const blank = { home: null, away: null, average: null };
+  const groups = [
+    {
+      id: "escanteios-partida",
+      title: "Escanteios da partida",
+      rows: [
+        { key: "totalCorners", label: "Total de escanteios", ...blank },
+        { key: "cornersPerMatch", label: "Escanteios / jogo", ...blank },
+        { key: "homeCorners", label: "Escanteios do mandante", ...blank },
+        { key: "awayCorners", label: "Escanteios do visitante", ...blank }
+      ]
+    },
+    {
+      id: "total-escanteios",
+      title: "Total de escanteios",
+      rows: [
+        { key: "cornersOver6", label: "Mais de 6", ...blank },
+        { key: "cornersOver7", label: "Mais de 7", ...blank },
+        { key: "cornersOver8", label: "Mais de 8", ...blank },
+        { key: "cornersOver9", label: "Mais de 9", ...blank },
+        { key: "cornersOver10", label: "Mais de 10", ...blank },
+        { key: "cornersOver11", label: "Mais de 11", ...blank },
+        { key: "cornersOver12", label: "Mais de 12", ...blank },
+        { key: "cornersOver13", label: "Mais de 13", ...blank }
+      ]
+    },
+    {
+      id: "escanteios-time",
+      title: "Escanteios do time",
+      rows: [
+        { key: "cornersForMatch", label: "Escanteios a favor / jogo", ...blank },
+        { key: "cornersAgainstMatch", label: "Escanteios contra / jogo", ...blank },
+        { key: "cornersForOver25", label: "Mais de 2.5 escanteios a favor", ...blank },
+        { key: "cornersForOver35", label: "Mais de 3.5 escanteios a favor", ...blank },
+        { key: "cornersForOver45", label: "Mais de 4.5 escanteios a favor", ...blank },
+        { key: "cornersAgainstOver25", label: "Mais de 2.5 escanteios contra", ...blank },
+        { key: "cornersAgainstOver35", label: "Mais de 3.5 escanteios contra", ...blank },
+        { key: "cornersAgainstOver45", label: "Mais de 4.5 escanteios contra", ...blank }
+      ]
+    },
+    {
+      id: "primeiro-tempo-escanteios",
+      title: "Primeiro tempo",
+      rows: [
+        { key: "fhCornersAverage", label: "Média FH", ...blank },
+        { key: "fhCornersOver4", label: "Mais de 4 FH", ...blank },
+        { key: "fhCornersOver5", label: "Mais de 5 FH", ...blank },
+        { key: "fhCornersOver6", label: "Mais de 6 FH", ...blank }
+      ]
+    },
+    {
+      id: "segundo-tempo-escanteios",
+      title: "Segundo tempo",
+      rows: [
+        { key: "shCornersAverage", label: "Média 2H", ...blank },
+        { key: "shCornersOver4", label: "Mais de 4 2H", ...blank },
+        { key: "shCornersOver5", label: "Mais de 5 2H", ...blank },
+        { key: "shCornersOver6", label: "Mais de 6 2H", ...blank }
+      ]
+    }
+  ];
   return `
-    ${numbersDataNote("Linhas de escanteios preparadas para receber o mapeamento dos endpoints oficiais. Nenhum número é inventado.")}
-    ${metricGroup("Escanteios da partida", [
-      { key: "totalCorners", label: "Total de escanteios", ...blank },
-      { key: "cornersPerMatch", label: "Escanteios / jogo", ...blank },
-      { key: "homeCorners", label: "Escanteios do mandante", ...blank },
-      { key: "awayCorners", label: "Escanteios do visitante", ...blank }
-    ], match)}
-    ${metricGroup("Total de escanteios", [
-      { key: "cornersOver6", label: "Mais de 6", ...blank },
-      { key: "cornersOver7", label: "Mais de 7", ...blank },
-      { key: "cornersOver8", label: "Mais de 8", ...blank },
-      { key: "cornersOver9", label: "Mais de 9", ...blank },
-      { key: "cornersOver10", label: "Mais de 10", ...blank },
-      { key: "cornersOver11", label: "Mais de 11", ...blank },
-      { key: "cornersOver12", label: "Mais de 12", ...blank },
-      { key: "cornersOver13", label: "Mais de 13", ...blank }
-    ], match)}
-    ${metricGroup("Escanteios do time", [
-      { key: "cornersForMatch", label: "Escanteios a favor / jogo", ...blank },
-      { key: "cornersAgainstMatch", label: "Escanteios contra / jogo", ...blank },
-      { key: "cornersForOver25", label: "Mais de 2.5 escanteios a favor", ...blank },
-      { key: "cornersForOver35", label: "Mais de 3.5 escanteios a favor", ...blank },
-      { key: "cornersForOver45", label: "Mais de 4.5 escanteios a favor", ...blank },
-      { key: "cornersAgainstOver25", label: "Mais de 2.5 escanteios contra", ...blank },
-      { key: "cornersAgainstOver35", label: "Mais de 3.5 escanteios contra", ...blank },
-      { key: "cornersAgainstOver45", label: "Mais de 4.5 escanteios contra", ...blank }
-    ], match)}
-    ${metricGroup("Primeiro tempo", [
-      { key: "fhCornersAverage", label: "Média FH", ...blank },
-      { key: "fhCornersOver4", label: "Mais de 4 FH", ...blank },
-      { key: "fhCornersOver5", label: "Mais de 5 FH", ...blank },
-      { key: "fhCornersOver6", label: "Mais de 6 FH", ...blank }
-    ], match)}
-    ${metricGroup("Segundo tempo", [
-      { key: "shCornersAverage", label: "Média 2H", ...blank },
-      { key: "shCornersOver4", label: "Mais de 4 2H", ...blank },
-      { key: "shCornersOver5", label: "Mais de 5 2H", ...blank },
-      { key: "shCornersOver6", label: "Mais de 6 2H", ...blank }
-    ], match)}
+    ${numbersDataNote("Linhas de escanteios organizadas por subaba para receber o mapeamento dos endpoints oficiais.")}
+    ${numbersSubtabs(groups, match)}
   `;
 }
 
 function renderCardsNumbersTab(match) {
   const blank = { home: null, away: null, average: null };
+  const groups = [
+    {
+      id: "cartoes-partida",
+      title: "Cartões da partida",
+      rows: [
+        { key: "totalCardsPerMatch", label: "Total de cartões / jogo", ...blank },
+        { key: "homeCardsPerMatch", label: "Cartões do mandante / jogo", ...blank },
+        { key: "awayCardsPerMatch", label: "Cartões do visitante / jogo", ...blank }
+      ]
+    },
+    {
+      id: "total-cartoes",
+      title: "Total de cartões",
+      rows: [
+        { key: "cardsOver25", label: "Mais de 2.5", ...blank },
+        { key: "cardsOver35", label: "Mais de 3.5", ...blank },
+        { key: "cardsOver45", label: "Mais de 4.5", ...blank },
+        { key: "cardsOver55", label: "Mais de 5.5", ...blank },
+        { key: "cardsOver65", label: "Mais de 6.5", ...blank }
+      ]
+    },
+    {
+      id: "cartoes-time",
+      title: "Cartões do time",
+      rows: [
+        { key: "cardsForAverage", label: "Cartões a favor média", ...blank },
+        { key: "cardsOver05For", label: "Mais de 0.5 a favor", ...blank },
+        { key: "cardsOver15For", label: "Mais de 1.5 a favor", ...blank },
+        { key: "cardsOver25For", label: "Mais de 2.5 a favor", ...blank },
+        { key: "cardsOver35For", label: "Mais de 3.5 a favor", ...blank }
+      ]
+    },
+    {
+      id: "cartoes-contra",
+      title: "Cartões contra",
+      rows: [
+        { key: "cardsOver05Against", label: "Mais de 0.5 contra", ...blank },
+        { key: "cardsOver15Against", label: "Mais de 1.5 contra", ...blank },
+        { key: "cardsOver25Against", label: "Mais de 2.5 contra", ...blank },
+        { key: "cardsOver35Against", label: "Mais de 3.5 contra", ...blank }
+      ]
+    },
+    {
+      id: "cartoes-tempos",
+      title: "1º / 2º tempo cartões",
+      rows: [
+        { key: "fhOver05CardsFor", label: "1H Mais de 0.5 cartões a favor", ...blank },
+        { key: "shOver05CardsFor", label: "2H Mais de 0.5 cartões a favor", ...blank },
+        { key: "fhTotalUnder2", label: "1H Total abaixo de 2", ...blank },
+        { key: "shTotalUnder2", label: "2H Total abaixo de 2", ...blank },
+        { key: "fhTotal2to3", label: "1H entre 2–3 cartões totais", ...blank },
+        { key: "shTotal2to3", label: "2H entre 2–3 cartões totais", ...blank },
+        { key: "fhTotalOver3", label: "1H Total acima de 3", ...blank },
+        { key: "shTotalOver3", label: "2H Total acima de 3", ...blank }
+      ]
+    }
+  ];
   return `
-    ${numbersDataNote("Linhas de cartões preparadas para o mapeamento dos endpoints oficiais. Sem dado oficial, mostramos —.")}
-    ${metricGroup("Cartões da partida", [
-      { key: "totalCardsPerMatch", label: "Total de cartões / jogo", ...blank },
-      { key: "homeCardsPerMatch", label: "Cartões do mandante / jogo", ...blank },
-      { key: "awayCardsPerMatch", label: "Cartões do visitante / jogo", ...blank }
-    ], match)}
-    ${metricGroup("Total de cartões", [
-      { key: "cardsOver25", label: "Mais de 2.5", ...blank },
-      { key: "cardsOver35", label: "Mais de 3.5", ...blank },
-      { key: "cardsOver45", label: "Mais de 4.5", ...blank },
-      { key: "cardsOver55", label: "Mais de 5.5", ...blank },
-      { key: "cardsOver65", label: "Mais de 6.5", ...blank }
-    ], match)}
-    ${metricGroup("Cartões do time", [
-      { key: "cardsForAverage", label: "Cartões a favor média", ...blank },
-      { key: "cardsOver05For", label: "Mais de 0.5 a favor", ...blank },
-      { key: "cardsOver15For", label: "Mais de 1.5 a favor", ...blank },
-      { key: "cardsOver25For", label: "Mais de 2.5 a favor", ...blank },
-      { key: "cardsOver35For", label: "Mais de 3.5 a favor", ...blank }
-    ], match)}
-    ${metricGroup("Cartões contra", [
-      { key: "cardsOver05Against", label: "Mais de 0.5 contra", ...blank },
-      { key: "cardsOver15Against", label: "Mais de 1.5 contra", ...blank },
-      { key: "cardsOver25Against", label: "Mais de 2.5 contra", ...blank },
-      { key: "cardsOver35Against", label: "Mais de 3.5 contra", ...blank }
-    ], match)}
-    ${metricGroup("1º / 2º tempo cartões", [
-      { key: "fhOver05CardsFor", label: "1H Mais de 0.5 cartões a favor", ...blank },
-      { key: "shOver05CardsFor", label: "2H Mais de 0.5 cartões a favor", ...blank },
-      { key: "fhTotalUnder2", label: "1H Total abaixo de 2", ...blank },
-      { key: "shTotalUnder2", label: "2H Total abaixo de 2", ...blank },
-      { key: "fhTotal2to3", label: "1H entre 2–3 cartões totais", ...blank },
-      { key: "shTotal2to3", label: "2H entre 2–3 cartões totais", ...blank },
-      { key: "fhTotalOver3", label: "1H Total acima de 3", ...blank },
-      { key: "shTotalOver3", label: "2H Total acima de 3", ...blank }
-    ], match)}
+    ${numbersDataNote("Linhas de cartões organizadas por subaba para o mapeamento dos endpoints oficiais.")}
+    ${numbersSubtabs(groups, match)}
   `;
 }
 
 function renderShotsNumbersTab(match) {
   const blank = { home: null, away: null, average: null };
+  const groups = [
+    {
+      id: "finalizacoes-time",
+      title: "Finalizações do time",
+      rows: [
+        { key: "shotsPerMatch", label: "Finalizações / jogo", ...blank },
+        { key: "shotsConversionRate", label: "Taxa de conversão de finalizações", ...blank },
+        { key: "shotsOnTargetPerMatch", label: "Finalizações no alvo / jogo", ...blank },
+        { key: "shotsOffTargetPerMatch", label: "Finalizações fora do alvo / jogo", ...blank },
+        { key: "shotsPerGoal", label: "Finalizações por gol marcado", ...blank },
+        { key: "teamShotsOver105", label: "Time com mais de 10.5 finalizações", ...blank },
+        { key: "teamShotsOver115", label: "Time com mais de 11.5 finalizações", ...blank },
+        { key: "teamShotsOver125", label: "Time com mais de 12.5 finalizações", ...blank },
+        { key: "teamShotsOver135", label: "Time com mais de 13.5 finalizações", ...blank },
+        { key: "teamShotsOver145", label: "Time com mais de 14.5 finalizações", ...blank },
+        { key: "teamShotsOver155", label: "Time com mais de 15.5 finalizações", ...blank },
+        { key: "teamSotOver35", label: "Time com mais de 3.5 finalizações no alvo", ...blank },
+        { key: "teamSotOver45", label: "Time com mais de 4.5 finalizações no alvo", ...blank },
+        { key: "teamSotOver55", label: "Time com mais de 5.5 finalizações no alvo", ...blank },
+        { key: "teamSotOver65", label: "Time com mais de 6.5 finalizações no alvo", ...blank }
+      ]
+    },
+    {
+      id: "finalizacoes-partida",
+      title: "Finalizações da partida",
+      rows: [
+        { key: "matchShotsOver235", label: "Jogo com mais de 23.5 finalizações", ...blank },
+        { key: "matchShotsOver245", label: "Jogo com mais de 24.5 finalizações", ...blank },
+        { key: "matchShotsOver255", label: "Jogo com mais de 25.5 finalizações", ...blank },
+        { key: "matchShotsOver265", label: "Jogo com mais de 26.5 finalizações", ...blank },
+        { key: "matchSotOver75", label: "Jogo com mais de 7.5 finalizações no alvo", ...blank },
+        { key: "matchSotOver85", label: "Jogo com mais de 8.5 finalizações no alvo", ...blank },
+        { key: "matchSotOver95", label: "Jogo com mais de 9.5 finalizações no alvo", ...blank }
+      ]
+    },
+    {
+      id: "impedimentos",
+      title: "Impedimentos",
+      rows: [
+        { key: "offsidesPerMatch", label: "Impedimentos / jogo", ...blank },
+        { key: "offsidesOver25", label: "Mais de 2.5 impedimentos", ...blank },
+        { key: "offsidesOver35", label: "Mais de 3.5 impedimentos", ...blank }
+      ]
+    },
+    {
+      id: "outras-estatisticas",
+      title: "Outras estatísticas",
+      rows: [
+        { key: "foulsCommitted", label: "Faltas cometidas / jogo", ...blank },
+        { key: "foulsAgainst", label: "Faltas sofridas / jogo", ...blank },
+        { key: "averagePossession", label: "Posse média", ...blank },
+        { key: "drawAtHalfTime", label: "Empate no intervalo", ...blank }
+      ]
+    }
+  ];
   return `
-    ${numbersDataNote("Finalizações, impedimentos e faltas ficam prontos para receber os campos oficiais da API. Sem campo mapeado, exibimos —.")}
-    ${metricGroup("Finalizações do time", [
-      { key: "shotsPerMatch", label: "Finalizações / jogo", ...blank },
-      { key: "shotsConversionRate", label: "Taxa de conversão de finalizações", ...blank },
-      { key: "shotsOnTargetPerMatch", label: "Finalizações no alvo / jogo", ...blank },
-      { key: "shotsOffTargetPerMatch", label: "Finalizações fora do alvo / jogo", ...blank },
-      { key: "shotsPerGoal", label: "Finalizações por gol marcado", ...blank },
-      { key: "teamShotsOver105", label: "Time com mais de 10.5 finalizações", ...blank },
-      { key: "teamShotsOver115", label: "Time com mais de 11.5 finalizações", ...blank },
-      { key: "teamShotsOver125", label: "Time com mais de 12.5 finalizações", ...blank },
-      { key: "teamShotsOver135", label: "Time com mais de 13.5 finalizações", ...blank },
-      { key: "teamShotsOver145", label: "Time com mais de 14.5 finalizações", ...blank },
-      { key: "teamShotsOver155", label: "Time com mais de 15.5 finalizações", ...blank },
-      { key: "teamSotOver35", label: "Time com mais de 3.5 finalizações no alvo", ...blank },
-      { key: "teamSotOver45", label: "Time com mais de 4.5 finalizações no alvo", ...blank },
-      { key: "teamSotOver55", label: "Time com mais de 5.5 finalizações no alvo", ...blank },
-      { key: "teamSotOver65", label: "Time com mais de 6.5 finalizações no alvo", ...blank }
-    ], match)}
-    ${metricGroup("Finalizações da partida", [
-      { key: "matchShotsOver235", label: "Jogo com mais de 23.5 finalizações", ...blank },
-      { key: "matchShotsOver245", label: "Jogo com mais de 24.5 finalizações", ...blank },
-      { key: "matchShotsOver255", label: "Jogo com mais de 25.5 finalizações", ...blank },
-      { key: "matchShotsOver265", label: "Jogo com mais de 26.5 finalizações", ...blank },
-      { key: "matchSotOver75", label: "Jogo com mais de 7.5 finalizações no alvo", ...blank },
-      { key: "matchSotOver85", label: "Jogo com mais de 8.5 finalizações no alvo", ...blank },
-      { key: "matchSotOver95", label: "Jogo com mais de 9.5 finalizações no alvo", ...blank }
-    ], match)}
-    ${metricGroup("Impedimentos", [
-      { key: "offsidesPerMatch", label: "Impedimentos / jogo", ...blank },
-      { key: "offsidesOver25", label: "Mais de 2.5 impedimentos", ...blank },
-      { key: "offsidesOver35", label: "Mais de 3.5 impedimentos", ...blank }
-    ], match)}
-    ${metricGroup("Outras estatísticas", [
-      { key: "foulsCommitted", label: "Faltas cometidas / jogo", ...blank },
-      { key: "foulsAgainst", label: "Faltas sofridas / jogo", ...blank },
-      { key: "averagePossession", label: "Posse média", ...blank },
-      { key: "drawAtHalfTime", label: "Empate no intervalo", ...blank }
-    ], match)}
+    ${numbersDataNote("Finalizações, impedimentos e faltas organizadas por subaba. Sem campo oficial mapeado, exibimos —.")}
+    ${numbersSubtabs(groups, match)}
   `;
 }
 

@@ -3431,3 +3431,62 @@ svg {
 .numbers-panel.is-active {
   display: block;
 }
+
+/* Subabas internas do Ver números */
+.numbers-subtabs-wrap {
+  display: grid;
+  gap: 12px;
+}
+
+.numbers-subtabs {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 6px;
+  border: 1px solid var(--border-soft);
+  border-radius: 15px;
+  background: rgba(15, 23, 42, 0.42);
+}
+
+.numbers-subtab {
+  flex: 0 0 auto;
+  min-height: 34px;
+  padding: 0 12px;
+  border: 1px solid transparent;
+  border-radius: 11px;
+  color: var(--text-3);
+  background: transparent;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 900;
+  cursor: pointer;
+  transition: 0.2s ease;
+}
+
+.numbers-subtab:hover,
+.numbers-subtab.is-active {
+  color: var(--text);
+  border-color: rgba(0, 220, 105, 0.28);
+  background: rgba(0, 220, 105, 0.12);
+}
+
+.numbers-subpanel {
+  display: none;
+}
+
+.numbers-subpanel.is-active {
+  display: block;
+}
+
+@media (max-width: 760px) {
+  .numbers-subtabs {
+    gap: 6px;
+  }
+
+  .numbers-subtab {
+    min-height: 32px;
+    padding: 0 10px;
+    font-size: 10px;
+  }
+}
