@@ -171,16 +171,22 @@ async function loadMatchesForDate() {
 
 async function fetchMatchesForSelectedDate() {
   const dateKey = formatApiDate(state.selectedDate);
-  const leagueResults = await Promise.allSettled(state.leagues.map((league) => fetchLeagueMatchesForDate(league, dateKey)));
-  const matches = leagueResults.flatMap((result) => result.status === "fulfilled" ? result.value : []);
 
-  if (matches.length) {
-    return uniqueMatches(matches);
+  // Primeiro tenta o endpoint leve da agenda do dia.
+  // Esse endpoint é o mais rápido para carregar a tela inicial e evita travar o site
+  // fazendo várias páginas de league-matches antes da primeira renderização.
+  try {
+    const todayPayload = await apiFetch("/todays-matches", { date: dateKey, timezone: APP_TIMEZONE });
+    const todayMatches = uniqueMatches(getDataArray(todayPayload));
+    if (todayMatches.length) return todayMatches;
+  } catch (error) {
+    console.warn("todays-matches indisponível, usando league-matches:", error);
   }
 
-  // Fallback: alguns planos entregam a agenda do dia por todays-matches.
-  const fallbackPayload = await apiFetch("/todays-matches", { date: dateKey, timezone: APP_TIMEZONE });
-  return uniqueMatches(getDataArray(fallbackPayload));
+  // Fallback oficial por liga/temporada, com paginação controlada.
+  const leagueResults = await Promise.allSettled(state.leagues.map((league) => fetchLeagueMatchesForDate(league, dateKey)));
+  const matches = leagueResults.flatMap((result) => result.status === "fulfilled" ? result.value : []);
+  return uniqueMatches(matches);
 }
 
 async function fetchLeagueMatchesForDate(league, dateKey) {
@@ -191,7 +197,6 @@ async function fetchLeagueMatchesForDate(league, dateKey) {
   do {
     const payload = await apiFetch("/league-matches", {
       league_id: league.seasonId,
-      season_id: league.seasonId,
       page,
       max_per_page: 500
     });
@@ -224,8 +229,7 @@ async function loadMatchTeams() {
   const teamRequests = state.leagues.map(async (league) => {
     try {
       const payload = await apiFetch("/league-teams", {
-        league_id: league.seasonId,
-        season_id: league.seasonId
+        league_id: league.seasonId
       });
       return getDataArray(payload).map((team) => normalizeTeamIdentity(team, league));
     } catch (error) {
@@ -251,12 +255,10 @@ async function loadLeagueStats(leagueKey, { silent = false } = {}) {
     const [teamsPayload, playersPayload] = await Promise.all([
       apiFetch("/league-teams", {
         league_id: league.seasonId,
-        season_id: league.seasonId,
         include: "stats"
       }),
       apiFetch("/league-players", {
         league_id: league.seasonId,
-        season_id: league.seasonId,
         page: 1
       })
     ]);
@@ -1189,8 +1191,8 @@ async function renderH2H({ fetchReal = false } = {}) {
 async function fetchH2HHistory(home, away) {
   const league = getLeague(state.statsLeagueKey);
   const schedulePayload = await apiFetch("/league-matches", {
-    season_id: league.seasonId,
-    max_per_page: 1000
+    league_id: league.seasonId,
+    max_per_page: 500
   });
   const schedule = getDataArray(schedulePayload).map((match) => normalizeMatch(match));
   const meeting = schedule.find((match) =>
@@ -1540,7 +1542,7 @@ async function ensurePlayersForMatch(match) {
   const league = state.leagues.find((item) => item.key === match.leagueKey);
   if (!league || state.loadedPlayerLeagueKeys.includes(league.key)) return;
   try {
-    const payload = await apiFetch("/league-players", { league_id: league.seasonId, season_id: league.seasonId, page: 1 });
+    const payload = await apiFetch("/league-players", { league_id: league.seasonId, page: 1 });
     const teams = state.teams.length ? state.teams : state.matchTeams;
     const players = getDataArray(payload).map((player) => normalizePlayer(player, teams));
     const existing = new Set(state.players.map((player) => String(player.id)));
