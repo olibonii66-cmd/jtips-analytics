@@ -1338,19 +1338,25 @@ function setupFilters() {
     renderH2H();
   });
 
-  els.oddsLeagueFilter.addEventListener("change", (event) => {
-    state.oddsLeague = event.target.value;
-    renderOdds();
-  });
-  els.oddsMarketFilter.addEventListener("change", (event) => {
-    state.oddsMarket = event.target.value;
-    renderOdds();
-  });
-  els.valueRange.addEventListener("input", (event) => {
-    state.minValue = Number(event.target.value);
-    els.valueRangeLabel.textContent = `${state.minValue}%`;
-    renderOdds();
-  });
+  if (els.oddsLeagueFilter) {
+    els.oddsLeagueFilter.addEventListener("change", (event) => {
+      state.oddsLeague = event.target.value;
+      renderOdds();
+    });
+  }
+  if (els.oddsMarketFilter) {
+    els.oddsMarketFilter.addEventListener("change", (event) => {
+      state.oddsMarket = event.target.value;
+      renderOdds();
+    });
+  }
+  if (els.valueRange) {
+    els.valueRange.addEventListener("input", (event) => {
+      state.minValue = Number(event.target.value);
+      els.valueRangeLabel.textContent = `${state.minValue}%`;
+      renderOdds();
+    });
+  }
 
   els.tipsFilter.querySelectorAll("button").forEach((button) => {
     button.addEventListener("click", () => {
