@@ -115,19 +115,14 @@ async function loadApplicationData({ refresh = false } = {}) {
 
 async function loadRealData() {
   const date = formatApiDate(state.selectedDate);
-  const [leaguePayload, matchesPayload] = await Promise.all([
-    apiFetch("/league-list", { chosen_leagues_only: "true" }).catch((error) => {
-      console.warn("Lista de ligas indisponível:", error);
-      return null;
-    }),
-    apiFetch("/todays-matches", {
-      date,
-      timezone: APP_TIMEZONE
-    })
-  ]);
+  const leaguePayload = await apiFetch("/league-list", { chosen_leagues_only: "true" }).catch((error) => {
+    console.warn("Lista de ligas indisponível:", error);
+    return null;
+  });
 
   const availableLeagues = getDataArray(leaguePayload);
   state.leagueIndex = buildLeagueIndex(availableLeagues);
+  const matchesPayload = await loadMatchesPayload(date, state.leagueIndex);
   const rawMatches = getDataArray(matchesPayload);
   state.leagues = resolveMatchLeagues(rawMatches, state.leagueIndex);
 
@@ -155,10 +150,7 @@ async function loadMatchesForDate() {
       await loadMatchTeams();
     }
 
-    const payload = await apiFetch("/todays-matches", {
-      date: formatApiDate(state.selectedDate),
-      timezone: APP_TIMEZONE
-    });
+    const payload = await loadMatchesPayload(formatApiDate(state.selectedDate), state.leagueIndex);
     const rawMatches = getDataArray(payload);
     state.leagues = resolveMatchLeagues(rawMatches, state.leagueIndex);
     state.matches = rawMatches.map((match) => normalizeMatch(match));
@@ -183,12 +175,62 @@ async function loadMatchesForDate() {
   }
 }
 
+async function loadMatchesPayload(date, availableLeagues = []) {
+  try {
+    return await apiFetch("/todays-matches", {
+      date,
+      timezone: APP_TIMEZONE
+    });
+  } catch (dailyError) {
+    console.warn("Agenda diária indisponível; tentando league-matches:", dailyError);
+  }
+
+  if (!availableLeagues.length) {
+    throw new Error("A API não liberou todays-matches e não retornou IDs de ligas para consultar league-matches.");
+  }
+
+  const leagueResults = await Promise.allSettled(
+    availableLeagues.map((league) => fetchAllLeagueMatches(league.seasonId))
+  );
+  const matches = leagueResults
+    .filter((result) => result.status === "fulfilled")
+    .flatMap((result) => result.value)
+    .filter((match) => formatApiDate(new Date(getMatchTimestamp(match))) === date);
+
+  if (!matches.length && leagueResults.every((result) => result.status === "rejected")) {
+    const firstError = leagueResults.find((result) => result.status === "rejected");
+    throw firstError?.reason || new Error("A FootyStats não retornou partidas.");
+  }
+
+  return { data: matches };
+}
+
+async function fetchAllLeagueMatches(leagueId) {
+  const firstPayload = await apiFetch("/league-matches", {
+    league_id: leagueId,
+    page: 1,
+    max_per_page: 500
+  });
+  const matches = getDataArray(firstPayload);
+  const maxPage = Math.max(1, Number(firstPayload?.pager?.max_page || firstPayload?.data?.pager?.max_page || 1));
+  if (maxPage === 1) return matches;
+
+  const remainingPages = await Promise.all(
+    Array.from({ length: maxPage - 1 }, (_, index) => apiFetch("/league-matches", {
+      league_id: leagueId,
+      page: index + 2,
+      max_per_page: 500
+    }))
+  );
+  return matches.concat(...remainingPages.map(getDataArray));
+}
+
 
 async function loadMatchTeams() {
   const teamRequests = state.leagues.map(async (league) => {
     try {
       const payload = await apiFetch("/league-teams", {
-        season_id: league.seasonId
+        league_id: league.seasonId
       });
       return getDataArray(payload).map((team) => normalizeTeamIdentity(team, league));
     } catch (error) {
@@ -213,11 +255,11 @@ async function loadLeagueStats(leagueKey, { silent = false } = {}) {
   try {
     const [teamsPayload, playersPayload] = await Promise.all([
       apiFetch("/league-teams", {
-        season_id: league.seasonId,
+        league_id: league.seasonId,
         include: "stats"
       }),
       apiFetch("/league-players", {
-        season_id: league.seasonId,
+        league_id: league.seasonId,
         page: 1
       })
     ]);
@@ -1194,8 +1236,8 @@ async function renderH2H({ fetchReal = false } = {}) {
 async function fetchH2HHistory(home, away) {
   const league = getLeague(state.statsLeagueKey);
   const schedulePayload = await apiFetch("/league-matches", {
-    season_id: league.seasonId,
-    max_per_page: 1000
+    league_id: league.seasonId,
+    max_per_page: 500
   });
   const schedule = getDataArray(schedulePayload).map((match) => normalizeMatch(match));
   const meeting = schedule.find((match) =>
@@ -1511,10 +1553,14 @@ async function openMatchModal(matchId) {
 
   try {
     const detailedMatch = await fetchOfficialMatchDetails(baseMatch);
-    await Promise.allSettled([
+    const supportingData = await Promise.allSettled([
       ensureTeamsForMatch(detailedMatch),
-      ensurePlayersForMatch(detailedMatch)
+      ensurePlayersForMatch(detailedMatch),
+      fetchRecentForm(detailedMatch)
     ]);
+    if (supportingData[2].status === "fulfilled") {
+      detailedMatch.recentForm = supportingData[2].value;
+    }
 
     if (!els.matchModal.classList.contains("open")) return;
     els.modalTitle.textContent = `${detailedMatch.homeName} x ${detailedMatch.awayName}`;
@@ -1559,7 +1605,7 @@ async function ensurePlayersForMatch(match) {
   const league = state.leagues.find((item) => item.key === match.leagueKey);
   if (!league || state.loadedPlayerLeagueKeys.includes(league.key)) return;
   try {
-    const payload = await apiFetch("/league-players", { season_id: league.seasonId, page: 1 });
+    const payload = await apiFetch("/league-players", { league_id: league.seasonId, page: 1 });
     const teams = state.teams.length ? state.teams : state.matchTeams;
     const players = getDataArray(payload).map((player) => normalizePlayer(player, teams));
     const existing = new Set(state.players.map((player) => String(player.id)));
@@ -1578,7 +1624,7 @@ async function ensureTeamsForMatch(match) {
 
   try {
     const payload = await apiFetch("/league-teams", {
-      season_id: seasonId,
+      league_id: seasonId,
       include: "stats"
     });
     const leagueRecord = league || {
@@ -1597,6 +1643,19 @@ async function ensureTeamsForMatch(match) {
   } catch (error) {
     console.warn(`Estatísticas de times indisponíveis para ${match.league}:`, error);
   }
+}
+
+async function fetchRecentForm(match) {
+  const results = await Promise.allSettled([
+    match.homeId ? apiFetch("/lastx", { team_id: match.homeId, last_x: 5 }) : Promise.resolve(null),
+    match.awayId ? apiFetch("/lastx", { team_id: match.awayId, last_x: 5 }) : Promise.resolve(null)
+  ]);
+  const homePayload = results[0].status === "fulfilled" ? results[0].value : null;
+  const awayPayload = results[1].status === "fulfilled" ? results[1].value : null;
+  return {
+    home: getDataArray(homePayload).map((item) => normalizeMatch(item)).slice(0, 5),
+    away: getDataArray(awayPayload).map((item) => normalizeMatch(item)).slice(0, 5)
+  };
 }
 
 /* Modal Ver números - versão com abas por estatística */
@@ -1679,6 +1738,142 @@ function numbersTabPanel(id, title, icon, content, active = false) {
       ${content}
     </section>
   `;
+}
+
+function modalMarket(label, value) {
+  const displayValue = value === null || value === undefined || value === "" ? "—" : String(value);
+  return `
+    <div class="numbers-team-stat">
+      <small>Dado oficial</small>
+      <strong>${escapeHtml(displayValue)}</strong>
+      <span>${escapeHtml(label)}</span>
+    </div>
+  `;
+}
+
+function formatProbability(value) {
+  return Number.isFinite(value) ? `${round(value * 100, 1)}%` : "—";
+}
+
+function renderGoalsNumbersTab(match) {
+  const stats = match.stats || {};
+  const values = [
+    match.homeGoals, match.awayGoals, stats.xgHome, stats.xgAway,
+    stats.xgPrematchHome, stats.xgPrematchAway, match.probabilities?.over25, match.probabilities?.btts
+  ];
+  return `
+    <div class="numbers-grid numbers-grid--summary">
+      ${teamStatCard(match.homeName, "Gols", match.homeGoals)}
+      ${teamStatCard(match.awayName, "Gols", match.awayGoals)}
+      ${teamStatCard(match.homeName, "xG", stats.xgHome)}
+      ${teamStatCard(match.awayName, "xG", stats.xgAway)}
+      ${teamStatCard(match.homeName, "xG pré-jogo", stats.xgPrematchHome)}
+      ${teamStatCard(match.awayName, "xG pré-jogo", stats.xgPrematchAway)}
+      ${teamStatCard("Jogo", "Over 2.5", probabilityPercent(match.probabilities?.over25), "%")}
+      ${teamStatCard("Jogo", "BTTS", probabilityPercent(match.probabilities?.btts), "%")}
+    </div>
+    ${officialDataNote(...values, "A FootyStats não retornou dados de gols ou xG para esta partida.")}
+  `;
+}
+
+function renderCornersNumbersTab(match) {
+  const stats = match.stats || {};
+  const values = [stats.cornersHome, stats.cornersAway, stats.cornersTotal, match.probabilities?.corners, match.probabilities?.cornersOver85, match.probabilities?.cornersOver95];
+  return `
+    <div class="numbers-grid numbers-grid--summary">
+      ${teamStatCard(match.homeName, "Escanteios", stats.cornersHome)}
+      ${teamStatCard(match.awayName, "Escanteios", stats.cornersAway)}
+      ${teamStatCard("Jogo", "Total", stats.cornersTotal)}
+      ${teamStatCard("Jogo", "Potencial", probabilityPercent(match.probabilities?.corners), "%")}
+      ${teamStatCard("Jogo", "Over 8.5", probabilityPercent(match.probabilities?.cornersOver85), "%")}
+      ${teamStatCard("Jogo", "Over 9.5", probabilityPercent(match.probabilities?.cornersOver95), "%")}
+    </div>
+    ${officialDataNote(...values, "A FootyStats não retornou dados de escanteios para esta partida.")}
+  `;
+}
+
+function renderCardsNumbersTab(match) {
+  const stats = match.stats || {};
+  const values = [stats.yellowHome, stats.yellowAway, stats.redHome, stats.redAway, stats.cardsHome, stats.cardsAway, match.probabilities?.cards];
+  return `
+    <div class="numbers-grid numbers-grid--summary">
+      ${teamStatCard(match.homeName, "Amarelos", stats.yellowHome)}
+      ${teamStatCard(match.awayName, "Amarelos", stats.yellowAway)}
+      ${teamStatCard(match.homeName, "Vermelhos", stats.redHome)}
+      ${teamStatCard(match.awayName, "Vermelhos", stats.redAway)}
+      ${teamStatCard(match.homeName, "Total cartões", stats.cardsHome)}
+      ${teamStatCard(match.awayName, "Total cartões", stats.cardsAway)}
+      ${teamStatCard("Jogo", "Potencial", probabilityPercent(match.probabilities?.cards), "%")}
+    </div>
+    ${officialDataNote(...values, "A FootyStats não retornou dados de cartões para esta partida.")}
+  `;
+}
+
+function renderShotsNumbersTab(match) {
+  const stats = match.stats || {};
+  const values = [stats.shotsHome, stats.shotsAway, stats.shotsOnTargetHome, stats.shotsOnTargetAway, stats.shotsOffTargetHome, stats.shotsOffTargetAway, stats.possessionHome, stats.possessionAway];
+  return `
+    <div class="numbers-grid numbers-grid--summary">
+      ${teamStatCard(match.homeName, "Finalizações", stats.shotsHome)}
+      ${teamStatCard(match.awayName, "Finalizações", stats.shotsAway)}
+      ${teamStatCard(match.homeName, "No alvo", stats.shotsOnTargetHome)}
+      ${teamStatCard(match.awayName, "No alvo", stats.shotsOnTargetAway)}
+      ${teamStatCard(match.homeName, "Fora do alvo", stats.shotsOffTargetHome)}
+      ${teamStatCard(match.awayName, "Fora do alvo", stats.shotsOffTargetAway)}
+      ${teamStatCard(match.homeName, "Posse", stats.possessionHome, "%")}
+      ${teamStatCard(match.awayName, "Posse", stats.possessionAway, "%")}
+    </div>
+    ${officialDataNote(...values, "A FootyStats não retornou finalizações ou posse para esta partida.")}
+  `;
+}
+
+function matchPlayers(match, side) {
+  const teamId = Number(side === "home" ? match.homeId : match.awayId);
+  return state.players
+    .filter((player) => Number(player.teamId) === teamId)
+    .sort((a, b) => (b.goals || 0) - (a.goals || 0) || (b.assists || 0) - (a.assists || 0))
+    .slice(0, 8);
+}
+
+function renderPlayersNumbersTab(match) {
+  const homePlayers = matchPlayers(match, "home");
+  const awayPlayers = matchPlayers(match, "away");
+  return `
+    <div class="numbers-players">
+      ${playerNumbersList(match.homeName, homePlayers)}
+      ${playerNumbersList(match.awayName, awayPlayers)}
+    </div>
+    ${homePlayers.length || awayPlayers.length ? "" : '<p class="numbers-empty-note">A FootyStats não retornou jogadores para esta competição.</p>'}
+  `;
+}
+
+function playerNumbersList(teamName, players) {
+  return `
+    <div class="numbers-player-list">
+      <h4>${escapeHtml(teamName)}</h4>
+      ${players.map((player) => `
+        <div class="numbers-player-row">
+          <span>${escapeHtml(initials(player.name))}</span>
+          <div><strong>${escapeHtml(player.name)}</strong><small>${player.appearances ?? "—"} jogos</small></div>
+          <em>${player.goals ?? 0} G · ${player.assists ?? 0} A</em>
+        </div>
+      `).join("")}
+    </div>
+  `;
+}
+
+function probabilityPercent(value) {
+  return Number.isFinite(value) ? round(value * 100, 1) : null;
+}
+
+function switchNumbersSubtab(subtabId, root) {
+  if (!subtabId || !root) return;
+  root.querySelectorAll("[data-numbers-subtab]").forEach((button) => {
+    button.classList.toggle("is-active", button.dataset.numbersSubtab === subtabId);
+  });
+  root.querySelectorAll("[data-numbers-subpanel]").forEach((panel) => {
+    panel.classList.toggle("is-active", panel.dataset.numbersSubpanel === subtabId);
+  });
 }
 
 function switchNumbersTab(tabId) {
@@ -2080,10 +2275,32 @@ function bestMarketForMatch(match) {
 }
 
 function modalAnalysis(match, market) {
-  if (match.status === "live") {
-    return `O ritmo atual mantém ${market.label.toLowerCase()} como principal leitura. Considere a variação da odd ao vivo antes de qualquer decisão.`;
+  const facts = [];
+  const homePpg = match.stats?.homePpg;
+  const awayPpg = match.stats?.awayPpg;
+  const prematchXg = match.stats?.xgPrematchTotal;
+  const recentHome = match.recentForm?.home?.length || 0;
+  const recentAway = match.recentForm?.away?.length || 0;
+
+  if (homePpg !== null && homePpg !== undefined && awayPpg !== null && awayPpg !== undefined) {
+    facts.push(`PPG pré-jogo: ${match.homeName} ${round(homePpg, 2)} e ${match.awayName} ${round(awayPpg, 2)}`);
   }
-  return `A combinação de probabilidade estimada, preço de mercado e indicadores recentes destaca ${market.label.toLowerCase()} como a opção de maior interesse estatístico.`;
+  if (prematchXg !== null && prematchXg !== undefined) {
+    facts.push(`xG total pré-jogo: ${round(prematchXg, 2)}`);
+  }
+  if (Number.isFinite(market.probability)) {
+    facts.push(`${market.label}: ${formatProbability(market.probability)}`);
+  }
+  if (Number.isFinite(market.odd)) {
+    facts.push(`odd retornada: ${formatOdd(market.odd)}`);
+  }
+  if (recentHome || recentAway) {
+    facts.push(`forma recente consultada: ${recentHome} jogos do mandante e ${recentAway} do visitante`);
+  }
+
+  return facts.length
+    ? facts.join(". ") + "."
+    : "A FootyStats não retornou indicadores suficientes para uma análise estatística desta partida.";
 }
 
 function leagueIcon() {
