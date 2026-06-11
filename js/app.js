@@ -1592,18 +1592,30 @@ async function openMatchModal(matchId) {
   els.matchModal.setAttribute("aria-hidden", "false");
   document.body.style.overflow = "hidden";
   els.modalTitle.textContent = `${baseMatch.homeName} x ${baseMatch.awayName}`;
-  els.matchModalBody.innerHTML = `<div class="numbers-loading"><i class="fa-solid fa-spinner fa-spin"></i><strong>Buscando estatísticas oficiais...</strong><span>ScoutBet está consultando /match e jogadores da liga quando disponíveis.</span></div>`;
+
+  // Nunca deixar o usuário preso no loading: a API /match pode vir vazia ou demorar.
+  // Primeiro renderiza os dados já disponíveis da lista; depois tenta enriquecer em segundo plano.
+  els.matchModalBody.innerHTML = matchModalTemplate(baseMatch);
 
   try {
-    await ensurePlayersForMatch(baseMatch);
-    const detailedMatch = await fetchOfficialMatchDetails(baseMatch);
-    await ensureLastXForMatch(detailedMatch);
+    const detailedMatch = await withTimeout(fetchOfficialMatchDetails(baseMatch), 7000, "Detalhe da partida indisponível.");
+    await Promise.allSettled([
+      withTimeout(ensurePlayersForMatch(detailedMatch), 7000, "Jogadores indisponíveis."),
+      withTimeout(ensureLastXForMatch(detailedMatch), 7000, "Últimos jogos indisponíveis.")
+    ]);
     els.modalTitle.textContent = `${detailedMatch.homeName} x ${detailedMatch.awayName}`;
     els.matchModalBody.innerHTML = matchModalTemplate(detailedMatch);
   } catch (error) {
-    console.warn("Detalhe oficial indisponível, usando dados da lista:", error);
-    els.matchModalBody.innerHTML = matchModalTemplate(baseMatch);
+    console.warn("Dados extras indisponíveis, mantendo dados da lista:", error);
   }
+}
+
+function withTimeout(promise, ms = 7000, message = "Tempo excedido.") {
+  let timer;
+  const timeout = new Promise((_, reject) => {
+    timer = window.setTimeout(() => reject(new Error(message)), ms);
+  });
+  return Promise.race([promise, timeout]).finally(() => window.clearTimeout(timer));
 }
 
 async function fetchOfficialMatchDetails(match) {
