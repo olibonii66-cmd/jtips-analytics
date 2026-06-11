@@ -126,6 +126,9 @@ async function loadRealData() {
   state.leagueIndex = buildLeagueIndex(availableLeagues);
   state.leagues = resolveTargetLeagues(availableLeagues);
 
+  const rawMatches = await fetchMatchesForSelectedDate();
+  state.leagues = mergeLeagueLists(state.leagues, deriveLeaguesFromMatches(rawMatches));
+
   if (!state.leagues.length && state.leagueIndex.length) {
     state.leagues = state.leagueIndex
       .slice()
@@ -149,11 +152,11 @@ async function loadRealData() {
   }
 
   await loadMatchTeams();
-
-  const rawMatches = await fetchMatchesForSelectedDate();
   state.matches = rawMatches.map((match) => normalizeMatch(match));
 
-  await loadLeagueStats(state.statsLeagueKey, { silent: true });
+  if (state.statsLeagueKey) {
+    await loadLeagueStats(state.statsLeagueKey, { silent: true });
+  }
 }
 async function loadMatchesForDate() {
   setLoading(true, "matches");
@@ -197,7 +200,9 @@ async function fetchMatchesForSelectedDate() {
     const todayPayload = await apiFetch("/todays-matches", { date: dateKey, timezone: APP_TIMEZONE });
     const todayMatches = uniqueMatches(getDataArray(todayPayload));
     if (todayMatches.length) {
-      return todayMatches.filter((match) => isMatchOnSelectedDate(match, dateKey));
+      // O endpoint todays-matches já vem filtrado pela data enviada.
+      // Não refiltrar no navegador evita perder jogos por diferença de fuso.
+      return todayMatches;
     }
   } catch (error) {
     console.warn("todays-matches indisponível; tentando league-matches.", error);
@@ -415,6 +420,44 @@ function resolveTargetLeagues(rawLeagues) {
       apiName: latest.name
     };
   }).filter(Boolean);
+}
+
+function deriveLeaguesFromMatches(matches) {
+  const byKey = new Map();
+
+  (matches || []).forEach((match) => {
+    const competitionId = Number(match.competition_id || match.season_id || match.league_id || match.competition?.id || match.league?.id || 0);
+    const indexed = competitionId
+      ? state.leagueIndex.find((league) => Number(league.seasonId) === competitionId || Number(league.id) === competitionId)
+      : null;
+
+    const fallbackName = cleanLeagueName(match.competition_name || match.league_name || match.season_name || indexed?.name || (competitionId ? `Campeonato ${competitionId}` : "Campeonato"));
+    const league = {
+      key: indexed?.key || slugify(`${fallbackName}-${competitionId || "api"}`),
+      name: indexed?.name || fallbackName,
+      short: indexed?.short || initials(fallbackName).slice(0, 3).toUpperCase(),
+      country: indexed?.country || match.country || match.country_name || "",
+      color: indexed?.color || colorFromString(fallbackName),
+      id: indexed?.id || competitionId,
+      seasonId: indexed?.seasonId || competitionId,
+      season: indexed?.year || match.season || "",
+      apiName: indexed?.name || fallbackName
+    };
+
+    if (!byKey.has(league.key)) byKey.set(league.key, league);
+  });
+
+  return Array.from(byKey.values());
+}
+
+function mergeLeagueLists(primary, secondary) {
+  const merged = new Map();
+  [...(primary || []), ...(secondary || [])].forEach((league) => {
+    if (!league) return;
+    const key = league.key || slugify(`${league.name || "campeonato"}-${league.seasonId || league.id || "api"}`);
+    if (!merged.has(key)) merged.set(key, { ...league, key });
+  });
+  return Array.from(merged.values());
 }
 
 function normalizeMatch(raw) {
@@ -2160,7 +2203,9 @@ function closeSidebar() {
 }
 
 function setTodayLabel() {
-  els.todayLabel.textContent = formatDate(new Date(), { day: "numeric", month: "long" });
+  if (els.todayLabel) {
+    els.todayLabel.textContent = formatDate(new Date(), { day: "numeric", month: "long" });
+  }
 }
 
 function setActiveButton(container, activeButton) {
@@ -2301,8 +2346,13 @@ function getTeamLogo(raw, side) {
 function sanitizeImageUrl(value) {
   const url = String(value || "").trim();
   if (!url || url === "0" || url.toLowerCase() === "null" || url.toLowerCase() === "undefined") return null;
-  if (!/^https?:\/\//i.test(url)) return null;
-  return url;
+  if (/^https?:\/\//i.test(url)) return url;
+  if (url.startsWith("//")) return `https:${url}`;
+
+  const clean = url.replace(/^\/+/, "");
+  if (clean.startsWith("img/")) return `https://cdn.footystats.org/${clean}`;
+  if (/^(teams|competitions|players)\//i.test(clean)) return `https://cdn.footystats.org/img/${clean}`;
+  return null;
 }
 
 function getNationalTeamFlagUrl(name) {
