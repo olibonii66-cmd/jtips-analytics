@@ -3356,3 +3356,78 @@ svg {
     grid-template-columns: 1fr;
   }
 }
+
+/* Ver números - abas completas por categoria */
+.modal__dialog {
+  width: min(980px, 100%);
+}
+
+.numbers-player-list--ranking {
+  min-width: 0;
+}
+
+.numbers-player-rank {
+  position: relative;
+  overflow: hidden;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  min-height: 44px;
+  padding: 10px 12px;
+  border-top: 1px solid var(--border-soft);
+  background: rgba(255, 255, 255, 0.018);
+}
+
+.numbers-player-rank:first-of-type {
+  border-top: 0;
+}
+
+.numbers-player-rank > div,
+.numbers-player-rank > span {
+  position: relative;
+  z-index: 1;
+}
+
+.numbers-player-rank strong,
+.numbers-player-rank em {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.numbers-player-rank strong {
+  color: var(--text);
+  font-size: 12px;
+}
+
+.numbers-player-rank em {
+  margin-top: 3px;
+  color: var(--text-3);
+  font-size: 9px;
+  font-style: normal;
+}
+
+.numbers-player-rank > span {
+  color: var(--accent);
+  font-size: 13px;
+  font-weight: 950;
+}
+
+.numbers-player-rank > b {
+  position: absolute;
+  inset: 7px auto 7px 0;
+  display: block;
+  border-radius: 0 999px 999px 0;
+  background: linear-gradient(90deg, rgba(0, 220, 105, 0.18), rgba(23, 232, 240, 0.12));
+}
+
+.numbers-panel {
+  max-height: min(62vh, 620px);
+  overflow: auto;
+}
+
+.numbers-panel.is-active {
+  display: block;
+}

@@ -466,7 +466,11 @@ function normalizePlayer(raw, teams) {
     goals,
     assists,
     minutes,
+    cards: nullablePositiveNumber(raw.cards_overall ?? raw.yellow_cards_overall ?? raw.cards ?? raw.yellow_cards),
+    yellowCards: nullablePositiveNumber(raw.yellow_cards_overall ?? raw.yellow_cards),
+    redCards: nullablePositiveNumber(raw.red_cards_overall ?? raw.red_cards),
     minutesPerGoal: goals && minutes !== null ? Math.round(minutes / goals) : null,
+    cardsPer90: minutes ? round(((nullablePositiveNumber(raw.cards_overall ?? raw.yellow_cards_overall ?? raw.cards ?? raw.yellow_cards) || 0) / minutes) * 90, 2) : null,
     rating: nullablePositiveNumber(raw.rating || raw.performance_rating)
   };
 }
@@ -1582,58 +1586,29 @@ function percentForDisplay(value) {
   return number <= 1 ? Math.round(number * 100) : Math.round(number);
 }
 
-function goalsProbabilityAverage(match, key) {
-  const map = {
-    over05: match.probabilities?.over05,
-    over15: match.probabilities?.over15,
-    over25: match.probabilities?.over25,
-    over35: match.probabilities?.over35,
-    over45: match.probabilities?.over45,
-    btts: match.probabilities?.btts,
-    bttsWin: match.probabilities?.bttsWin,
-    bttsDraw: match.probabilities?.bttsDraw,
-    bttsOver25: match.probabilities?.bttsOver25,
-    bttsNoOver25: match.probabilities?.bttsNoOver25,
-    bttsFirstHalf: match.probabilities?.bttsFirstHalf,
-    over05FH: match.probabilities?.over05FH,
-    over15FH: match.probabilities?.over15FH,
-    over25FH: match.probabilities?.over25FH,
-    bttsSecondHalf: match.probabilities?.bttsSecondHalf,
-    bttsBothHalves: match.probabilities?.bttsBothHalves,
-    over05SH: match.probabilities?.over05SH,
-    over15SH: match.probabilities?.over15SH,
-    over25SH: match.probabilities?.over25SH,
-    under05: match.probabilities?.under05,
-    under15: match.probabilities?.under15,
-    under25: match.probabilities?.under25,
-    under35: match.probabilities?.under35,
-    under45: match.probabilities?.under45,
-    under05FH: match.probabilities?.under05FH,
-    under15FH: match.probabilities?.under15FH,
-    under25FH: match.probabilities?.under25FH,
-    under05SH: match.probabilities?.under05SH,
-    under15SH: match.probabilities?.under15SH,
-    under25SH: match.probabilities?.under25SH
-  };
-  if (map[key] !== undefined && map[key] !== null && Number.isFinite(Number(map[key]))) return map[key];
-  if (key === "under15" && Number.isFinite(Number(match.probabilities?.over15))) return 1 - Number(match.probabilities.over15);
-  if (key === "under25" && Number.isFinite(Number(match.probabilities?.over25))) return 1 - Number(match.probabilities.over25);
-  if (key === "under35" && Number.isFinite(Number(match.probabilities?.over35))) return 1 - Number(match.probabilities.over35);
-  return null;
-}
-
-function goalsPercentTone(value) {
+function metricTone(value) {
   const percent = percentForDisplay(value);
-  if (percent === null) return { percent: null, className: "is-empty", label: "—" };
+  if (percent === null) return { className: "is-empty", label: "—" };
   return {
-    percent,
     className: percent >= 70 ? "is-good" : percent >= 40 ? "is-mid" : "is-low",
     label: `${percent}%`
   };
 }
 
-function goalsMetricValue(label, value) {
-  const tone = goalsPercentTone(value);
+function rawMetricValue(label, value, suffix = "") {
+  const isEmpty = value === null || value === undefined || value === "" || !Number.isFinite(Number(value));
+  const className = isEmpty ? "is-empty" : "is-good";
+  const formatted = isEmpty ? "—" : `${round(Number(value), 2)}${suffix}`;
+  return `
+    <div class="numbers-goal-metric ${className}">
+      <small>${escapeHtml(label)}</small>
+      <strong>${escapeHtml(formatted)}</strong>
+    </div>
+  `;
+}
+
+function percentMetricValue(label, value) {
+  const tone = metricTone(value);
   return `
     <div class="numbers-goal-metric ${tone.className}">
       <small>${escapeHtml(label)}</small>
@@ -1642,95 +1617,267 @@ function goalsMetricValue(label, value) {
   `;
 }
 
-function goalsNumbersCard(row, match) {
-  const average = goalsProbabilityAverage(match, row.key);
+function metricCard(row, match) {
   return `
-    <article class="numbers-goal-card" data-stat-key="${escapeHtml(row.key)}">
+    <article class="numbers-goal-card" data-stat-key="${escapeHtml(row.key || row.label)}">
       <div class="numbers-goal-card__label">
         <span>${escapeHtml(row.label)}</span>
       </div>
       <div class="numbers-goal-card__metrics">
-        ${goalsMetricValue(match.homeName, row.home)}
-        ${goalsMetricValue(match.awayName, row.away)}
-        ${goalsMetricValue("Média", average)}
+        ${percentMetricValue(match.homeName, row.home ?? null)}
+        ${percentMetricValue(match.awayName, row.away ?? null)}
+        ${percentMetricValue("Média", row.average ?? null)}
       </div>
     </article>
   `;
 }
 
-function goalsNumbersTable(title, rows, match) {
+function metricGroup(title, rows, match, eyebrow = "Categoria") {
   return `
     <section class="numbers-goals-group">
       <div class="numbers-goals-group__head">
         <div>
-          <small>Categoria</small>
+          <small>${escapeHtml(eyebrow)}</small>
           <strong>${escapeHtml(title)}</strong>
         </div>
         <span>${rows.length} linhas</span>
       </div>
       <div class="numbers-goals-cards">
-        ${rows.map((row) => goalsNumbersCard(row, match)).join("")}
+        ${rows.map((row) => metricCard(row, match)).join("")}
       </div>
     </section>
   `;
 }
 
+function numbersDataNote(text) {
+  return `<div class="numbers-goals-note">${escapeHtml(text)}</div>`;
+}
+
 function renderGoalsNumbersTab(match) {
-  const empty = null;
-  const matchRows = [
-    { key: "over05", label: "Mais de 0,5", home: empty, away: empty },
-    { key: "over15", label: "Mais de 1,5", home: empty, away: empty },
-    { key: "over25", label: "Mais de 2,5", home: empty, away: empty },
-    { key: "over35", label: "Mais de 3,5", home: empty, away: empty },
-    { key: "over45", label: "Mais de 4,5", home: empty, away: empty },
-    { key: "btts", label: "BTTS", home: empty, away: empty },
-    { key: "bttsWin", label: "Ambas as equipes marcam e ganhem.", home: empty, away: empty },
-    { key: "bttsDraw", label: "Ambas as equipes marcam e empate", home: empty, away: empty },
-    { key: "bttsOver25", label: "Ambas as equipes marcam e mais de 2,5 gols", home: empty, away: empty },
-    { key: "bttsNoOver25", label: "Ambas as equipes marcam Não e Mais de 2,5", home: empty, away: empty }
-  ];
-
-  const firstHalfRows = [
-    { key: "bttsFirstHalf", label: "Ambas as equipes marcam no primeiro tempo.", home: empty, away: empty },
-    { key: "over05FH", label: "Mais de 0,5 FH", home: empty, away: empty },
-    { key: "over15FH", label: "Mais de 1,5 FH", home: empty, away: empty },
-    { key: "over25FH", label: "Mais de 2,5 FH", home: empty, away: empty }
-  ];
-
-  const secondHalfRows = [
-    { key: "bttsSecondHalf", label: "Ambas as equipes marcam no segundo tempo.", home: empty, away: empty },
-    { key: "bttsBothHalves", label: "Ambas as equipes marcam nos dois tempos.", home: empty, away: empty },
-    { key: "over05SH", label: "Mais de 0,5 2H", home: empty, away: empty },
-    { key: "over15SH", label: "Mais de 1,5 2H", home: empty, away: empty },
-    { key: "over25SH", label: "Mais de 2,5 2H", home: empty, away: empty }
-  ];
-
-  const underRows = [
-    { key: "under05", label: "Menos de 0,5", home: empty, away: empty },
-    { key: "under15", label: "Menos de 1,5", home: empty, away: empty },
-    { key: "under25", label: "Menos de 2,5", home: empty, away: empty },
-    { key: "under35", label: "Menos de 3,5", home: empty, away: empty },
-    { key: "under45", label: "Menos de 4,5", home: empty, away: empty }
-  ];
-
-  const underHalvesRows = [
-    { key: "under05FH", label: "Menos de 0,5 FH", home: empty, away: empty },
-    { key: "under15FH", label: "Menos de 1,5 FH", home: empty, away: empty },
-    { key: "under25FH", label: "Menos de 2,5 FH", home: empty, away: empty },
-    { key: "under05SH", label: "Menos de 0,5 2H", home: empty, away: empty },
-    { key: "under15SH", label: "Menos de 1,5 2H", home: empty, away: empty },
-    { key: "under25SH", label: "Menos de 2,5 2H", home: empty, away: empty }
-  ];
-
+  const blank = { home: null, away: null, average: null };
   return `
-    <div class="numbers-goals-note">
-      Linhas de gols configuradas no padrão visual do JTIPS. Onde ainda não houver endpoint oficial mapeado, mostramos — sem inventar número.
+    ${numbersDataNote("Linhas de gols configuradas no padrão visual do JTIPS. Onde ainda não houver endpoint oficial mapeado, mostramos — sem inventar número.")}
+    ${metricGroup("Gols da partida", [
+      { key: "over05", label: "Mais de 0,5", ...blank },
+      { key: "over15", label: "Mais de 1,5", ...blank },
+      { key: "over25", label: "Mais de 2,5", ...blank },
+      { key: "over35", label: "Mais de 3,5", ...blank },
+      { key: "over45", label: "Mais de 4,5", ...blank },
+      { key: "btts", label: "BTTS", ...blank },
+      { key: "bttsWin", label: "Ambas as equipes marcam e ganhem.", ...blank },
+      { key: "bttsDraw", label: "Ambas as equipes marcam e empate", ...blank },
+      { key: "bttsOver25", label: "Ambas as equipes marcam e mais de 2,5 gols", ...blank },
+      { key: "bttsNoOver25", label: "Ambas as equipes marcam Não e Mais de 2,5", ...blank }
+    ], match)}
+    ${metricGroup("Gols do primeiro tempo", [
+      { key: "bttsFirstHalf", label: "Ambas as equipes marcam no primeiro tempo.", ...blank },
+      { key: "over05FH", label: "Mais de 0,5 FH", ...blank },
+      { key: "over15FH", label: "Mais de 1,5 FH", ...blank },
+      { key: "over25FH", label: "Mais de 2,5 FH", ...blank }
+    ], match)}
+    ${metricGroup("Gols do segundo tempo", [
+      { key: "bttsSecondHalf", label: "Ambas as equipes marcam no segundo tempo.", ...blank },
+      { key: "bttsBothHalves", label: "Ambas as equipes marcam nos dois tempos.", ...blank },
+      { key: "over05SH", label: "Mais de 0,5 2H", ...blank },
+      { key: "over15SH", label: "Mais de 1,5 2H", ...blank },
+      { key: "over25SH", label: "Mais de 2,5 2H", ...blank }
+    ], match)}
+    ${metricGroup("Menos de X gols", [
+      { key: "under05", label: "Menos de 0,5", ...blank },
+      { key: "under15", label: "Menos de 1,5", ...blank },
+      { key: "under25", label: "Menos de 2,5", ...blank },
+      { key: "under35", label: "Menos de 3,5", ...blank },
+      { key: "under45", label: "Menos de 4,5", ...blank }
+    ], match)}
+    ${metricGroup("Primeiro/Segundo Tempo", [
+      { key: "under05FH", label: "Menos de 0,5 FH", ...blank },
+      { key: "under15FH", label: "Menos de 1,5 FH", ...blank },
+      { key: "under25FH", label: "Menos de 2,5 FH", ...blank },
+      { key: "under05SH", label: "Menos de 0,5 2H", ...blank },
+      { key: "under15SH", label: "Menos de 1,5 2H", ...blank },
+      { key: "under25SH", label: "Menos de 2,5 2H", ...blank }
+    ], match)}
+  `;
+}
+
+function renderCornersNumbersTab(match) {
+  const blank = { home: null, away: null, average: null };
+  return `
+    ${numbersDataNote("Linhas de escanteios preparadas para receber o mapeamento dos endpoints oficiais. Nenhum número é inventado.")}
+    ${metricGroup("Escanteios da partida", [
+      { key: "totalCorners", label: "Total de escanteios", ...blank },
+      { key: "cornersPerMatch", label: "Escanteios / jogo", ...blank },
+      { key: "homeCorners", label: "Escanteios do mandante", ...blank },
+      { key: "awayCorners", label: "Escanteios do visitante", ...blank }
+    ], match)}
+    ${metricGroup("Total de escanteios", [
+      { key: "cornersOver6", label: "Mais de 6", ...blank },
+      { key: "cornersOver7", label: "Mais de 7", ...blank },
+      { key: "cornersOver8", label: "Mais de 8", ...blank },
+      { key: "cornersOver9", label: "Mais de 9", ...blank },
+      { key: "cornersOver10", label: "Mais de 10", ...blank },
+      { key: "cornersOver11", label: "Mais de 11", ...blank },
+      { key: "cornersOver12", label: "Mais de 12", ...blank },
+      { key: "cornersOver13", label: "Mais de 13", ...blank }
+    ], match)}
+    ${metricGroup("Escanteios do time", [
+      { key: "cornersForMatch", label: "Escanteios a favor / jogo", ...blank },
+      { key: "cornersAgainstMatch", label: "Escanteios contra / jogo", ...blank },
+      { key: "cornersForOver25", label: "Mais de 2.5 escanteios a favor", ...blank },
+      { key: "cornersForOver35", label: "Mais de 3.5 escanteios a favor", ...blank },
+      { key: "cornersForOver45", label: "Mais de 4.5 escanteios a favor", ...blank },
+      { key: "cornersAgainstOver25", label: "Mais de 2.5 escanteios contra", ...blank },
+      { key: "cornersAgainstOver35", label: "Mais de 3.5 escanteios contra", ...blank },
+      { key: "cornersAgainstOver45", label: "Mais de 4.5 escanteios contra", ...blank }
+    ], match)}
+    ${metricGroup("Primeiro tempo", [
+      { key: "fhCornersAverage", label: "Média FH", ...blank },
+      { key: "fhCornersOver4", label: "Mais de 4 FH", ...blank },
+      { key: "fhCornersOver5", label: "Mais de 5 FH", ...blank },
+      { key: "fhCornersOver6", label: "Mais de 6 FH", ...blank }
+    ], match)}
+    ${metricGroup("Segundo tempo", [
+      { key: "shCornersAverage", label: "Média 2H", ...blank },
+      { key: "shCornersOver4", label: "Mais de 4 2H", ...blank },
+      { key: "shCornersOver5", label: "Mais de 5 2H", ...blank },
+      { key: "shCornersOver6", label: "Mais de 6 2H", ...blank }
+    ], match)}
+  `;
+}
+
+function renderCardsNumbersTab(match) {
+  const blank = { home: null, away: null, average: null };
+  return `
+    ${numbersDataNote("Linhas de cartões preparadas para o mapeamento dos endpoints oficiais. Sem dado oficial, mostramos —.")}
+    ${metricGroup("Cartões da partida", [
+      { key: "totalCardsPerMatch", label: "Total de cartões / jogo", ...blank },
+      { key: "homeCardsPerMatch", label: "Cartões do mandante / jogo", ...blank },
+      { key: "awayCardsPerMatch", label: "Cartões do visitante / jogo", ...blank }
+    ], match)}
+    ${metricGroup("Total de cartões", [
+      { key: "cardsOver25", label: "Mais de 2.5", ...blank },
+      { key: "cardsOver35", label: "Mais de 3.5", ...blank },
+      { key: "cardsOver45", label: "Mais de 4.5", ...blank },
+      { key: "cardsOver55", label: "Mais de 5.5", ...blank },
+      { key: "cardsOver65", label: "Mais de 6.5", ...blank }
+    ], match)}
+    ${metricGroup("Cartões do time", [
+      { key: "cardsForAverage", label: "Cartões a favor média", ...blank },
+      { key: "cardsOver05For", label: "Mais de 0.5 a favor", ...blank },
+      { key: "cardsOver15For", label: "Mais de 1.5 a favor", ...blank },
+      { key: "cardsOver25For", label: "Mais de 2.5 a favor", ...blank },
+      { key: "cardsOver35For", label: "Mais de 3.5 a favor", ...blank }
+    ], match)}
+    ${metricGroup("Cartões contra", [
+      { key: "cardsOver05Against", label: "Mais de 0.5 contra", ...blank },
+      { key: "cardsOver15Against", label: "Mais de 1.5 contra", ...blank },
+      { key: "cardsOver25Against", label: "Mais de 2.5 contra", ...blank },
+      { key: "cardsOver35Against", label: "Mais de 3.5 contra", ...blank }
+    ], match)}
+    ${metricGroup("1º / 2º tempo cartões", [
+      { key: "fhOver05CardsFor", label: "1H Mais de 0.5 cartões a favor", ...blank },
+      { key: "shOver05CardsFor", label: "2H Mais de 0.5 cartões a favor", ...blank },
+      { key: "fhTotalUnder2", label: "1H Total abaixo de 2", ...blank },
+      { key: "shTotalUnder2", label: "2H Total abaixo de 2", ...blank },
+      { key: "fhTotal2to3", label: "1H entre 2–3 cartões totais", ...blank },
+      { key: "shTotal2to3", label: "2H entre 2–3 cartões totais", ...blank },
+      { key: "fhTotalOver3", label: "1H Total acima de 3", ...blank },
+      { key: "shTotalOver3", label: "2H Total acima de 3", ...blank }
+    ], match)}
+  `;
+}
+
+function renderShotsNumbersTab(match) {
+  const blank = { home: null, away: null, average: null };
+  return `
+    ${numbersDataNote("Finalizações, impedimentos e faltas ficam prontos para receber os campos oficiais da API. Sem campo mapeado, exibimos —.")}
+    ${metricGroup("Finalizações do time", [
+      { key: "shotsPerMatch", label: "Finalizações / jogo", ...blank },
+      { key: "shotsConversionRate", label: "Taxa de conversão de finalizações", ...blank },
+      { key: "shotsOnTargetPerMatch", label: "Finalizações no alvo / jogo", ...blank },
+      { key: "shotsOffTargetPerMatch", label: "Finalizações fora do alvo / jogo", ...blank },
+      { key: "shotsPerGoal", label: "Finalizações por gol marcado", ...blank },
+      { key: "teamShotsOver105", label: "Time com mais de 10.5 finalizações", ...blank },
+      { key: "teamShotsOver115", label: "Time com mais de 11.5 finalizações", ...blank },
+      { key: "teamShotsOver125", label: "Time com mais de 12.5 finalizações", ...blank },
+      { key: "teamShotsOver135", label: "Time com mais de 13.5 finalizações", ...blank },
+      { key: "teamShotsOver145", label: "Time com mais de 14.5 finalizações", ...blank },
+      { key: "teamShotsOver155", label: "Time com mais de 15.5 finalizações", ...blank },
+      { key: "teamSotOver35", label: "Time com mais de 3.5 finalizações no alvo", ...blank },
+      { key: "teamSotOver45", label: "Time com mais de 4.5 finalizações no alvo", ...blank },
+      { key: "teamSotOver55", label: "Time com mais de 5.5 finalizações no alvo", ...blank },
+      { key: "teamSotOver65", label: "Time com mais de 6.5 finalizações no alvo", ...blank }
+    ], match)}
+    ${metricGroup("Finalizações da partida", [
+      { key: "matchShotsOver235", label: "Jogo com mais de 23.5 finalizações", ...blank },
+      { key: "matchShotsOver245", label: "Jogo com mais de 24.5 finalizações", ...blank },
+      { key: "matchShotsOver255", label: "Jogo com mais de 25.5 finalizações", ...blank },
+      { key: "matchShotsOver265", label: "Jogo com mais de 26.5 finalizações", ...blank },
+      { key: "matchSotOver75", label: "Jogo com mais de 7.5 finalizações no alvo", ...blank },
+      { key: "matchSotOver85", label: "Jogo com mais de 8.5 finalizações no alvo", ...blank },
+      { key: "matchSotOver95", label: "Jogo com mais de 9.5 finalizações no alvo", ...blank }
+    ], match)}
+    ${metricGroup("Impedimentos", [
+      { key: "offsidesPerMatch", label: "Impedimentos / jogo", ...blank },
+      { key: "offsidesOver25", label: "Mais de 2.5 impedimentos", ...blank },
+      { key: "offsidesOver35", label: "Mais de 3.5 impedimentos", ...blank }
+    ], match)}
+    ${metricGroup("Outras estatísticas", [
+      { key: "foulsCommitted", label: "Faltas cometidas / jogo", ...blank },
+      { key: "foulsAgainst", label: "Faltas sofridas / jogo", ...blank },
+      { key: "averagePossession", label: "Posse média", ...blank },
+      { key: "drawAtHalfTime", label: "Empate no intervalo", ...blank }
+    ], match)}
+  `;
+}
+
+function playerMetricValue(player, metric) {
+  if (!player) return "—";
+  if (metric === "goals") return displayApiValue(player.goals);
+  if (metric === "cards") return displayApiValue(player.cards ?? player.yellowCards);
+  if (metric === "cardsPer90") return displayApiValue(player.cardsPer90);
+  return "—";
+}
+
+function playerRankingBlock(title, players, metric) {
+  const sorted = [...players]
+    .filter((player) => playerMetricValue(player, metric) !== "—")
+    .sort((a, b) => Number(playerMetricValue(b, metric)) - Number(playerMetricValue(a, metric)))
+    .slice(0, 6);
+  if (!sorted.length) {
+    return `<div class="numbers-player-list"><h4>${escapeHtml(title)}</h4><p class="numbers-empty-note">Dados indisponíveis para este mercado na API atual.</p></div>`;
+  }
+  const max = Math.max(...sorted.map((player) => Number(playerMetricValue(player, metric)) || 0), 1);
+  return `
+    <div class="numbers-player-list numbers-player-list--ranking">
+      <h4>${escapeHtml(title)}</h4>
+      ${sorted.map((player) => {
+        const value = Number(playerMetricValue(player, metric)) || 0;
+        return `
+          <div class="numbers-player-rank">
+            <div><strong>${escapeHtml(player.name)}</strong><em>${escapeHtml(player.team)}</em></div>
+            <span>${escapeHtml(playerMetricValue(player, metric))}</span>
+            <b style="width:${Math.max(8, Math.round((value / max) * 100))}%"></b>
+          </div>
+        `;
+      }).join("")}
     </div>
-    ${goalsNumbersTable("Gols da partida", matchRows, match)}
-    ${goalsNumbersTable("Gols do primeiro tempo", firstHalfRows, match)}
-    ${goalsNumbersTable("Gols do segundo tempo", secondHalfRows, match)}
-    ${goalsNumbersTable("Menos de X gols", underRows, match)}
-    ${goalsNumbersTable("Primeiro/Segundo Tempo", underHalvesRows, match)}
+  `;
+}
+
+function renderPlayersNumbersTab(match) {
+  const homePlayers = matchPlayers(match, "home");
+  const awayPlayers = matchPlayers(match, "away");
+  return `
+    ${numbersDataNote("Jogadores aparecem quando o endpoint de atletas retornar dados oficiais para a liga/time. Sem dados oficiais, mostramos indisponível.")}
+    <div class="numbers-players">
+      ${playerRankingBlock(`Artilheiros - ${match.homeName}`, homePlayers, "goals")}
+      ${playerRankingBlock(`Artilheiros - ${match.awayName}`, awayPlayers, "goals")}
+      ${playerRankingBlock(`Cartões recebidos - ${match.homeName}`, homePlayers, "cards")}
+      ${playerRankingBlock(`Cartões recebidos - ${match.awayName}`, awayPlayers, "cards")}
+      ${playerRankingBlock(`Cartões / 90 - ${match.homeName}`, homePlayers, "cardsPer90")}
+      ${playerRankingBlock(`Cartões / 90 - ${match.awayName}`, awayPlayers, "cardsPer90")}
+    </div>
   `;
 }
 
@@ -1777,48 +1924,13 @@ function matchModalTemplate(match) {
 
         ${numbersTabPanel("gols", "Gols", "fa-solid fa-futbol", renderGoalsNumbersTab(match))}
 
-        ${numbersTabPanel("escanteios", "Escanteios", "fa-solid fa-flag", `
-          <div class="numbers-comparison">
-            ${teamStatCard(match.homeName, "Escanteios por jogo", homeStats.corners)}
-            ${teamStatCard(match.awayName, "Escanteios por jogo", awayStats.corners)}
-          </div>
-          ${probabilityLine("Mais de 8.5 escanteios", match.probabilities.cornersOver85)}
-          ${probabilityLine("Mais de 9.5 escanteios", match.probabilities.cornersOver95)}
-          ${probabilityLine("Mais de 10.5 escanteios", match.probabilities.cornersOver105)}
-          ${numbersStatRow("Escanteios registrados", match.stats.cornersHome, match.stats.cornersAway)}
-          ${officialDataNote(match.stats.cornersHome, match.stats.cornersAway, homeStats.corners, awayStats.corners, "A API não retornou escanteios oficiais para esta partida ou para estes times.")}
-        `)}
+        ${numbersTabPanel("escanteios", "Escanteios", "fa-solid fa-flag", renderCornersNumbersTab(match))}
 
-        ${numbersTabPanel("cartoes", "Cartões", "fa-solid fa-square", `
-          <div class="numbers-comparison">
-            ${teamStatCard(match.homeName, "Cartões por jogo", homeStats.cards)}
-            ${teamStatCard(match.awayName, "Cartões por jogo", awayStats.cards)}
-          </div>
-          ${probabilityLine("Mais de 3.5 cartões", match.probabilities.cardsOver35)}
-          ${probabilityLine("Mais de 4.5 cartões", match.probabilities.cardsOver45)}
-          ${probabilityLine("Mais de 5.5 cartões", match.probabilities.cardsOver55)}
-          ${numbersStatRow("Cartões registrados", match.stats.cardsHome, match.stats.cardsAway)}
-          ${officialDataNote(match.stats.cardsHome, match.stats.cardsAway, homeStats.cards, awayStats.cards, "A API não retornou cartões oficiais para esta partida ou para estes times.")}
-        `)}
+        ${numbersTabPanel("cartoes", "Cartões", "fa-solid fa-square", renderCardsNumbersTab(match))}
 
-        ${numbersTabPanel("finalizacoes", "Finalizações", "fa-solid fa-bullseye", `
-          <div class="numbers-comparison">
-            ${teamStatCard(match.homeName, "Finalizações por jogo", homeStats.shots)}
-            ${teamStatCard(match.awayName, "Finalizações por jogo", awayStats.shots)}
-            ${teamStatCard(match.homeName, "Posse média", homeStats.possession, "%")}
-            ${teamStatCard(match.awayName, "Posse média", awayStats.possession, "%")}
-          </div>
-          ${numbersStatRow("Finalizações registradas", match.stats.shotsHome, match.stats.shotsAway)}
-          ${numbersStatRow("Posse registrada", match.stats.possessionHome, match.stats.possessionAway, "%")}
-          ${officialDataNote(match.stats.shotsHome, match.stats.shotsAway, homeStats.shots, awayStats.shots, "A API não retornou finalizações oficiais para esta partida ou para estes times.")}
-        `)}
+        ${numbersTabPanel("finalizacoes", "Finalizações", "fa-solid fa-bullseye", renderShotsNumbersTab(match))}
 
-        ${numbersTabPanel("jogadores", "Jogadores", "fa-solid fa-user-group", `
-          <div class="numbers-players">
-            <div>${playersList("Mandante", homePlayers)}</div>
-            <div>${playersList("Visitante", awayPlayers)}</div>
-          </div>
-        `)}
+        ${numbersTabPanel("jogadores", "Jogadores", "fa-solid fa-user-group", renderPlayersNumbersTab(match))}
       </div>
     </div>
   `;
