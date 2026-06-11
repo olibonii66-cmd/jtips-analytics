@@ -246,11 +246,16 @@ async function apiFetch(endpoint, params = {}) {
       signal: controller.signal
     });
 
+    const contentType = response.headers.get("content-type") || "";
+    const payload = contentType.includes("application/json")
+      ? await response.json()
+      : { error: await response.text() };
+
     if (!response.ok) {
-      throw new Error(`FootyStats respondeu com HTTP ${response.status}.`);
+      const details = payload?.message || payload?.error || `HTTP ${response.status}`;
+      throw new Error(`FootyStats: ${details}`);
     }
 
-    const payload = await response.json();
     if (payload?.success === false || payload?.error) {
       throw new Error(payload.message || payload.error || "A API recusou a solicitação.");
     }
@@ -543,12 +548,14 @@ function populateLeagueFilters() {
   const allOption = `<option value="all">Todos os campeonatos</option>`;
   const options = state.leagues.map((league) => `<option value="${league.key}">${escapeHtml(league.name)}</option>`).join("");
   if (els.matchLeagueFilter) els.matchLeagueFilter.innerHTML = allOption + options;
-  els.oddsLeagueFilter.innerHTML = allOption + options;
-  els.statsLeagueFilter.innerHTML = state.leagues.map((league) => `
-    <option value="${league.key}" ${league.key === state.statsLeagueKey ? "selected" : ""}>${escapeHtml(league.name)}</option>
-  `).join("");
+  if (els.oddsLeagueFilter) els.oddsLeagueFilter.innerHTML = allOption + options;
+  if (els.statsLeagueFilter) {
+    els.statsLeagueFilter.innerHTML = state.leagues.map((league) => `
+      <option value="${league.key}" ${league.key === state.statsLeagueKey ? "selected" : ""}>${escapeHtml(league.name)}</option>
+    `).join("");
+  }
   if (els.matchLeagueFilter) els.matchLeagueFilter.value = state.matchLeague;
-  els.oddsLeagueFilter.value = state.oddsLeague;
+  if (els.oddsLeagueFilter) els.oddsLeagueFilter.value = state.oddsLeague;
 }
 
 function renderDashboard() {
