@@ -1507,17 +1507,24 @@ async function openMatchModal(matchId) {
   els.matchModal.setAttribute("aria-hidden", "false");
   document.body.style.overflow = "hidden";
   els.modalTitle.textContent = `${baseMatch.homeName} x ${baseMatch.awayName}`;
-  els.matchModalBody.innerHTML = `<div class="numbers-loading"><i class="fa-solid fa-spinner fa-spin"></i><strong>Buscando estatísticas oficiais...</strong><span>ScoutBet está consultando /match e jogadores da liga quando disponíveis.</span></div>`;
+  els.matchModalBody.innerHTML = matchModalTemplate(baseMatch);
 
-  try {
-    await ensurePlayersForMatch(baseMatch);
-    const detailedMatch = await fetchOfficialMatchDetails(baseMatch);
-    els.modalTitle.textContent = `${detailedMatch.homeName} x ${detailedMatch.awayName}`;
-    els.matchModalBody.innerHTML = matchModalTemplate(detailedMatch);
-  } catch (error) {
-    console.warn("Detalhe oficial indisponível, usando dados da lista:", error);
-    els.matchModalBody.innerHTML = matchModalTemplate(baseMatch);
+  const results = await Promise.allSettled([
+    fetchOfficialMatchDetails(baseMatch),
+    ensureTeamsForMatch(baseMatch),
+    ensurePlayersForMatch(baseMatch)
+  ]);
+
+  const detailResult = results[0];
+  const detailedMatch = detailResult.status === "fulfilled" ? detailResult.value : baseMatch;
+
+  if (detailResult.status === "rejected") {
+    console.warn("Detalhe oficial indisponível, usando dados da agenda:", detailResult.reason);
   }
+
+  if (!els.matchModal.classList.contains("open")) return;
+  els.modalTitle.textContent = `${detailedMatch.homeName} x ${detailedMatch.awayName}`;
+  els.matchModalBody.innerHTML = matchModalTemplate(detailedMatch);
 }
 
 async function fetchOfficialMatchDetails(match) {
@@ -1553,6 +1560,34 @@ async function ensurePlayersForMatch(match) {
   } catch (error) {
     console.warn(`Jogadores indisponíveis para ${league.name}:`, error);
     state.loadedPlayerLeagueKeys.push(league.key);
+  }
+}
+
+async function ensureTeamsForMatch(match) {
+  const league = state.leagues.find((item) => item.key === match.leagueKey);
+  const seasonId = Number(league?.seasonId || match.competitionId || 0);
+  if (!seasonId) return;
+
+  try {
+    const payload = await apiFetch("/league-teams", {
+      season_id: seasonId,
+      include: "stats"
+    });
+    const leagueRecord = league || {
+      key: match.leagueKey,
+      seasonId,
+      name: match.league,
+      color: match.leagueColor
+    };
+    const teams = getDataArray(payload).map((team) => normalizeTeam(team, leagueRecord));
+    const existing = new Map(state.teams.map((team) => [String(team.id), team]));
+    teams.forEach((team) => {
+      const current = existing.get(String(team.id));
+      existing.set(String(team.id), current ? { ...current, ...team } : team);
+    });
+    state.teams = Array.from(existing.values());
+  } catch (error) {
+    console.warn(`Estatísticas de times indisponíveis para ${match.league}:`, error);
   }
 }
 
