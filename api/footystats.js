@@ -1,4 +1,5 @@
 const FOOTYSTATS_BASE_URL = "https://api.football-data-api.com";
+const UPSTREAM_TIMEOUT_MS = 15000;
 
 const ALLOWED_ENDPOINTS = new Set([
   "league-list",
@@ -47,30 +48,49 @@ module.exports = async function handler(request, response) {
     });
   });
 
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), UPSTREAM_TIMEOUT_MS);
+
   try {
     const footyStatsResponse = await fetch(footyStatsUrl, {
       method: "GET",
       headers: {
         Accept: "application/json"
-      }
+      },
+      signal: controller.signal
     });
-
     const contentType = footyStatsResponse.headers.get("content-type") || "";
     const payload = contentType.includes("application/json")
       ? await footyStatsResponse.json()
       : { error: await footyStatsResponse.text() };
 
-    response.setHeader("Cache-Control", "s-maxage=60, stale-while-revalidate=300");
+    response.setHeader("Cache-Control", cacheControlFor(endpoint));
     return response.status(footyStatsResponse.status).json(payload);
   } catch (error) {
     console.error("Erro no proxy FootyStats:", error);
     return response.status(502).json({
-      error: "Não foi possível conectar à FootyStats."
+      error: error.name === "AbortError"
+        ? "A FootyStats demorou mais que o esperado para responder."
+        : "Não foi possível conectar à FootyStats."
     });
+  } finally {
+    clearTimeout(timeout);
   }
 };
 
 function normalizeEndpoint(value) {
   const endpoint = Array.isArray(value) ? value[0] : value;
   return String(endpoint || "").replace(/^\/+|\/+$/g, "");
+}
+
+function cacheControlFor(endpoint) {
+  if (endpoint === "todays-matches" || endpoint === "match") {
+    return "no-store";
+  }
+
+  if (endpoint === "league-list") {
+    return "s-maxage=3600, stale-while-revalidate=86400";
+  }
+
+  return "s-maxage=300, stale-while-revalidate=1800";
 }

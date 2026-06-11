@@ -78,7 +78,7 @@ function cacheElements() {
     "oddsSummary", "oddsLeagueFilter", "oddsMarketFilter", "valueRange",
     "valueRangeLabel", "valueBetsGrid", "homeTeamSelect", "awayTeamSelect",
     "compareTeamsButton", "h2hContent", "tipsFilter", "tipsGrid", "matchModal",
-    "modalTitle", "matchModalBody", "toastRegion", "todayLabel"
+    "modalTitle", "matchModalBody", "toastRegion", "todayWeekday", "todayLabel"
   ].forEach((id) => {
     els[id] = document.getElementById(id);
   });
@@ -114,30 +114,37 @@ async function loadApplicationData({ refresh = false } = {}) {
 }
 
 async function loadRealData() {
-  const leaguePayload = await apiFetch("/league-list", { chosen_leagues_only: "true" });
-  const availableLeagues = getDataArray(leaguePayload);
-  state.leagueIndex = buildLeagueIndex(availableLeagues);
-  state.leagues = resolveTargetLeagues(availableLeagues);
-
-  if (!state.leagues.length) {
-    throw new Error("Nenhum dos campeonatos configurados está disponível no plano da API.");
+  try {
+    const leaguePayload = await apiFetch("/league-list", { chosen_leagues_only: "true" });
+    const availableLeagues = getDataArray(leaguePayload);
+    state.leagueIndex = buildLeagueIndex(availableLeagues);
+    state.leagues = resolveTargetLeagues(availableLeagues);
+  } catch (error) {
+    console.warn("Lista de ligas indisponível; a agenda continuará sendo carregada:", error);
+    state.leagueIndex = [];
+    state.leagues = [];
   }
 
-  if (!state.leagues.some((league) => league.key === state.statsLeagueKey)) {
+  if (state.leagues.length && !state.leagues.some((league) => league.key === state.statsLeagueKey)) {
     state.statsLeagueKey = state.leagues[0].key;
   }
 
-  await loadMatchTeams();
-
   const date = formatApiDate(state.selectedDate);
-  const matchesPayload = await apiFetch("/todays-matches", {
+  const rawMatches = await apiFetchAllPages("/todays-matches", {
     date,
     timezone: APP_TIMEZONE
-  });
-  const rawMatches = getDataArray(matchesPayload);
+  }, 200);
   state.matches = rawMatches.map((match) => normalizeMatch(match));
 
-  await loadLeagueStats(state.statsLeagueKey, { silent: true });
+  const matchLeagues = resolveMatchLeagues(rawMatches);
+  if (matchLeagues.length) {
+    await loadMatchTeams(matchLeagues);
+    state.matches = rawMatches.map((match) => normalizeMatch(match));
+  }
+
+  if (state.leagues.length) {
+    await loadLeagueStats(state.statsLeagueKey, { silent: true });
+  }
 }
 
 async function loadMatchesForDate() {
@@ -147,15 +154,13 @@ async function loadMatchesForDate() {
       throw new Error("Execute o projeto com vercel dev ou abra a versão publicada.");
     }
 
-    if (!state.matchTeams.length) {
-      await loadMatchTeams();
-    }
-
-    const payload = await apiFetch("/todays-matches", {
+    const rawMatches = await apiFetchAllPages("/todays-matches", {
       date: formatApiDate(state.selectedDate),
       timezone: APP_TIMEZONE
-    });
-    state.matches = getDataArray(payload).map((match) => normalizeMatch(match));
+    }, 200);
+    const matchLeagues = resolveMatchLeagues(rawMatches);
+    if (matchLeagues.length) await loadMatchTeams(matchLeagues);
+    state.matches = rawMatches.map((match) => normalizeMatch(match));
     state.mode = "api";
 
     state.valueBets = buildValueBets(state.matches);
@@ -168,7 +173,15 @@ async function loadMatchesForDate() {
     updateLastSync();
   } catch (error) {
     console.error(error);
+    state.matches = [];
+    state.valueBets = [];
+    state.tips = [];
+    state.mode = "error";
     renderMatchesError("Não foi possível carregar as partidas desta data.");
+    renderDashboard();
+    renderOdds();
+    renderTips();
+    updateApiStatus();
     showToast("Agenda indisponível", "Tente novamente em alguns instantes.", "error");
   } finally {
     setLoading(false, "matches");
@@ -176,11 +189,14 @@ async function loadMatchesForDate() {
 }
 
 
-async function loadMatchTeams() {
-  const teamRequests = state.leagues.map(async (league) => {
+async function loadMatchTeams(leagues = state.leagues) {
+  const loadedLeagueKeys = new Set(state.matchTeams.map((team) => team.leagueKey));
+  const pendingLeagues = leagues.filter((league) => league?.seasonId && !loadedLeagueKeys.has(league.key));
+  if (!pendingLeagues.length) return;
+
+  const teamRequests = pendingLeagues.map(async (league) => {
     try {
       const payload = await apiFetch("/league-teams", {
-        league_id: league.seasonId,
         season_id: league.seasonId
       });
       return getDataArray(payload).map((team) => normalizeTeamIdentity(team, league));
@@ -191,7 +207,37 @@ async function loadMatchTeams() {
   });
 
   const groups = await Promise.all(teamRequests);
-  state.matchTeams = groups.flat();
+  const existing = new Set(state.matchTeams.map((team) => `${team.leagueKey}:${team.id}`));
+  groups.flat().forEach((team) => {
+    const key = `${team.leagueKey}:${team.id}`;
+    if (!existing.has(key)) {
+      existing.add(key);
+      state.matchTeams.push(team);
+    }
+  });
+}
+
+function resolveMatchLeagues(rawMatches) {
+  const leaguePool = [...state.leagueIndex, ...state.leagues];
+  const resolved = rawMatches
+    .map((match) => {
+      const competitionId = Number(
+        match.competition_id ||
+        match.season_id ||
+        match.league_id ||
+        match.competition?.id ||
+        match.league?.id ||
+        0
+      );
+      if (!competitionId) return null;
+      return leaguePool.find((league) => (
+        Number(league.seasonId) === competitionId ||
+        Number(league.id) === competitionId
+      )) || null;
+    })
+    .filter(Boolean);
+
+  return [...new Map(resolved.map((league) => [league.key, league])).values()];
 }
 
 async function loadLeagueStats(leagueKey, { silent = false } = {}) {
@@ -204,21 +250,18 @@ async function loadLeagueStats(leagueKey, { silent = false } = {}) {
   }
 
   try {
-    const [teamsPayload, playersPayload] = await Promise.all([
+    const [teamsPayload, players] = await Promise.all([
       apiFetch("/league-teams", {
-        league_id: league.seasonId,
         season_id: league.seasonId,
         include: "stats"
       }),
-      apiFetch("/league-players", {
-        league_id: league.seasonId,
-        season_id: league.seasonId,
-        page: 1
-      })
+      apiFetchAllPages("/league-players", {
+        season_id: league.seasonId
+      }, 200)
     ]);
 
     state.teams = getDataArray(teamsPayload).map((team) => normalizeTeam(team, league));
-    state.players = getDataArray(playersPayload).map((player) => normalizePlayer(player, state.teams));
+    state.players = players.map((player) => normalizePlayer(player, state.teams));
   } catch (error) {
     console.error(error);
     state.teams = [];
@@ -263,6 +306,47 @@ async function apiFetch(endpoint, params = {}) {
   } finally {
     window.clearTimeout(timeout);
   }
+}
+
+async function apiFetchAllPages(endpoint, params = {}, pageSize = 200, maxPages = 10) {
+  const records = [];
+  const pageSignatures = new Set();
+
+  for (let page = 1; page <= maxPages; page += 1) {
+    const payload = await apiFetch(endpoint, { ...params, page });
+    const pageRecords = getDataArray(payload);
+    const signature = pageRecords
+      .slice(0, 3)
+      .map((record) => record?.id ?? record?.match_id ?? record?.player_id ?? JSON.stringify(record))
+      .join("|");
+
+    if (signature && pageSignatures.has(signature)) break;
+    if (signature) pageSignatures.add(signature);
+    records.push(...pageRecords);
+
+    if (pageRecords.length < pageSize || !hasNextPage(payload, page)) {
+      break;
+    }
+  }
+
+  return records;
+}
+
+function hasNextPage(payload, currentPage) {
+  const pagination = payload?.pager || payload?.pagination || payload?.meta?.pagination || payload?.data?.pagination;
+  if (!pagination) return true;
+
+  const lastPage = Number(
+    pagination.last_page ??
+    pagination.total_pages ??
+    pagination.page_count ??
+    pagination.max_page
+  );
+  const nextPage = pagination.next_page ?? pagination.nextPage;
+
+  if (Number.isFinite(lastPage) && lastPage > 0) return currentPage < lastPage;
+  if (nextPage === null || nextPage === false) return false;
+  return true;
 }
 
 function buildLeagueIndex(rawLeagues) {
@@ -339,12 +423,12 @@ function normalizeMatch(raw) {
   const status = normalizeStatus(raw.status, timestamp, raw);
   const homeId = Number(raw.homeID || raw.home_id || raw.homeTeam?.id || raw.team_a_id || raw.team_a?.id || 0);
   const awayId = Number(raw.awayID || raw.away_id || raw.awayTeam?.id || raw.team_b_id || raw.team_b?.id || 0);
-  const rawHomeName = raw.home_name || raw.homeTeam?.name || raw.home_team_name || raw.team_a_name || raw.team_a?.name || "Mandante";
-  const rawAwayName = raw.away_name || raw.awayTeam?.name || raw.away_team_name || raw.team_b_name || raw.team_b?.name || "Visitante";
+  const rawHomeName = raw.home_name || raw.homeTeam?.name || raw.home_team_name || raw.team_a_name || raw.team_a?.name || "";
+  const rawAwayName = raw.away_name || raw.awayTeam?.name || raw.away_team_name || raw.team_b_name || raw.team_b?.name || "";
   const homeTeam = findMatchTeam(homeId, rawHomeName);
   const awayTeam = findMatchTeam(awayId, rawAwayName);
-  const homeName = rawHomeName || homeTeam?.name || "Mandante";
-  const awayName = rawAwayName || awayTeam?.name || "Visitante";
+  const homeName = homeTeam?.name || rawHomeName || "Mandante";
+  const awayName = awayTeam?.name || rawAwayName || "Visitante";
   const homeGoals = numberOrNull(raw.homeGoalCount ?? raw.home_score ?? raw.team_a_score ?? raw.homeGoals?.length);
   const awayGoals = numberOrNull(raw.awayGoalCount ?? raw.away_score ?? raw.team_b_score ?? raw.awayGoals?.length);
   const homeLogo = getTeamLogo(raw, "home") || homeTeam?.image || getNationalTeamFlagUrl(homeName) || null;
@@ -369,7 +453,7 @@ function normalizeMatch(raw) {
     homeGoals,
     awayGoals,
     timestamp,
-    date: new Date(timestamp),
+    date: timestamp ? new Date(timestamp) : null,
     status,
     minute: normalizeMinute(raw.minute ?? raw.match_minute ?? raw.elapsed ?? raw.game_minute),
     odds: {
@@ -392,20 +476,20 @@ function normalizeMatch(raw) {
       home: firstProbability(raw.home_win_percentage, raw.homeWinProbability, raw.probability_home),
       draw: firstProbability(raw.draw_percentage, raw.drawProbability, raw.probability_draw),
       away: firstProbability(raw.away_win_percentage, raw.awayWinProbability, raw.probability_away),
-      over05: firstProbability(raw.over05, raw.over_05_percentage, raw.o05_potential, raw.over05Probability),
-      over15: firstProbability(raw.over15, raw.over_15_percentage, raw.o15_potential, raw.over15Probability),
-      over25: firstProbability(raw.over25, raw.over_25_percentage, raw.o25_potential, raw.over25Probability),
-      over35: firstProbability(raw.over35, raw.over_35_percentage, raw.o35_potential, raw.over35Probability),
-      over45: firstProbability(raw.over45, raw.over_45_percentage, raw.o45_potential, raw.over45Probability),
-      btts: firstProbability(raw.btts, raw.btts_percentage, raw.btts_potential, raw.bttsProbability),
+      over05: firstProbability(raw.over_05_percentage, raw.o05_potential, raw.over05Probability),
+      over15: firstProbability(raw.over_15_percentage, raw.o15_potential, raw.over15Probability),
+      over25: firstProbability(raw.over_25_percentage, raw.o25_potential, raw.over25Probability),
+      over35: firstProbability(raw.over_35_percentage, raw.o35_potential, raw.over35Probability),
+      over45: firstProbability(raw.over_45_percentage, raw.o45_potential, raw.over45Probability),
+      btts: firstProbability(raw.btts_percentage, raw.btts_potential, raw.bttsProbability),
       bttsFh: firstProbability(raw.btts_fhg_potential, raw.btts_fh_potential, raw.bttsFirstHalfProbability),
       btts2h: firstProbability(raw.btts_2hg_potential, raw.btts_2h_potential, raw.bttsSecondHalfProbability),
-      corners: firstProbability(raw.corners_potential, raw.cornersPotential),
+      corners: null,
       cornersOver85: firstProbability(raw.corners_o85_potential, raw.corners_over_85_percentage, raw.cornersOver85Probability),
       cornersOver95: firstProbability(raw.corners_o95_potential, raw.corners_over_95_percentage, raw.cornersOver95Probability),
       cornersOver105: firstProbability(raw.corners_o105_potential, raw.corners_over_105_percentage, raw.cornersOver105Probability),
-      cards: firstProbability(raw.cards_potential, raw.cardsPotential),
-      cardsOver35: firstProbability(raw.cards_o35_potential, raw.cards_over_35_percentage, raw.cardsOver35Probability, raw.cards_potential),
+      cards: null,
+      cardsOver35: firstProbability(raw.cards_o35_potential, raw.cards_over_35_percentage, raw.cardsOver35Probability),
       cardsOver45: firstProbability(raw.cards_o45_potential, raw.cards_over_45_percentage, raw.cardsOver45Probability),
       cardsOver55: firstProbability(raw.cards_o55_potential, raw.cards_over_55_percentage, raw.cardsOver55Probability)
     },
@@ -510,7 +594,9 @@ function normalizePlayer(raw, teams) {
     yellowCards: nullablePositiveNumber(raw.yellow_cards_overall ?? raw.yellow_cards),
     redCards: nullablePositiveNumber(raw.red_cards_overall ?? raw.red_cards),
     minutesPerGoal: goals && minutes !== null ? Math.round(minutes / goals) : null,
-    cardsPer90: minutes ? round(((nullablePositiveNumber(raw.cards_overall ?? raw.yellow_cards_overall ?? raw.cards ?? raw.yellow_cards) || 0) / minutes) * 90, 2) : null,
+    cardsPer90: minutes && nullablePositiveNumber(raw.cards_overall ?? raw.yellow_cards_overall ?? raw.cards ?? raw.yellow_cards) !== null
+      ? round((nullablePositiveNumber(raw.cards_overall ?? raw.yellow_cards_overall ?? raw.cards ?? raw.yellow_cards) / minutes) * 90, 2)
+      : null,
     rating: nullablePositiveNumber(raw.rating || raw.performance_rating)
   };
 }
@@ -525,6 +611,10 @@ function clearApiData() {
   state.loadedPlayerLeagueKeys = [];
   state.tips = [];
   state.valueBets = [];
+  if (state.charts.radar) {
+    state.charts.radar.destroy();
+    state.charts.radar = null;
+  }
 }
 
 function renderAll() {
@@ -543,12 +633,15 @@ function populateLeagueFilters() {
   const allOption = `<option value="all">Todos os campeonatos</option>`;
   const options = state.leagues.map((league) => `<option value="${league.key}">${escapeHtml(league.name)}</option>`).join("");
   if (els.matchLeagueFilter) els.matchLeagueFilter.innerHTML = allOption + options;
-  els.oddsLeagueFilter.innerHTML = allOption + options;
-  els.statsLeagueFilter.innerHTML = state.leagues.map((league) => `
-    <option value="${league.key}" ${league.key === state.statsLeagueKey ? "selected" : ""}>${escapeHtml(league.name)}</option>
-  `).join("");
+  if (els.oddsLeagueFilter) els.oddsLeagueFilter.innerHTML = allOption + options;
+  if (els.statsLeagueFilter) {
+    els.statsLeagueFilter.innerHTML = state.leagues.map((league) => `
+      <option value="${league.key}" ${league.key === state.statsLeagueKey ? "selected" : ""}>${escapeHtml(league.name)}</option>
+    `).join("");
+    els.statsLeagueFilter.disabled = state.leagues.length === 0;
+  }
   if (els.matchLeagueFilter) els.matchLeagueFilter.value = state.matchLeague;
-  els.oddsLeagueFilter.value = state.oddsLeague;
+  if (els.oddsLeagueFilter) els.oddsLeagueFilter.value = state.oddsLeague;
 }
 
 function renderDashboard() {
@@ -616,8 +709,8 @@ function featuredMatchTemplate(match) {
         <span>${escapeHtml(match.leagueShort)}</span>
       </div>
       <div class="match-teams">
-        ${compactTeamRow(match.homeName, match.homeGoals, match.leagueColor, match.homeLogo, match.status === "complete")}
-        ${compactTeamRow(match.awayName, match.awayGoals, secondaryColor(match.leagueColor), match.awayLogo, match.status === "complete")}
+        ${compactTeamRow(match.homeName, match.homeGoals, match.leagueColor, match.homeLogo, shouldShowMatchScore(match))}
+        ${compactTeamRow(match.awayName, match.awayGoals, secondaryColor(match.leagueColor), match.awayLogo, shouldShowMatchScore(match))}
       </div>
       <div class="match-insight">
         <small>Melhor leitura</small>
@@ -707,6 +800,7 @@ function renderMatchesError(message) {
 
 function renderStats() {
   if (!state.teams.length && !state.players.length) {
+    renderTeamRadarChart([]);
     els.statsOverview.innerHTML = `
       <div class="panel empty-state" style="grid-column:1/-1">
         <i class="fa-solid fa-chart-column"></i>
@@ -737,17 +831,17 @@ function renderStats() {
     <div class="ranking-row">
       <span class="ranking-position ${index < 3 ? "top" : ""}">${String(index + 1).padStart(2, "0")}</span>
       <div class="ranking-team">${teamCrest(team.name, team.color)}<strong>${escapeHtml(team.name)}</strong></div>
-      ${rankingData("Aprov.", `${Math.round(team.winRate)}%`)}
-      ${rankingData("Gols", round(team.goalsPerMatch, 2))}
-      ${rankingData("Posse", `${round(team.possession, 0)}%`)}
-      ${rankingData("PPG", round(team.ppg, 2))}
+      ${rankingData("Aprov.", formatStatValue(team.winRate, 0, "%"))}
+      ${rankingData("Gols", formatStatValue(team.goalsPerMatch, 2))}
+      ${rankingData("Posse", formatStatValue(team.possession, 0, "%"))}
+      ${rankingData("PPG", formatStatValue(team.ppg, 2))}
     </div>
   `).join("");
 
-  const sortedPlayers = [...state.players].sort((a, b) => (b.goals + b.assists) - (a.goals + a.assists));
-  const topScorer = [...state.players].sort((a, b) => b.goals - a.goals)[0];
-  const topAssist = [...state.players].sort((a, b) => b.assists - a.assists)[0];
-  const topRating = [...state.players].sort((a, b) => b.rating - a.rating)[0];
+  const sortedPlayers = [...state.players].sort((a, b) => sumKnown(b.goals, b.assists) - sumKnown(a.goals, a.assists));
+  const topScorer = [...state.players].filter((player) => player.goals !== null).sort((a, b) => b.goals - a.goals)[0];
+  const topAssist = [...state.players].filter((player) => player.assists !== null).sort((a, b) => b.assists - a.assists)[0];
+  const topRating = [...state.players].filter((player) => player.rating !== null).sort((a, b) => b.rating - a.rating)[0];
 
   els.playerLeaders.innerHTML = [
     playerLeader("Artilheiro", topScorer, topScorer?.goals != null ? `${topScorer.goals} gols` : "—"),
@@ -839,7 +933,7 @@ function valueBetCard(bet) {
       </div>
       <div class="value-card__market">
         ${valueCell("Mercado", bet.market)}
-        ${valueCell("Prob. modelo", `${round(bet.probability * 100, 1)}%`)}
+        ${valueCell("Prob. FootyStats", `${round(bet.probability * 100, 1)}%`)}
         ${valueCell("Odd", formatOdd(bet.odd))}
         ${valueCell("Value", `+${round(bet.value, 1)}%`, true)}
       </div>
@@ -920,7 +1014,7 @@ function buildTips(matches) {
 }
 
 function analysisText(bet) {
-  return `A ScoutBet estima ${round(bet.probability * 100, 1)}% de probabilidade para este mercado. Com odd ${formatOdd(bet.odd)}, o valor esperado calculado é de +${round(bet.value, 1)}%.`;
+  return `A FootyStats informa ${round(bet.probability * 100, 1)}% de probabilidade para este mercado. Com odd ${formatOdd(bet.odd)}, o valor esperado calculado é de +${round(bet.value, 1)}%.`;
 }
 
 function buildComfortLines(match) {
@@ -984,7 +1078,7 @@ function bettingInsight(bet, comfortLines) {
   const lineText = strongLines.length
     ? strongLines.slice(0, 2).map((line) => `${line.title.toLowerCase()} em ${line.label}`).join(" e ")
     : "os dados disponíveis";
-  return `A entrada ${bet.market.toLowerCase()} ganha força porque ${lineText} sustentam uma leitura confortável. A odd ${formatOdd(bet.odd)} fica interessante frente à probabilidade estimada de ${round(bet.probability * 100, 1)}%.`;
+  return `A entrada ${bet.market.toLowerCase()} ganha força porque ${lineText} sustentam a leitura. A odd ${formatOdd(bet.odd)} é comparada à probabilidade de ${round(bet.probability * 100, 1)}% informada pela FootyStats.`;
 }
 
 function renderTips() {
@@ -1218,7 +1312,14 @@ function h2hMatchRow(match) {
 function renderTeamRadarChart(teams) {
   if (!window.Chart) return;
   const ctx = document.getElementById("teamRadarChart");
-  if (!ctx || !teams.length) return;
+  if (!ctx) return;
+  if (!teams.length) {
+    if (state.charts.radar) {
+      state.charts.radar.destroy();
+      state.charts.radar = null;
+    }
+    return;
+  }
   const colors = ["#00c853", "#59a8ff", "#9d8cff"];
   if (state.charts.radar) state.charts.radar.destroy();
 
@@ -1495,9 +1596,9 @@ async function ensurePlayersForMatch(match) {
   const league = state.leagues.find((item) => item.key === match.leagueKey);
   if (!league || state.loadedPlayerLeagueKeys.includes(league.key)) return;
   try {
-    const payload = await apiFetch("/league-players", { league_id: league.seasonId, season_id: league.seasonId, page: 1 });
+    const records = await apiFetchAllPages("/league-players", { season_id: league.seasonId }, 200);
     const teams = state.teams.length ? state.teams : state.matchTeams;
-    const players = getDataArray(payload).map((player) => normalizePlayer(player, teams));
+    const players = records.map((player) => normalizePlayer(player, teams));
     const existing = new Set(state.players.map((player) => String(player.id)));
     players.forEach((player) => { if (!existing.has(String(player.id))) state.players.push(player); });
     state.loadedPlayerLeagueKeys.push(league.key);
@@ -1679,7 +1780,9 @@ function setLoading(loading, scope = "all") {
 }
 
 function updateLastSync() {
-  els.lastUpdate.textContent = `às ${formatTime(new Date())}`;
+  els.lastUpdate.textContent = state.mode === "api"
+    ? `às ${formatTime(new Date())}`
+    : "sem conexão";
 }
 
 function showToast(title, message, type = "success") {
@@ -1701,6 +1804,7 @@ function closeSidebar() {
 }
 
 function setTodayLabel() {
+  els.todayWeekday.textContent = capitalize(formatDate(new Date(), { weekday: "long" }));
   els.todayLabel.textContent = formatDate(new Date(), { day: "numeric", month: "long" });
 }
 
@@ -1860,8 +1964,10 @@ function getNationalTeamFlagUrl(name) {
 function getMatchTimestamp(raw) {
   const unix = Number(raw.date_unix || raw.timestamp || raw.match_timestamp || raw.time);
   if (Number.isFinite(unix) && unix > 100000000) return unix > 100000000000 ? unix : unix * 1000;
-  const parsed = new Date(raw.date || raw.match_date || raw.kickoff || Date.now()).getTime();
-  return Number.isNaN(parsed) ? Date.now() : parsed;
+  const source = raw.date || raw.match_date || raw.kickoff;
+  if (!source) return null;
+  const parsed = new Date(source).getTime();
+  return Number.isNaN(parsed) ? null : parsed;
 }
 
 function normalizeMinute(value) {
@@ -1877,9 +1983,6 @@ function normalizeStatus(status, timestamp, raw = {}) {
   const normalizedMinute = normalizeText(minuteValue);
   const kickoff = Number(timestamp) || 0;
   const now = Date.now();
-  const fiveMinutes = 5 * 60 * 1000;
-  const liveWindow = 3.25 * 60 * 60 * 1000;
-
   const isCancelled = ["cancelled", "canceled"].some((item) => value.includes(item));
   const isPostponed = ["postponed"].some((item) => value.includes(item));
   const isSuspended = ["suspended", "abandoned"].some((item) => value.includes(item));
@@ -1893,24 +1996,11 @@ function normalizeStatus(status, timestamp, raw = {}) {
   if (isPostponed) return "postponed";
   if (isSuspended) return "suspended";
 
-  // O live score da FootyStats usa minuto para atualizar partidas ao vivo.
-  // Quando existir minuto numérico, ele tem prioridade sobre status inconsistente.
-  if (isLive && !minuteSaysFinished) return "live";
-
-  if (kickoff) {
-    if (kickoff > now + fiveMinutes) return "scheduled";
-
-    // Durante a janela natural da partida, tratar como ao vivo mesmo se a lista
-    // vier com status antigo como complete/finished.
-    if (now >= kickoff - fiveMinutes && now <= kickoff + liveWindow && !minuteSaysFinished) {
-      return "live";
-    }
-  }
-
   if (isFinished) return "complete";
+  if (isLive && !minuteSaysFinished) return "live";
   if (isScheduled) return "scheduled";
 
-  if (kickoff && now > kickoff + liveWindow) return "complete";
+  if (kickoff && kickoff > now) return "scheduled";
   return "scheduled";
 }
 
@@ -1929,7 +2019,7 @@ function statusLabel(match) {
 }
 
 function shouldShowMatchScore(match) {
-  return match.status === "complete" &&
+  return (match.status === "live" || match.status === "complete") &&
     match.homeGoals !== null &&
     match.awayGoals !== null;
 }
@@ -1960,10 +2050,13 @@ function bestMarketForMatch(match) {
 }
 
 function modalAnalysis(match, market) {
+  if (!Number.isFinite(market.probability) || !Number.isFinite(market.odd)) {
+    return "A FootyStats não retornou probabilidade e odd suficientes para calcular uma leitura deste mercado.";
+  }
   if (match.status === "live") {
     return `O ritmo atual mantém ${market.label.toLowerCase()} como principal leitura. Considere a variação da odd ao vivo antes de qualquer decisão.`;
   }
-  return `A combinação de probabilidade estimada, preço de mercado e indicadores recentes destaca ${market.label.toLowerCase()} como a opção de maior interesse estatístico.`;
+  return `A combinação da probabilidade fornecida pela FootyStats com a odd disponível destaca ${market.label.toLowerCase()} como a opção de maior value matemático.`;
 }
 
 function leagueIcon() {
@@ -2013,6 +2106,7 @@ function percentOf(items, predicate) {
 }
 
 function scale(value, min, max) {
+  if (value === null || value === undefined || !Number.isFinite(Number(value))) return null;
   return clamp(((value - min) / (max - min)) * 100, 0, 100);
 }
 
@@ -2026,6 +2120,20 @@ function average(values) {
 
 function formatAverage(value, decimals, suffix = "") {
   return value === null ? "—" : `${round(value, decimals)}${suffix}`;
+}
+
+function formatStatValue(value, decimals = 0, suffix = "") {
+  return value === null || value === undefined || !Number.isFinite(Number(value))
+    ? "—"
+    : `${round(Number(value), decimals)}${suffix}`;
+}
+
+function sumKnown(...values) {
+  return values.reduce((sum, value) => (
+    value === null || value === undefined || !Number.isFinite(Number(value))
+      ? sum
+      : sum + Number(value)
+  ), 0);
 }
 
 function positiveNumber(value, fallback = 0) {
@@ -2111,11 +2219,15 @@ function formatApiDate(date) {
 }
 
 function formatDate(date, options) {
-  return new Intl.DateTimeFormat("pt-BR", options).format(new Date(date));
+  const parsed = new Date(date);
+  if (!date || Number.isNaN(parsed.getTime())) return "—";
+  return new Intl.DateTimeFormat("pt-BR", options).format(parsed);
 }
 
 function formatTime(date) {
-  return new Intl.DateTimeFormat("pt-BR", { hour: "2-digit", minute: "2-digit" }).format(new Date(date));
+  const parsed = new Date(date);
+  if (!date || Number.isNaN(parsed.getTime())) return "—";
+  return new Intl.DateTimeFormat("pt-BR", { hour: "2-digit", minute: "2-digit" }).format(parsed);
 }
 
 function formatOdd(value) {
