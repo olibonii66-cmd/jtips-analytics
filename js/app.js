@@ -114,29 +114,25 @@ async function loadApplicationData({ refresh = false } = {}) {
 }
 
 async function loadRealData() {
-  const date = formatApiDate(state.selectedDate);
-  const leaguePayload = await apiFetch("/league-list", { chosen_leagues_only: "true" }).catch((error) => {
-    console.warn("Lista de ligas indisponível:", error);
-    return null;
-  });
-
+  const leaguePayload = await apiFetch("/league-list", { chosen_leagues_only: "true" });
   const availableLeagues = getDataArray(leaguePayload);
   state.leagueIndex = buildLeagueIndex(availableLeagues);
-  const matchesPayload = await loadMatchesPayload(date, state.leagueIndex);
-  const rawMatches = getDataArray(matchesPayload);
-  state.leagues = resolveMatchLeagues(rawMatches, state.leagueIndex);
+  state.leagues = resolveTargetLeagues(availableLeagues);
 
-  if (state.leagues.length && !state.leagues.some((league) => league.key === state.statsLeagueKey)) {
+  if (!state.leagues.length) {
+    throw new Error("Nenhum dos campeonatos configurados está disponível no plano da API.");
+  }
+
+  if (!state.leagues.some((league) => league.key === state.statsLeagueKey)) {
     state.statsLeagueKey = state.leagues[0].key;
   }
 
-  state.matches = rawMatches.map((match) => normalizeMatch(match));
   await loadMatchTeams();
+
+  const rawMatches = await fetchMatchesForSelectedDate();
   state.matches = rawMatches.map((match) => normalizeMatch(match));
 
-  if (state.leagues.length) {
-    await loadLeagueStats(state.statsLeagueKey, { silent: true });
-  }
+  await loadLeagueStats(state.statsLeagueKey, { silent: true });
 }
 
 async function loadMatchesForDate() {
@@ -150,11 +146,7 @@ async function loadMatchesForDate() {
       await loadMatchTeams();
     }
 
-    const payload = await loadMatchesPayload(formatApiDate(state.selectedDate), state.leagueIndex);
-    const rawMatches = getDataArray(payload);
-    state.leagues = resolveMatchLeagues(rawMatches, state.leagueIndex);
-    state.matches = rawMatches.map((match) => normalizeMatch(match));
-    await loadMatchTeams();
+    const rawMatches = await fetchMatchesForSelectedDate();
     state.matches = rawMatches.map((match) => normalizeMatch(match));
     state.mode = "api";
 
@@ -175,54 +167,56 @@ async function loadMatchesForDate() {
   }
 }
 
-async function loadMatchesPayload(date, availableLeagues = []) {
-  try {
-    return await apiFetch("/todays-matches", {
-      date,
-      timezone: APP_TIMEZONE
-    });
-  } catch (dailyError) {
-    console.warn("Agenda diária indisponível; tentando league-matches:", dailyError);
+
+
+async function fetchMatchesForSelectedDate() {
+  const dateKey = formatApiDate(state.selectedDate);
+  const leagueResults = await Promise.allSettled(state.leagues.map((league) => fetchLeagueMatchesForDate(league, dateKey)));
+  const matches = leagueResults.flatMap((result) => result.status === "fulfilled" ? result.value : []);
+
+  if (matches.length) {
+    return uniqueMatches(matches);
   }
 
-  if (!availableLeagues.length) {
-    throw new Error("A API não liberou todays-matches e não retornou IDs de ligas para consultar league-matches.");
-  }
-
-  const leagueResults = await Promise.allSettled(
-    availableLeagues.map((league) => fetchAllLeagueMatches(league.seasonId))
-  );
-  const matches = leagueResults
-    .filter((result) => result.status === "fulfilled")
-    .flatMap((result) => result.value)
-    .filter((match) => formatApiDate(new Date(getMatchTimestamp(match))) === date);
-
-  if (!matches.length && leagueResults.every((result) => result.status === "rejected")) {
-    const firstError = leagueResults.find((result) => result.status === "rejected");
-    throw firstError?.reason || new Error("A FootyStats não retornou partidas.");
-  }
-
-  return { data: matches };
+  // Fallback: alguns planos entregam a agenda do dia por todays-matches.
+  const fallbackPayload = await apiFetch("/todays-matches", { date: dateKey, timezone: APP_TIMEZONE });
+  return uniqueMatches(getDataArray(fallbackPayload));
 }
 
-async function fetchAllLeagueMatches(leagueId) {
-  const firstPayload = await apiFetch("/league-matches", {
-    league_id: leagueId,
-    page: 1,
-    max_per_page: 500
-  });
-  const matches = getDataArray(firstPayload);
-  const maxPage = Math.max(1, Number(firstPayload?.pager?.max_page || firstPayload?.data?.pager?.max_page || 1));
-  if (maxPage === 1) return matches;
+async function fetchLeagueMatchesForDate(league, dateKey) {
+  const matches = [];
+  let page = 1;
+  let maxPage = 1;
 
-  const remainingPages = await Promise.all(
-    Array.from({ length: maxPage - 1 }, (_, index) => apiFetch("/league-matches", {
-      league_id: leagueId,
-      page: index + 2,
+  do {
+    const payload = await apiFetch("/league-matches", {
+      league_id: league.seasonId,
+      season_id: league.seasonId,
+      page,
       max_per_page: 500
-    }))
-  );
-  return matches.concat(...remainingPages.map(getDataArray));
+    });
+
+    const pageMatches = getDataArray(payload);
+    matches.push(...pageMatches);
+    maxPage = getPagerMaxPage(payload) || maxPage;
+    page += 1;
+  } while (page <= maxPage && page <= 20);
+
+  return matches.filter((match) => formatApiDate(new Date(getMatchTimestamp(match))) === dateKey);
+}
+
+function getPagerMaxPage(payload) {
+  return Number(payload?.pager?.max_page || payload?.data?.pager?.max_page || payload?.pagination?.max_page || 1);
+}
+
+function uniqueMatches(matches) {
+  const seen = new Set();
+  return matches.filter((match) => {
+    const id = String(match.id || match.match_id || `${match.homeID}-${match.awayID}-${match.date_unix}`);
+    if (seen.has(id)) return false;
+    seen.add(id);
+    return true;
+  });
 }
 
 
@@ -230,7 +224,8 @@ async function loadMatchTeams() {
   const teamRequests = state.leagues.map(async (league) => {
     try {
       const payload = await apiFetch("/league-teams", {
-        league_id: league.seasonId
+        league_id: league.seasonId,
+        season_id: league.seasonId
       });
       return getDataArray(payload).map((team) => normalizeTeamIdentity(team, league));
     } catch (error) {
@@ -256,10 +251,12 @@ async function loadLeagueStats(leagueKey, { silent = false } = {}) {
     const [teamsPayload, playersPayload] = await Promise.all([
       apiFetch("/league-teams", {
         league_id: league.seasonId,
+        season_id: league.seasonId,
         include: "stats"
       }),
       apiFetch("/league-players", {
         league_id: league.seasonId,
+        season_id: league.seasonId,
         page: 1
       })
     ]);
@@ -293,16 +290,11 @@ async function apiFetch(endpoint, params = {}) {
       signal: controller.signal
     });
 
-    const contentType = response.headers.get("content-type") || "";
-    const payload = contentType.includes("application/json")
-      ? await response.json()
-      : { error: await response.text() };
-
     if (!response.ok) {
-      const details = payload?.message || payload?.error || `HTTP ${response.status}`;
-      throw new Error(`FootyStats: ${details}`);
+      throw new Error(`FootyStats respondeu com HTTP ${response.status}.`);
     }
 
+    const payload = await response.json();
     if (payload?.success === false || payload?.error) {
       throw new Error(payload.message || payload.error || "A API recusou a solicitação.");
     }
@@ -383,42 +375,6 @@ function resolveTargetLeagues(rawLeagues) {
       apiName: latest.name
     };
   }).filter(Boolean);
-}
-
-function resolveMatchLeagues(rawMatches, availableLeagues = []) {
-  const leaguesBySeason = new Map();
-
-  rawMatches.forEach((match) => {
-    const seasonId = Number(
-      match.competition_id ||
-      match.season_id ||
-      match.league_id ||
-      match.competition?.id ||
-      match.league?.id ||
-      0
-    );
-    if (!seasonId || leaguesBySeason.has(seasonId)) return;
-
-    const available = availableLeagues.find((league) =>
-      Number(league.seasonId) === seasonId || Number(league.id) === seasonId
-    );
-    const name = extractLeagueName(match, available);
-
-    leaguesBySeason.set(seasonId, {
-      ...(available || {}),
-      id: available?.id || seasonId,
-      seasonId,
-      key: available?.key || slugify(`${name}-${seasonId}`),
-      name,
-      apiName: available?.apiName || name,
-      short: available?.short || initials(name).slice(0, 3).toUpperCase(),
-      country: available?.country || match.country_name || match.country || "",
-      color: available?.color || colorFromString(name),
-      season: available?.season?.year || available?.year || match.season || ""
-    });
-  });
-
-  return Array.from(leaguesBySeason.values());
 }
 
 function normalizeMatch(raw) {
@@ -539,7 +495,7 @@ function normalizeTeamIdentity(raw, league) {
     name,
     fullName: raw.full_name || raw.english_name || name,
     shortHand: raw.shortHand || raw.short_name || initials(name),
-    image: getTeamImage(raw),
+    image: sanitizeImageUrl(raw.image || raw.logo || raw.team_logo || raw.team_badge || raw.badge || raw.crest || raw.image_url || raw.logo_url),
     leagueKey: league.key,
     color: colorFromString(name)
   };
@@ -556,7 +512,6 @@ function normalizeTeam(raw, league) {
     ...raw,
     id: Number(raw.id || raw.team_id),
     name: raw.name || raw.full_name || raw.english_name || "Time",
-    image: getTeamImage(raw),
     leagueKey: league.key,
     color: colorFromString(raw.name || String(raw.id)),
     played,
@@ -632,14 +587,12 @@ function populateLeagueFilters() {
   const allOption = `<option value="all">Todos os campeonatos</option>`;
   const options = state.leagues.map((league) => `<option value="${league.key}">${escapeHtml(league.name)}</option>`).join("");
   if (els.matchLeagueFilter) els.matchLeagueFilter.innerHTML = allOption + options;
-  if (els.oddsLeagueFilter) els.oddsLeagueFilter.innerHTML = allOption + options;
-  if (els.statsLeagueFilter) {
-    els.statsLeagueFilter.innerHTML = state.leagues.map((league) => `
-      <option value="${league.key}" ${league.key === state.statsLeagueKey ? "selected" : ""}>${escapeHtml(league.name)}</option>
-    `).join("");
-  }
+  els.oddsLeagueFilter.innerHTML = allOption + options;
+  els.statsLeagueFilter.innerHTML = state.leagues.map((league) => `
+    <option value="${league.key}" ${league.key === state.statsLeagueKey ? "selected" : ""}>${escapeHtml(league.name)}</option>
+  `).join("");
   if (els.matchLeagueFilter) els.matchLeagueFilter.value = state.matchLeague;
-  if (els.oddsLeagueFilter) els.oddsLeagueFilter.value = state.oddsLeague;
+  els.oddsLeagueFilter.value = state.oddsLeague;
 }
 
 function renderDashboard() {
@@ -827,7 +780,7 @@ function renderStats() {
   els.teamRanking.innerHTML = sortedTeams.slice(0, 8).map((team, index) => `
     <div class="ranking-row">
       <span class="ranking-position ${index < 3 ? "top" : ""}">${String(index + 1).padStart(2, "0")}</span>
-      <div class="ranking-team">${teamCrest(team.name, team.color, team.image)}<strong>${escapeHtml(team.name)}</strong></div>
+      <div class="ranking-team">${teamCrest(team.name, team.color)}<strong>${escapeHtml(team.name)}</strong></div>
       ${rankingData("Aprov.", `${Math.round(team.winRate)}%`)}
       ${rankingData("Gols", round(team.goalsPerMatch, 2))}
       ${rankingData("Posse", `${round(team.possession, 0)}%`)}
@@ -924,9 +877,9 @@ function valueBetCard(bet) {
         <span class="value-pill ${bet.value >= 7 ? "high" : "medium"}">${bet.value >= 7 ? "Alto valor" : "Valor moderado"}</span>
       </div>
       <div class="value-card__match">
-        <div class="value-card__team">${teamCrest(bet.match.homeName, bet.match.leagueColor, bet.match.homeLogo)}<span>${escapeHtml(bet.match.homeName)}</span></div>
+        <div class="value-card__team">${teamCrest(bet.match.homeName, bet.match.leagueColor)}<span>${escapeHtml(bet.match.homeName)}</span></div>
         <span class="value-card__vs">VS</span>
-        <div class="value-card__team">${teamCrest(bet.match.awayName, secondaryColor(bet.match.leagueColor), bet.match.awayLogo)}<span>${escapeHtml(bet.match.awayName)}</span></div>
+        <div class="value-card__team">${teamCrest(bet.match.awayName, secondaryColor(bet.match.leagueColor))}<span>${escapeHtml(bet.match.awayName)}</span></div>
       </div>
       <div class="value-card__market">
         ${valueCell("Mercado", bet.market)}
@@ -1236,8 +1189,8 @@ async function renderH2H({ fetchReal = false } = {}) {
 async function fetchH2HHistory(home, away) {
   const league = getLeague(state.statsLeagueKey);
   const schedulePayload = await apiFetch("/league-matches", {
-    league_id: league.seasonId,
-    max_per_page: 500
+    season_id: league.seasonId,
+    max_per_page: 1000
   });
   const schedule = getDataArray(schedulePayload).map((match) => normalizeMatch(match));
   const meeting = schedule.find((match) =>
@@ -1286,7 +1239,7 @@ function collectMatchObjects(value, depth = 0, found = []) {
 function h2hTeamScore(team, wins) {
   return `
     <div class="h2h-team-score">
-      <div>${teamCrest(team.name, team.color, team.image)}<strong>${escapeHtml(team.name)}</strong></div>
+      <div>${teamCrest(team.name, team.color)}<strong>${escapeHtml(team.name)}</strong></div>
       <div class="h2h-wins"><b>${wins}</b><small>vitórias</small></div>
     </div>
   `;
@@ -1549,41 +1502,23 @@ async function openMatchModal(matchId) {
   els.matchModal.setAttribute("aria-hidden", "false");
   document.body.style.overflow = "hidden";
   els.modalTitle.textContent = `${baseMatch.homeName} x ${baseMatch.awayName}`;
-  els.matchModalBody.innerHTML = `<div class="numbers-loading"><i class="fa-solid fa-spinner fa-spin"></i><strong>Buscando estatísticas oficiais...</strong><span>Consultando os dados reais desta partida na FootyStats.</span></div>`;
+  els.matchModalBody.innerHTML = `<div class="numbers-loading"><i class="fa-solid fa-spinner fa-spin"></i><strong>Buscando estatísticas oficiais...</strong><span>ScoutBet está consultando /match e jogadores da liga quando disponíveis.</span></div>`;
 
   try {
+    await ensurePlayersForMatch(baseMatch);
     const detailedMatch = await fetchOfficialMatchDetails(baseMatch);
-    const supportingData = await Promise.allSettled([
-      ensureTeamsForMatch(detailedMatch),
-      ensurePlayersForMatch(detailedMatch),
-      fetchRecentForm(detailedMatch)
-    ]);
-    if (supportingData[2].status === "fulfilled") {
-      detailedMatch.recentForm = supportingData[2].value;
-    }
-
-    if (!els.matchModal.classList.contains("open")) return;
+    await ensureLastXForMatch(detailedMatch);
     els.modalTitle.textContent = `${detailedMatch.homeName} x ${detailedMatch.awayName}`;
     els.matchModalBody.innerHTML = matchModalTemplate(detailedMatch);
   } catch (error) {
-    console.error("Não foi possível carregar os dados oficiais da partida:", error);
-    if (!els.matchModal.classList.contains("open")) return;
-    els.matchModalBody.innerHTML = `
-      <div class="error-state">
-        <i class="fa-solid fa-cloud-arrow-down"></i>
-        <h3>Dados oficiais indisponíveis</h3>
-        <p>${escapeHtml(error.message || "A FootyStats não retornou os detalhes desta partida.")}</p>
-      </div>
-    `;
+    console.warn("Detalhe oficial indisponível, usando dados da lista:", error);
+    els.matchModalBody.innerHTML = matchModalTemplate(baseMatch);
   }
 }
 
 async function fetchOfficialMatchDetails(match) {
   const payload = await apiFetch("/match", { match_id: match.id });
-  const raw = pickSingleRecord(payload);
-  if (!raw || typeof raw !== "object" || (!raw.id && !raw.match_id)) {
-    throw new Error("A FootyStats não retornou os dados detalhados desta partida.");
-  }
+  const raw = pickSingleRecord(payload) || payload;
   const normalized = normalizeMatch({ ...match, ...raw });
   const index = state.matches.findIndex((item) => String(item.id) === String(match.id));
   if (index >= 0) state.matches[index] = { ...state.matches[index], ...normalized };
@@ -1605,7 +1540,7 @@ async function ensurePlayersForMatch(match) {
   const league = state.leagues.find((item) => item.key === match.leagueKey);
   if (!league || state.loadedPlayerLeagueKeys.includes(league.key)) return;
   try {
-    const payload = await apiFetch("/league-players", { league_id: league.seasonId, page: 1 });
+    const payload = await apiFetch("/league-players", { league_id: league.seasonId, season_id: league.seasonId, page: 1 });
     const teams = state.teams.length ? state.teams : state.matchTeams;
     const players = getDataArray(payload).map((player) => normalizePlayer(player, teams));
     const existing = new Set(state.players.map((player) => String(player.id)));
@@ -1617,45 +1552,28 @@ async function ensurePlayersForMatch(match) {
   }
 }
 
-async function ensureTeamsForMatch(match) {
-  const league = state.leagues.find((item) => item.key === match.leagueKey);
-  const seasonId = Number(league?.seasonId || match.competitionId || 0);
-  if (!seasonId) return;
 
-  try {
-    const payload = await apiFetch("/league-teams", {
-      league_id: seasonId,
-      include: "stats"
-    });
-    const leagueRecord = league || {
-      key: match.leagueKey,
-      seasonId,
-      name: match.league,
-      color: match.leagueColor
-    };
-    const teams = getDataArray(payload).map((team) => normalizeTeam(team, leagueRecord));
-    const existing = new Map(state.teams.map((team) => [String(team.id), team]));
-    teams.forEach((team) => {
-      const current = existing.get(String(team.id));
-      existing.set(String(team.id), current ? { ...current, ...team } : team);
-    });
-    state.teams = Array.from(existing.values());
-  } catch (error) {
-    console.warn(`Estatísticas de times indisponíveis para ${match.league}:`, error);
-  }
-}
+async function ensureLastXForMatch(match) {
+  if (!match || match.__lastxLoaded) return;
+  const requests = [
+    ["home", match.homeId],
+    ["away", match.awayId]
+  ].map(async ([side, teamId]) => {
+    if (!teamId) return [side, []];
+    try {
+      const payload = await apiFetch("/lastx", { team_id: teamId, last_x: 5 });
+      return [side, getDataArray(payload).map((item) => normalizeMatch(item))];
+    } catch (error) {
+      console.warn(`Últimos jogos indisponíveis para ${side}:`, error);
+      return [side, []];
+    }
+  });
 
-async function fetchRecentForm(match) {
-  const results = await Promise.allSettled([
-    match.homeId ? apiFetch("/lastx", { team_id: match.homeId, last_x: 5 }) : Promise.resolve(null),
-    match.awayId ? apiFetch("/lastx", { team_id: match.awayId, last_x: 5 }) : Promise.resolve(null)
-  ]);
-  const homePayload = results[0].status === "fulfilled" ? results[0].value : null;
-  const awayPayload = results[1].status === "fulfilled" ? results[1].value : null;
-  return {
-    home: getDataArray(homePayload).map((item) => normalizeMatch(item)).slice(0, 5),
-    away: getDataArray(awayPayload).map((item) => normalizeMatch(item)).slice(0, 5)
-  };
+  const entries = await Promise.all(requests);
+  const bySide = Object.fromEntries(entries);
+  match.__lastxHome = bySide.home || [];
+  match.__lastxAway = bySide.away || [];
+  match.__lastxLoaded = true;
 }
 
 /* Modal Ver números - versão com abas por estatística */
@@ -1740,142 +1658,6 @@ function numbersTabPanel(id, title, icon, content, active = false) {
   `;
 }
 
-function modalMarket(label, value) {
-  const displayValue = value === null || value === undefined || value === "" ? "—" : String(value);
-  return `
-    <div class="numbers-team-stat">
-      <small>Dado oficial</small>
-      <strong>${escapeHtml(displayValue)}</strong>
-      <span>${escapeHtml(label)}</span>
-    </div>
-  `;
-}
-
-function formatProbability(value) {
-  return Number.isFinite(value) ? `${round(value * 100, 1)}%` : "—";
-}
-
-function renderGoalsNumbersTab(match) {
-  const stats = match.stats || {};
-  const values = [
-    match.homeGoals, match.awayGoals, stats.xgHome, stats.xgAway,
-    stats.xgPrematchHome, stats.xgPrematchAway, match.probabilities?.over25, match.probabilities?.btts
-  ];
-  return `
-    <div class="numbers-grid numbers-grid--summary">
-      ${teamStatCard(match.homeName, "Gols", match.homeGoals)}
-      ${teamStatCard(match.awayName, "Gols", match.awayGoals)}
-      ${teamStatCard(match.homeName, "xG", stats.xgHome)}
-      ${teamStatCard(match.awayName, "xG", stats.xgAway)}
-      ${teamStatCard(match.homeName, "xG pré-jogo", stats.xgPrematchHome)}
-      ${teamStatCard(match.awayName, "xG pré-jogo", stats.xgPrematchAway)}
-      ${teamStatCard("Jogo", "Over 2.5", probabilityPercent(match.probabilities?.over25), "%")}
-      ${teamStatCard("Jogo", "BTTS", probabilityPercent(match.probabilities?.btts), "%")}
-    </div>
-    ${officialDataNote(...values, "A FootyStats não retornou dados de gols ou xG para esta partida.")}
-  `;
-}
-
-function renderCornersNumbersTab(match) {
-  const stats = match.stats || {};
-  const values = [stats.cornersHome, stats.cornersAway, stats.cornersTotal, match.probabilities?.corners, match.probabilities?.cornersOver85, match.probabilities?.cornersOver95];
-  return `
-    <div class="numbers-grid numbers-grid--summary">
-      ${teamStatCard(match.homeName, "Escanteios", stats.cornersHome)}
-      ${teamStatCard(match.awayName, "Escanteios", stats.cornersAway)}
-      ${teamStatCard("Jogo", "Total", stats.cornersTotal)}
-      ${teamStatCard("Jogo", "Potencial", probabilityPercent(match.probabilities?.corners), "%")}
-      ${teamStatCard("Jogo", "Over 8.5", probabilityPercent(match.probabilities?.cornersOver85), "%")}
-      ${teamStatCard("Jogo", "Over 9.5", probabilityPercent(match.probabilities?.cornersOver95), "%")}
-    </div>
-    ${officialDataNote(...values, "A FootyStats não retornou dados de escanteios para esta partida.")}
-  `;
-}
-
-function renderCardsNumbersTab(match) {
-  const stats = match.stats || {};
-  const values = [stats.yellowHome, stats.yellowAway, stats.redHome, stats.redAway, stats.cardsHome, stats.cardsAway, match.probabilities?.cards];
-  return `
-    <div class="numbers-grid numbers-grid--summary">
-      ${teamStatCard(match.homeName, "Amarelos", stats.yellowHome)}
-      ${teamStatCard(match.awayName, "Amarelos", stats.yellowAway)}
-      ${teamStatCard(match.homeName, "Vermelhos", stats.redHome)}
-      ${teamStatCard(match.awayName, "Vermelhos", stats.redAway)}
-      ${teamStatCard(match.homeName, "Total cartões", stats.cardsHome)}
-      ${teamStatCard(match.awayName, "Total cartões", stats.cardsAway)}
-      ${teamStatCard("Jogo", "Potencial", probabilityPercent(match.probabilities?.cards), "%")}
-    </div>
-    ${officialDataNote(...values, "A FootyStats não retornou dados de cartões para esta partida.")}
-  `;
-}
-
-function renderShotsNumbersTab(match) {
-  const stats = match.stats || {};
-  const values = [stats.shotsHome, stats.shotsAway, stats.shotsOnTargetHome, stats.shotsOnTargetAway, stats.shotsOffTargetHome, stats.shotsOffTargetAway, stats.possessionHome, stats.possessionAway];
-  return `
-    <div class="numbers-grid numbers-grid--summary">
-      ${teamStatCard(match.homeName, "Finalizações", stats.shotsHome)}
-      ${teamStatCard(match.awayName, "Finalizações", stats.shotsAway)}
-      ${teamStatCard(match.homeName, "No alvo", stats.shotsOnTargetHome)}
-      ${teamStatCard(match.awayName, "No alvo", stats.shotsOnTargetAway)}
-      ${teamStatCard(match.homeName, "Fora do alvo", stats.shotsOffTargetHome)}
-      ${teamStatCard(match.awayName, "Fora do alvo", stats.shotsOffTargetAway)}
-      ${teamStatCard(match.homeName, "Posse", stats.possessionHome, "%")}
-      ${teamStatCard(match.awayName, "Posse", stats.possessionAway, "%")}
-    </div>
-    ${officialDataNote(...values, "A FootyStats não retornou finalizações ou posse para esta partida.")}
-  `;
-}
-
-function matchPlayers(match, side) {
-  const teamId = Number(side === "home" ? match.homeId : match.awayId);
-  return state.players
-    .filter((player) => Number(player.teamId) === teamId)
-    .sort((a, b) => (b.goals || 0) - (a.goals || 0) || (b.assists || 0) - (a.assists || 0))
-    .slice(0, 8);
-}
-
-function renderPlayersNumbersTab(match) {
-  const homePlayers = matchPlayers(match, "home");
-  const awayPlayers = matchPlayers(match, "away");
-  return `
-    <div class="numbers-players">
-      ${playerNumbersList(match.homeName, homePlayers)}
-      ${playerNumbersList(match.awayName, awayPlayers)}
-    </div>
-    ${homePlayers.length || awayPlayers.length ? "" : '<p class="numbers-empty-note">A FootyStats não retornou jogadores para esta competição.</p>'}
-  `;
-}
-
-function playerNumbersList(teamName, players) {
-  return `
-    <div class="numbers-player-list">
-      <h4>${escapeHtml(teamName)}</h4>
-      ${players.map((player) => `
-        <div class="numbers-player-row">
-          <span>${escapeHtml(initials(player.name))}</span>
-          <div><strong>${escapeHtml(player.name)}</strong><small>${player.appearances ?? "—"} jogos</small></div>
-          <em>${player.goals ?? 0} G · ${player.assists ?? 0} A</em>
-        </div>
-      `).join("")}
-    </div>
-  `;
-}
-
-function probabilityPercent(value) {
-  return Number.isFinite(value) ? round(value * 100, 1) : null;
-}
-
-function switchNumbersSubtab(subtabId, root) {
-  if (!subtabId || !root) return;
-  root.querySelectorAll("[data-numbers-subtab]").forEach((button) => {
-    button.classList.toggle("is-active", button.dataset.numbersSubtab === subtabId);
-  });
-  root.querySelectorAll("[data-numbers-subpanel]").forEach((panel) => {
-    panel.classList.toggle("is-active", panel.dataset.numbersSubpanel === subtabId);
-  });
-}
-
 function switchNumbersTab(tabId) {
   if (!tabId) return;
   els.matchModal.querySelectorAll("[data-numbers-tab]").forEach((button) => {
@@ -1886,6 +1668,349 @@ function switchNumbersTab(tabId) {
   els.matchModal.querySelectorAll("[data-numbers-panel]").forEach((panel) => {
     panel.classList.toggle("is-active", panel.dataset.numbersPanel === tabId);
   });
+}
+
+
+function renderGoalsNumbersTab(match) {
+  const groups = [
+    ["gols-partida", "Gols da partida", [
+      goalLine("Mais de 0.5", match.probabilities.over05),
+      goalLine("Mais de 1.5", match.probabilities.over15),
+      goalLine("Mais de 2.5", match.probabilities.over25),
+      goalLine("Mais de 3.5", match.probabilities.over35),
+      goalLine("Mais de 4.5", match.probabilities.over45),
+      goalLine("BTTS", match.probabilities.btts),
+      goalLine("Ambas marcam e ganham", null),
+      goalLine("Ambas marcam e empate", null),
+      goalLine("Ambas marcam e mais de 2.5", null),
+      goalLine("Ambas marcam Não e Mais de 2.5", null)
+    ]],
+    ["gols-1t", "Gols do primeiro tempo", [
+      goalLine("Ambas marcam no primeiro tempo", match.probabilities.bttsFh),
+      goalLine("Mais de 0.5 FH", firstProbability(match.odds?.firstHalfOver05, match.odds_1st_half_over05, match.over05_fh_potential)),
+      goalLine("Mais de 1.5 FH", firstProbability(match.odds?.firstHalfOver15, match.odds_1st_half_over15, match.over15_fh_potential)),
+      goalLine("Mais de 2.5 FH", firstProbability(match.over25_fh_potential))
+    ]],
+    ["gols-2t", "Gols do segundo tempo", [
+      goalLine("Ambas marcam no segundo tempo", match.probabilities.btts2h),
+      goalLine("Ambas marcam nos dois tempos", null),
+      goalLine("Mais de 0.5 2H", firstProbability(match.odds?.secondHalfOver05, match.odds_2nd_half_over05, match.over05_2h_potential)),
+      goalLine("Mais de 1.5 2H", firstProbability(match.odds?.secondHalfOver15, match.odds_2nd_half_over15, match.over15_2h_potential)),
+      goalLine("Mais de 2.5 2H", firstProbability(match.over25_2h_potential))
+    ]],
+    ["menos-gols", "Menos de X gols", [
+      goalLine("Menos de 0.5", inverseProbability(match.probabilities.over05)),
+      goalLine("Menos de 1.5", inverseProbability(match.probabilities.over15)),
+      goalLine("Menos de 2.5", firstProbability(match.under25, match.probabilities.under25) || inverseProbability(match.probabilities.over25)),
+      goalLine("Menos de 3.5", inverseProbability(match.probabilities.over35)),
+      goalLine("Menos de 4.5", inverseProbability(match.probabilities.over45))
+    ]],
+    ["tempos", "Primeiro/Segundo Tempo", [
+      goalLine("Menos de 0.5 FH", null),
+      goalLine("Menos de 1.5 FH", null),
+      goalLine("Menos de 2.5 FH", null),
+      goalLine("Menos de 0.5 2H", null),
+      goalLine("Menos de 1.5 2H", null),
+      goalLine("Menos de 2.5 2H", null)
+    ]]
+  ];
+  return renderNumbersSubtabs("gols", groups);
+}
+
+function renderCornersNumbersTab(match) {
+  const totalCorners = firstNumber(match.stats.cornersTotal, addNullable(match.stats.cornersHome, match.stats.cornersAway));
+  const groups = [
+    ["escanteios-partida", "Escanteios da partida", [
+      statLine("Total de escanteios", match.stats.cornersHome, match.stats.cornersAway, totalCorners),
+      statLine("Escanteios / jogo", null, null, match.probabilities.corners),
+      statLine("Escanteios do mandante", match.stats.cornersHome, null, null),
+      statLine("Escanteios do visitante", null, match.stats.cornersAway, null)
+    ]],
+    ["total-escanteios", "Total de escanteios", [
+      goalLine("Mais de 6", estimateFromPotential(match.probabilities.corners, 8)),
+      goalLine("Mais de 7", estimateFromPotential(match.probabilities.corners, 5)),
+      goalLine("Mais de 8", match.probabilities.cornersOver85),
+      goalLine("Mais de 9", match.probabilities.cornersOver95),
+      goalLine("Mais de 10", match.probabilities.cornersOver105),
+      goalLine("Mais de 11", estimateFromPotential(match.probabilities.cornersOver105, -8)),
+      goalLine("Mais de 12", estimateFromPotential(match.probabilities.cornersOver105, -14)),
+      goalLine("Mais de 13", estimateFromPotential(match.probabilities.cornersOver105, -20))
+    ]],
+    ["escanteios-time", "Escanteios do time", [
+      statLine("Escanteios a favor / jogo", match.stats.cornersHome, match.stats.cornersAway, totalCorners),
+      statLine("Escanteios contra / jogo", null, null, null),
+      goalLine("Mais de 2.5 escanteios a favor", null),
+      goalLine("Mais de 3.5 escanteios a favor", null),
+      goalLine("Mais de 4.5 escanteios a favor", null),
+      goalLine("Mais de 2.5 escanteios contra", null),
+      goalLine("Mais de 3.5 escanteios contra", null),
+      goalLine("Mais de 4.5 escanteios contra", null)
+    ]],
+    ["escanteios-1t", "Primeiro tempo", [
+      statLine("Média FH", null, null, null),
+      goalLine("Mais de 4 FH", null),
+      goalLine("Mais de 5 FH", null),
+      goalLine("Mais de 6 FH", null)
+    ]],
+    ["escanteios-2t", "Segundo tempo", [
+      statLine("Média 2H", null, null, null),
+      goalLine("Mais de 4 2H", null),
+      goalLine("Mais de 5 2H", null),
+      goalLine("Mais de 6 2H", null)
+    ]]
+  ];
+  return renderNumbersSubtabs("escanteios", groups);
+}
+
+function renderCardsNumbersTab(match) {
+  const totalCards = firstNumber(addNullable(match.stats.cardsHome, match.stats.cardsAway), addNullable(addNullable(match.stats.yellowHome, match.stats.yellowAway), addNullable(match.stats.redHome, match.stats.redAway)));
+  const groups = [
+    ["cartoes-partida", "Cartões da partida", [
+      statLine("Total de cartões / jogo", match.stats.cardsHome, match.stats.cardsAway, totalCards),
+      statLine("Cartões do mandante / jogo", match.stats.cardsHome, null, null),
+      statLine("Cartões do visitante / jogo", null, match.stats.cardsAway, null)
+    ]],
+    ["total-cartoes", "Total de cartões", [
+      goalLine("Mais de 2.5", estimateFromPotential(match.probabilities.cards, 10)),
+      goalLine("Mais de 3.5", match.probabilities.cardsOver35),
+      goalLine("Mais de 4.5", match.probabilities.cardsOver45),
+      goalLine("Mais de 5.5", match.probabilities.cardsOver55),
+      goalLine("Mais de 6.5", estimateFromPotential(match.probabilities.cardsOver55, -10))
+    ]],
+    ["cartoes-time", "Cartões do time", [
+      statLine("Cartões a favor média", match.stats.cardsHome, match.stats.cardsAway, totalCards),
+      goalLine("Mais de 0.5 a favor", null),
+      goalLine("Mais de 1.5 a favor", null),
+      goalLine("Mais de 2.5 a favor", null),
+      goalLine("Mais de 3.5 a favor", null)
+    ]],
+    ["cartoes-contra", "Cartões contra", [
+      goalLine("Mais de 0.5 contra", null),
+      goalLine("Mais de 1.5 contra", null),
+      goalLine("Mais de 2.5 contra", null),
+      goalLine("Mais de 3.5 contra", null)
+    ]],
+    ["cartoes-tempos", "1º / 2º tempo cartões", [
+      goalLine("1H Mais de 0.5 cartões a favor", null),
+      goalLine("2H Mais de 0.5 cartões a favor", null),
+      goalLine("1H Total abaixo de 2", null),
+      goalLine("2H Total abaixo de 2", null),
+      goalLine("1H entre 2–3 cartões totais", null),
+      goalLine("2H entre 2–3 cartões totais", null),
+      goalLine("1H Total acima de 3", null),
+      goalLine("2H Total acima de 3", null)
+    ]]
+  ];
+  return renderNumbersSubtabs("cartoes", groups);
+}
+
+function renderShotsNumbersTab(match) {
+  const totalShots = firstNumber(addNullable(match.stats.shotsHome, match.stats.shotsAway));
+  const totalOnTarget = firstNumber(addNullable(match.stats.shotsOnTargetHome, match.stats.shotsOnTargetAway));
+  const groups = [
+    ["finalizacoes-time", "Finalizações do time", [
+      statLine("Finalizações / jogo", match.stats.shotsHome, match.stats.shotsAway, totalShots),
+      statLine("Taxa de conversão de finalizações", shotConversion(match, "home"), shotConversion(match, "away"), null, "%"),
+      statLine("Finalizações no alvo / jogo", match.stats.shotsOnTargetHome, match.stats.shotsOnTargetAway, totalOnTarget),
+      statLine("Finalizações fora do alvo / jogo", match.stats.shotsOffTargetHome, match.stats.shotsOffTargetAway, firstNumber(addNullable(match.stats.shotsOffTargetHome, match.stats.shotsOffTargetAway))),
+      statLine("Finalizações por gol marcado", shotsPerGoal(match, "home"), shotsPerGoal(match, "away"), null),
+      goalLine("Time com mais de 10.5 finalizações", probabilityFromStat(match.stats.shotsHome, match.stats.shotsAway, 10.5)),
+      goalLine("Time com mais de 11.5 finalizações", probabilityFromStat(match.stats.shotsHome, match.stats.shotsAway, 11.5)),
+      goalLine("Time com mais de 12.5 finalizações", probabilityFromStat(match.stats.shotsHome, match.stats.shotsAway, 12.5)),
+      goalLine("Time com mais de 13.5 finalizações", probabilityFromStat(match.stats.shotsHome, match.stats.shotsAway, 13.5)),
+      goalLine("Time com mais de 14.5 finalizações", probabilityFromStat(match.stats.shotsHome, match.stats.shotsAway, 14.5)),
+      goalLine("Time com mais de 15.5 finalizações", probabilityFromStat(match.stats.shotsHome, match.stats.shotsAway, 15.5)),
+      goalLine("Time com mais de 3.5 finalizações no alvo", probabilityFromStat(match.stats.shotsOnTargetHome, match.stats.shotsOnTargetAway, 3.5)),
+      goalLine("Time com mais de 4.5 finalizações no alvo", probabilityFromStat(match.stats.shotsOnTargetHome, match.stats.shotsOnTargetAway, 4.5)),
+      goalLine("Time com mais de 5.5 finalizações no alvo", probabilityFromStat(match.stats.shotsOnTargetHome, match.stats.shotsOnTargetAway, 5.5)),
+      goalLine("Time com mais de 6.5 finalizações no alvo", probabilityFromStat(match.stats.shotsOnTargetHome, match.stats.shotsOnTargetAway, 6.5))
+    ]],
+    ["finalizacoes-partida", "Finalizações da partida", [
+      goalLine("Jogo com mais de 23.5 finalizações", probabilityFromTotal(totalShots, 23.5)),
+      goalLine("Jogo com mais de 24.5 finalizações", probabilityFromTotal(totalShots, 24.5)),
+      goalLine("Jogo com mais de 25.5 finalizações", probabilityFromTotal(totalShots, 25.5)),
+      goalLine("Jogo com mais de 26.5 finalizações", probabilityFromTotal(totalShots, 26.5)),
+      goalLine("Jogo com mais de 7.5 finalizações no alvo", probabilityFromTotal(totalOnTarget, 7.5)),
+      goalLine("Jogo com mais de 8.5 finalizações no alvo", probabilityFromTotal(totalOnTarget, 8.5)),
+      goalLine("Jogo com mais de 9.5 finalizações no alvo", probabilityFromTotal(totalOnTarget, 9.5))
+    ]],
+    ["impedimentos", "Impedimentos", [
+      statLine("Impedimentos / jogo", match.stats.offsidesHome, match.stats.offsidesAway, firstNumber(addNullable(match.stats.offsidesHome, match.stats.offsidesAway))),
+      goalLine("Mais de 2.5 impedimentos", probabilityFromTotal(addNullable(match.stats.offsidesHome, match.stats.offsidesAway), 2.5)),
+      goalLine("Mais de 3.5 impedimentos", probabilityFromTotal(addNullable(match.stats.offsidesHome, match.stats.offsidesAway), 3.5))
+    ]],
+    ["outras", "Outras estatísticas", [
+      statLine("Faltas cometidas / jogo", match.stats.foulsHome, match.stats.foulsAway, firstNumber(addNullable(match.stats.foulsHome, match.stats.foulsAway))),
+      statLine("Faltas sofridas / jogo", null, null, null),
+      statLine("Posse média", match.stats.possessionHome, match.stats.possessionAway, null, "%"),
+      goalLine("Empate no intervalo", null)
+    ]]
+  ];
+  return renderNumbersSubtabs("finalizacoes", groups);
+}
+
+function renderPlayersNumbersTab(match) {
+  const homePlayers = matchPlayers(match, "home");
+  const awayPlayers = matchPlayers(match, "away");
+  return `
+    <div class="numbers-subtabs-wrap">
+      <div class="numbers-data-card">
+        <h4>Jogadores para marcar</h4>
+        <div class="numbers-players">${playersColumn(match.homeName, homePlayers, "goals")}${playersColumn(match.awayName, awayPlayers, "goals")}</div>
+      </div>
+      <div class="numbers-data-card">
+        <h4>Jogadores para receber cartão</h4>
+        <div class="numbers-players">${playersColumn(match.homeName, homePlayers, "cards")}${playersColumn(match.awayName, awayPlayers, "cards")}</div>
+      </div>
+      <div class="numbers-data-card">
+        <h4>Cartões por 90 minutos</h4>
+        <div class="numbers-players">${playersColumn(match.homeName, homePlayers, "cards90")}${playersColumn(match.awayName, awayPlayers, "cards90")}</div>
+      </div>
+    </div>
+  `;
+}
+
+function renderNumbersSubtabs(rootId, groups) {
+  const first = groups[0]?.[0];
+  return `
+    <div class="numbers-subtabs-wrap" data-numbers-subtabs-root="${escapeHtml(rootId)}">
+      <div class="numbers-subtabs" role="tablist">
+        ${groups.map(([id, title], index) => `<button type="button" class="numbers-subtab ${index === 0 ? "is-active" : ""}" data-numbers-subtab="${escapeHtml(id)}">${escapeHtml(title)}</button>`).join("")}
+      </div>
+      ${groups.map(([id, title, rows], index) => `
+        <div class="numbers-subpanel ${index === 0 ? "is-active" : ""}" data-numbers-subpanel="${escapeHtml(id)}">
+          <div class="numbers-data-card">
+            <h4>${escapeHtml(title)}</h4>
+            <div class="numbers-lines-list">${rows.join("")}</div>
+          </div>
+        </div>
+      `).join("")}
+      ${officialDataLegend()}
+    </div>
+  `;
+}
+
+function switchNumbersSubtab(subtabId, root) {
+  if (!subtabId || !root) return;
+  root.querySelectorAll("[data-numbers-subtab]").forEach((button) => button.classList.toggle("is-active", button.dataset.numbersSubtab === subtabId));
+  root.querySelectorAll("[data-numbers-subpanel]").forEach((panel) => panel.classList.toggle("is-active", panel.dataset.numbersSubpanel === subtabId));
+}
+
+function goalLine(label, probability) {
+  const pct = formatProbabilityNumber(probability);
+  const width = pct === null ? 0 : pct;
+  return `
+    <div class="numbers-line">
+      <div class="numbers-line__meta"><span>${escapeHtml(label)}</span><strong>${pct === null ? "—" : `${pct}%`}</strong></div>
+      <div class="numbers-line__track"><span style="width:${width}%"></span></div>
+    </div>
+  `;
+}
+
+function statLine(label, homeValue, awayValue, totalValue = null, suffix = "") {
+  return `
+    <div class="numbers-stat-row">
+      <strong>${formatStatValue(homeValue, suffix)}</strong>
+      <div><span>${escapeHtml(label)}</span><div class="numbers-stat-bar">${statBar(homeValue, awayValue)}</div>${totalValue !== null && totalValue !== undefined ? `<small>Total: ${formatStatValue(totalValue, suffix)}</small>` : ""}</div>
+      <strong>${formatStatValue(awayValue, suffix)}</strong>
+    </div>
+  `;
+}
+
+function statBar(homeValue, awayValue) {
+  const home = nullablePositiveNumber(homeValue) || 0;
+  const away = nullablePositiveNumber(awayValue) || 0;
+  const total = home + away;
+  const homeWidth = total ? (home / total) * 100 : 50;
+  const awayWidth = total ? (away / total) * 100 : 50;
+  return `<i style="width:${homeWidth}%"></i><b style="width:${awayWidth}%"></b>`;
+}
+
+function formatStatValue(value, suffix = "") {
+  const number = nullablePositiveNumber(value);
+  if (number === null) return "—";
+  return `${round(number, suffix === "%" ? 0 : 2)}${suffix}`;
+}
+
+function formatProbability(value) {
+  const pct = formatProbabilityNumber(value);
+  return pct === null ? "—" : `${pct}%`;
+}
+
+function formatProbabilityNumber(value) {
+  const prob = clampProbability(value);
+  if (!Number.isFinite(prob)) return null;
+  return Math.round(prob * 100);
+}
+
+function inverseProbability(value) {
+  const prob = clampProbability(value);
+  return Number.isFinite(prob) ? 1 - prob : null;
+}
+
+function estimateFromPotential(value, delta = 0) {
+  const pct = formatProbabilityNumber(value);
+  if (pct === null) return null;
+  return clamp((pct + delta) / 100, 0.01, 0.99);
+}
+
+function probabilityFromTotal(total, line) {
+  const number = nullablePositiveNumber(total);
+  if (number === null) return null;
+  return number > line ? 0.75 : number === line ? 0.5 : 0.35;
+}
+
+function probabilityFromStat(homeValue, awayValue, line) {
+  const home = nullablePositiveNumber(homeValue);
+  const away = nullablePositiveNumber(awayValue);
+  const best = Math.max(home || 0, away || 0);
+  if (!best) return null;
+  return probabilityFromTotal(best, line);
+}
+
+function shotConversion(match, side) {
+  const shots = side === "home" ? match.stats.shotsHome : match.stats.shotsAway;
+  const goals = side === "home" ? match.homeGoals : match.awayGoals;
+  if (!nullablePositiveNumber(shots) || !nullablePositiveNumber(goals)) return null;
+  return (goals / shots) * 100;
+}
+
+function shotsPerGoal(match, side) {
+  const shots = side === "home" ? match.stats.shotsHome : match.stats.shotsAway;
+  const goals = side === "home" ? match.homeGoals : match.awayGoals;
+  if (!nullablePositiveNumber(shots) || !nullablePositiveNumber(goals)) return null;
+  return shots / goals;
+}
+
+function playersColumn(teamName, players, metric) {
+  const sorted = [...players].sort((a, b) => playerMetric(b, metric) - playerMetric(a, metric)).slice(0, 5);
+  return `
+    <div class="numbers-player-list">
+      <h5>${escapeHtml(teamName)}</h5>
+      ${sorted.length ? sorted.map((player) => playerMetricRow(player, metric)).join("") : `<p class="numbers-empty-note">Dados de jogadores indisponíveis.</p>`}
+    </div>
+  `;
+}
+
+function playerMetricRow(player, metric) {
+  const value = playerMetric(player, metric);
+  return `
+    <div class="numbers-player-row">
+      <span>${escapeHtml(player.name)}</span>
+      <strong>${value ? round(value, metric === "cards90" ? 2 : 0) : "—"}</strong>
+    </div>
+  `;
+}
+
+function playerMetric(player, metric) {
+  if (metric === "goals") return nullablePositiveNumber(player.goals) || 0;
+  if (metric === "cards") return nullablePositiveNumber(player.cards) || 0;
+  if (metric === "cards90") return nullablePositiveNumber(player.cardsPer90) || 0;
+  return 0;
+}
+
+function officialDataLegend() {
+  return `<p class="numbers-empty-note">Dados preenchidos somente quando a FootyStats envia campos oficiais pelo endpoint /match, /league-matches, /league-players ou /lastx.</p>`;
 }
 
 function teamNumbersForMatch(match, side) {
@@ -2085,64 +2210,36 @@ function findMatchTeam(teamId, name = "") {
 function getTeamLogo(raw, side) {
   const prefix = side === "home" ? "home" : "away";
   const teamPrefix = side === "home" ? "team_a" : "team_b";
-  const nested = side === "home"
-    ? (raw.homeTeam || raw.home_team || raw.team_a)
-    : (raw.awayTeam || raw.away_team || raw.team_b);
+  const nested = side === "home" ? raw.homeTeam : raw.awayTeam;
   return sanitizeImageUrl(
     raw[`${prefix}_image`] ||
-    raw[`${prefix}Image`] ||
     raw[`${prefix}_logo`] ||
-    raw[`${prefix}Logo`] ||
     raw[`${prefix}_badge`] ||
     raw[`${prefix}_crest`] ||
     raw[`${prefix}_team_image`] ||
     raw[`${prefix}_team_logo`] ||
     raw[`${prefix}_team_badge`] ||
-    raw[`${prefix}_team_crest`] ||
     raw[`${teamPrefix}_image`] ||
     raw[`${teamPrefix}_logo`] ||
     raw[`${teamPrefix}_badge`] ||
     raw[`${teamPrefix}_crest`] ||
     raw[`${teamPrefix}_team_logo`] ||
     raw[`${teamPrefix}_team_image`] ||
-    getTeamImage(nested)
-  );
-}
-
-function getTeamImage(team) {
-  if (!team || typeof team !== "object") return null;
-  return sanitizeImageUrl(
-    team.image ||
-    team.image_url ||
-    team.imageURL ||
-    team.logo ||
-    team.logo_url ||
-    team.logoURL ||
-    team.logo_path ||
-    team.team_logo ||
-    team.team_image ||
-    team.team_badge ||
-    team.team_crest ||
-    team.club_logo ||
-    team.badge ||
-    team.crest
+    nested?.image ||
+    nested?.logo ||
+    nested?.badge ||
+    nested?.crest ||
+    nested?.image_url ||
+    nested?.team_logo ||
+    nested?.team_badge
   );
 }
 
 function sanitizeImageUrl(value) {
-  let url = String(value || "").trim();
-  const normalized = url.toLowerCase();
-  if (!url || url === "0" || normalized === "null" || normalized === "undefined") return null;
-  if (url.startsWith("//")) url = `https:${url}`;
-  if (url.startsWith("/")) url = `https://cdn.footystats.org${url}`;
-  if (/^(cdn\.)?footystats\.org\//i.test(url)) url = `https://${url}`;
+  const url = String(value || "").trim();
+  if (!url || url === "0" || url.toLowerCase() === "null" || url.toLowerCase() === "undefined") return null;
   if (!/^https?:\/\//i.test(url)) return null;
-
-  try {
-    return new URL(url).href;
-  } catch {
-    return null;
-  }
+  return url;
 }
 
 function getNationalTeamFlagUrl(name) {
@@ -2275,32 +2372,10 @@ function bestMarketForMatch(match) {
 }
 
 function modalAnalysis(match, market) {
-  const facts = [];
-  const homePpg = match.stats?.homePpg;
-  const awayPpg = match.stats?.awayPpg;
-  const prematchXg = match.stats?.xgPrematchTotal;
-  const recentHome = match.recentForm?.home?.length || 0;
-  const recentAway = match.recentForm?.away?.length || 0;
-
-  if (homePpg !== null && homePpg !== undefined && awayPpg !== null && awayPpg !== undefined) {
-    facts.push(`PPG pré-jogo: ${match.homeName} ${round(homePpg, 2)} e ${match.awayName} ${round(awayPpg, 2)}`);
+  if (match.status === "live") {
+    return `O ritmo atual mantém ${market.label.toLowerCase()} como principal leitura. Considere a variação da odd ao vivo antes de qualquer decisão.`;
   }
-  if (prematchXg !== null && prematchXg !== undefined) {
-    facts.push(`xG total pré-jogo: ${round(prematchXg, 2)}`);
-  }
-  if (Number.isFinite(market.probability)) {
-    facts.push(`${market.label}: ${formatProbability(market.probability)}`);
-  }
-  if (Number.isFinite(market.odd)) {
-    facts.push(`odd retornada: ${formatOdd(market.odd)}`);
-  }
-  if (recentHome || recentAway) {
-    facts.push(`forma recente consultada: ${recentHome} jogos do mandante e ${recentAway} do visitante`);
-  }
-
-  return facts.length
-    ? facts.join(". ") + "."
-    : "A FootyStats não retornou indicadores suficientes para uma análise estatística desta partida.";
+  return `A combinação de probabilidade estimada, preço de mercado e indicadores recentes destaca ${market.label.toLowerCase()} como a opção de maior interesse estatístico.`;
 }
 
 function leagueIcon() {
@@ -2311,10 +2386,9 @@ function teamCrest(name, color = "#00c853", image = null) {
   const safeImage = sanitizeImageUrl(image);
   const flagImage = safeImage ? null : getNationalTeamFlagUrl(name);
   const imageUrl = safeImage || flagImage;
-  const fallback = escapeHtml(initials(name));
   const content = imageUrl
-    ? `<img src="${escapeHtml(imageUrl)}" alt="${escapeHtml(name)}" loading="lazy" onerror="this.parentElement.textContent='${fallback}'">`
-    : fallback;
+    ? `<img src="${escapeHtml(imageUrl)}" alt="" loading="lazy" referrerpolicy="no-referrer">`
+    : escapeHtml(initials(name));
   return `<span class="team-crest" style="--league-color:${color}">${content}</span>`;
 }
 
