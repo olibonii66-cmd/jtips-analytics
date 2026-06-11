@@ -32,6 +32,7 @@ const state = {
   matches: [],
   teams: [],
   players: [],
+  loadedPlayerLeagueKeys: [],
   tips: [],
   valueBets: [],
   matchStatus: "all",
@@ -179,6 +180,7 @@ async function loadMatchTeams() {
   const teamRequests = state.leagues.map(async (league) => {
     try {
       const payload = await apiFetch("/league-teams", {
+        league_id: league.seasonId,
         season_id: league.seasonId
       });
       return getDataArray(payload).map((team) => normalizeTeamIdentity(team, league));
@@ -204,10 +206,12 @@ async function loadLeagueStats(leagueKey, { silent = false } = {}) {
   try {
     const [teamsPayload, playersPayload] = await Promise.all([
       apiFetch("/league-teams", {
+        league_id: league.seasonId,
         season_id: league.seasonId,
         include: "stats"
       }),
       apiFetch("/league-players", {
+        league_id: league.seasonId,
         season_id: league.seasonId,
         page: 1
       })
@@ -369,23 +373,38 @@ function normalizeMatch(raw) {
     status,
     minute: normalizeMinute(raw.minute ?? raw.match_minute ?? raw.elapsed ?? raw.game_minute),
     odds: {
-      home: nullablePositiveNumber(raw.odds_ft_1 || raw.odds_1 || raw.odds?.home),
-      draw: nullablePositiveNumber(raw.odds_ft_X || raw.odds_x || raw.odds?.draw),
-      away: nullablePositiveNumber(raw.odds_ft_2 || raw.odds_2 || raw.odds?.away),
-      over25: nullablePositiveNumber(raw.odds_ft_over25 || raw.odds_over_25 || raw.odds?.over25),
-      btts: nullablePositiveNumber(raw.odds_btts_yes || raw.odds_btts || raw.odds?.btts)
+      home: firstPositiveNumber(raw.odds_ft_1, raw.odds_1, raw.odds?.home),
+      draw: firstPositiveNumber(raw.odds_ft_x, raw.odds_ft_X, raw.odds_x, raw.odds?.draw),
+      away: firstPositiveNumber(raw.odds_ft_2, raw.odds_2, raw.odds?.away),
+      over15: firstPositiveNumber(raw.odds_ft_over15, raw.odds_over_15, raw.odds?.over15),
+      over25: firstPositiveNumber(raw.odds_ft_over25, raw.odds_over_25, raw.odds?.over25),
+      under25: firstPositiveNumber(raw.odds_ft_under25, raw.odds_under_25, raw.odds?.under25),
+      btts: firstPositiveNumber(raw.odds_btts_yes, raw.odds_btts, raw.odds?.btts),
+      bttsNo: firstPositiveNumber(raw.odds_btts_no, raw.odds?.bttsNo),
+      dc1x: firstPositiveNumber(raw.odds_doublechance_1x, raw.odds_dc_1x),
+      dc12: firstPositiveNumber(raw.odds_doublechance_12, raw.odds_dc_12),
+      dcx2: firstPositiveNumber(raw.odds_doublechance_x2, raw.odds_dc_x2),
+      cornersOver85: firstPositiveNumber(raw.odds_corners_over_85, raw.odds_corners_over_8_5),
+      cornersOver95: firstPositiveNumber(raw.odds_corners_over_95, raw.odds_corners_over_9_5),
+      cornersUnder105: firstPositiveNumber(raw.odds_corners_under_105, raw.odds_corners_under_10_5)
     },
     probabilities: {
-      home: clampProbability(raw.home_win_percentage || raw.homeWinProbability),
-      draw: clampProbability(raw.draw_percentage || raw.drawProbability),
-      away: clampProbability(raw.away_win_percentage || raw.awayWinProbability),
+      home: firstProbability(raw.home_win_percentage, raw.homeWinProbability, raw.probability_home),
+      draw: firstProbability(raw.draw_percentage, raw.drawProbability, raw.probability_draw),
+      away: firstProbability(raw.away_win_percentage, raw.awayWinProbability, raw.probability_away),
+      over05: firstProbability(raw.over05, raw.over_05_percentage, raw.o05_potential, raw.over05Probability),
       over15: firstProbability(raw.over15, raw.over_15_percentage, raw.o15_potential, raw.over15Probability),
       over25: firstProbability(raw.over25, raw.over_25_percentage, raw.o25_potential, raw.over25Probability),
       over35: firstProbability(raw.over35, raw.over_35_percentage, raw.o35_potential, raw.over35Probability),
-      btts: firstProbability(raw.btts_percentage, raw.btts_potential, raw.bttsProbability),
+      over45: firstProbability(raw.over45, raw.over_45_percentage, raw.o45_potential, raw.over45Probability),
+      btts: firstProbability(raw.btts, raw.btts_percentage, raw.btts_potential, raw.bttsProbability),
+      bttsFh: firstProbability(raw.btts_fhg_potential, raw.btts_fh_potential, raw.bttsFirstHalfProbability),
+      btts2h: firstProbability(raw.btts_2hg_potential, raw.btts_2h_potential, raw.bttsSecondHalfProbability),
+      corners: firstProbability(raw.corners_potential, raw.cornersPotential),
       cornersOver85: firstProbability(raw.corners_o85_potential, raw.corners_over_85_percentage, raw.cornersOver85Probability),
       cornersOver95: firstProbability(raw.corners_o95_potential, raw.corners_over_95_percentage, raw.cornersOver95Probability),
       cornersOver105: firstProbability(raw.corners_o105_potential, raw.corners_over_105_percentage, raw.cornersOver105Probability),
+      cards: firstProbability(raw.cards_potential, raw.cardsPotential),
       cardsOver35: firstProbability(raw.cards_o35_potential, raw.cards_over_35_percentage, raw.cardsOver35Probability, raw.cards_potential),
       cardsOver45: firstProbability(raw.cards_o45_potential, raw.cards_over_45_percentage, raw.cardsOver45Probability),
       cardsOver55: firstProbability(raw.cards_o55_potential, raw.cards_over_55_percentage, raw.cardsOver55Probability)
@@ -395,10 +414,31 @@ function normalizeMatch(raw) {
       possessionAway: nullablePositiveNumber(raw.team_b_possession),
       shotsHome: nullablePositiveNumber(raw.team_a_shots),
       shotsAway: nullablePositiveNumber(raw.team_b_shots),
+      shotsOnTargetHome: nullablePositiveNumber(raw.team_a_shotsOnTarget),
+      shotsOnTargetAway: nullablePositiveNumber(raw.team_b_shotsOnTarget),
+      shotsOffTargetHome: nullablePositiveNumber(raw.team_a_shotsOffTarget),
+      shotsOffTargetAway: nullablePositiveNumber(raw.team_b_shotsOffTarget),
       cornersHome: nullablePositiveNumber(raw.team_a_corners),
       cornersAway: nullablePositiveNumber(raw.team_b_corners),
-      cardsHome: nullablePositiveNumber(raw.team_a_cards_num),
-      cardsAway: nullablePositiveNumber(raw.team_b_cards_num)
+      cornersTotal: nullablePositiveNumber(raw.totalCornerCount),
+      yellowHome: nullablePositiveNumber(raw.team_a_yellow_cards),
+      yellowAway: nullablePositiveNumber(raw.team_b_yellow_cards),
+      redHome: nullablePositiveNumber(raw.team_a_red_cards),
+      redAway: nullablePositiveNumber(raw.team_b_red_cards),
+      cardsHome: firstNumber(raw.team_a_cards_num, addNullable(raw.team_a_yellow_cards, raw.team_a_red_cards)),
+      cardsAway: firstNumber(raw.team_b_cards_num, addNullable(raw.team_b_yellow_cards, raw.team_b_red_cards)),
+      foulsHome: nullablePositiveNumber(raw.team_a_fouls),
+      foulsAway: nullablePositiveNumber(raw.team_b_fouls),
+      offsidesHome: nullablePositiveNumber(raw.team_a_offsides),
+      offsidesAway: nullablePositiveNumber(raw.team_b_offsides),
+      xgHome: nullablePositiveNumber(raw.team_a_xg),
+      xgAway: nullablePositiveNumber(raw.team_b_xg),
+      xgTotal: nullablePositiveNumber(raw.total_xg),
+      xgPrematchHome: nullablePositiveNumber(raw.team_a_xg_prematch),
+      xgPrematchAway: nullablePositiveNumber(raw.team_b_xg_prematch),
+      xgPrematchTotal: nullablePositiveNumber(raw.total_xg_prematch),
+      homePpg: nullablePositiveNumber(raw.pre_match_home_ppg ?? raw.pre_match_teamA_overall_ppg),
+      awayPpg: nullablePositiveNumber(raw.pre_match_away_ppg ?? raw.pre_match_teamB_overall_ppg)
     }
   };
 }
@@ -482,6 +522,7 @@ function clearApiData() {
   state.matches = [];
   state.teams = [];
   state.players = [];
+  state.loadedPlayerLeagueKeys = [];
   state.tips = [];
   state.valueBets = [];
 }
@@ -879,7 +920,7 @@ function buildTips(matches) {
 }
 
 function analysisText(bet) {
-  return `A FootyStats informa ${round(bet.probability * 100, 1)}% de probabilidade para este mercado. Com odd ${formatOdd(bet.odd)}, a diferença matemática calculada é de +${round(bet.value, 1)}%.`;
+  return `A ScoutBet estima ${round(bet.probability * 100, 1)}% de probabilidade para este mercado. Com odd ${formatOdd(bet.odd)}, o valor esperado calculado é de +${round(bet.value, 1)}%.`;
 }
 
 function buildComfortLines(match) {
@@ -1410,609 +1451,60 @@ function bindMatchButtons() {
 }
 
 async function openMatchModal(matchId) {
-  const match = state.matches.find((item) => String(item.id) === String(matchId));
-  if (!match) return;
+  const baseMatch = state.matches.find((item) => String(item.id) === String(matchId));
+  if (!baseMatch) return;
 
   els.matchModal.classList.add("open");
   els.matchModal.setAttribute("aria-hidden", "false");
   document.body.style.overflow = "hidden";
-  els.modalTitle.textContent = `${match.homeName} x ${match.awayName}`;
+  els.modalTitle.textContent = `${baseMatch.homeName} x ${baseMatch.awayName}`;
+  els.matchModalBody.innerHTML = `<div class="numbers-loading"><i class="fa-solid fa-spinner fa-spin"></i><strong>Buscando estatísticas oficiais...</strong><span>ScoutBet está consultando /match e jogadores da liga quando disponíveis.</span></div>`;
 
   try {
-    // Não depende de endpoint ao vivo. O modal usa dados oficiais já carregados
-    // de partidas, times e jogadores para abrir imediatamente.
-    els.matchModalBody.innerHTML = matchModalTemplate(match);
+    await ensurePlayersForMatch(baseMatch);
+    const detailedMatch = await fetchOfficialMatchDetails(baseMatch);
+    els.modalTitle.textContent = `${detailedMatch.homeName} x ${detailedMatch.awayName}`;
+    els.matchModalBody.innerHTML = matchModalTemplate(detailedMatch);
   } catch (error) {
-    console.error(error);
-    els.matchModalBody.innerHTML = `
-      <div class="numbers-section">
-        <div class="numbers-section__head"><i class="fa-solid fa-triangle-exclamation"></i><strong>Dados indisponíveis</strong></div>
-        <p class="numbers-empty-note">Não foi possível montar os números desta partida com os dados oficiais disponíveis.</p>
-      </div>
-    `;
+    console.warn("Detalhe oficial indisponível, usando dados da lista:", error);
+    els.matchModalBody.innerHTML = matchModalTemplate(baseMatch);
   }
 }
 
-function matchModalTemplate(match) {
-  const market = bestMarketForMatch(match);
-  const homePlayers = matchPlayers(match, "home");
-  const awayPlayers = matchPlayers(match, "away");
-
-  return `
-    <div class="numbers-modal">
-      <div class="numbers-hero">
-        <div class="numbers-team">
-          ${teamCrest(match.homeName, match.leagueColor, match.homeLogo)}
-          <strong>${escapeHtml(match.homeName)}</strong>
-          <span>Mandante</span>
-        </div>
-        <div class="numbers-center">
-          <strong>${shouldShowMatchScore(match) ? `${match.homeGoals} – ${match.awayGoals}` : "VS"}</strong>
-          <span>${escapeHtml(formatMatchTime(match))}</span>
-          ${statusPill(match)}
-        </div>
-        <div class="numbers-team">
-          ${teamCrest(match.awayName, secondaryColor(match.leagueColor), match.awayLogo)}
-          <strong>${escapeHtml(match.awayName)}</strong>
-          <span>Visitante</span>
-        </div>
-      </div>
-
-      ${numbersSection("Resumo", "fa-solid fa-chart-simple", `
-        <div class="numbers-grid numbers-grid--summary">
-          ${modalMarket("Mercado", market.label)}
-          ${modalMarket("Odd", formatOdd(market.odd))}
-          ${modalMarket("Probabilidade", formatProbability(market.probability))}
-          ${modalMarket("Status", statusLabel(match))}
-        </div>
-        <div class="numbers-note"><small>Leitura do modelo</small><strong>${escapeHtml(modalAnalysis(match, market))}</strong></div>
-      `)}
-
-      ${numbersSection("Gols", "fa-solid fa-futbol", `
-        ${probabilityLine("Mais de 1.5 gols", match.probabilities.over15)}
-        ${probabilityLine("Mais de 2.5 gols", match.probabilities.over25)}
-        ${probabilityLine("Mais de 3.5 gols", match.probabilities.over35)}
-        ${probabilityLine("Ambas marcam", match.probabilities.btts)}
-      `)}
-
-      ${numbersSection("Escanteios", "fa-solid fa-flag", `
-        ${probabilityLine("Mais de 8.5 escanteios", match.probabilities.cornersOver85)}
-        ${probabilityLine("Mais de 9.5 escanteios", match.probabilities.cornersOver95)}
-        ${probabilityLine("Mais de 10.5 escanteios", match.probabilities.cornersOver105)}
-        ${numbersStatRow("Escanteios no jogo", match.stats.cornersHome, match.stats.cornersAway)}
-      `)}
-
-      ${numbersSection("Cartões", "fa-solid fa-square", `
-        ${probabilityLine("Mais de 3.5 cartões", match.probabilities.cardsOver35)}
-        ${probabilityLine("Mais de 4.5 cartões", match.probabilities.cardsOver45)}
-        ${probabilityLine("Mais de 5.5 cartões", match.probabilities.cardsOver55)}
-        ${numbersStatRow("Cartões no jogo", match.stats.cardsHome, match.stats.cardsAway)}
-      `)}
-
-      ${numbersSection("Finalizações", "fa-solid fa-bullseye", `
-        ${numbersStatRow("Finalizações", match.stats.shotsHome, match.stats.shotsAway)}
-        ${numbersStatRow("Posse de bola", match.stats.possessionHome, match.stats.possessionAway, "%")}
-        ${statAvailabilityNote(match.stats.shotsHome, match.stats.shotsAway, "Finalizações aparecem quando a FootyStats retornar estatísticas oficiais para esta partida.")}
-      `)}
-
-      ${numbersSection("Jogadores", "fa-solid fa-user-group", `
-        <div class="numbers-players">
-          <div>${playersList("Mandante", homePlayers)}</div>
-          <div>${playersList("Visitante", awayPlayers)}</div>
-        </div>
-      `)}
-    </div>
-  `;
+async function fetchOfficialMatchDetails(match) {
+  const payload = await apiFetch("/match", { match_id: match.id });
+  const raw = pickSingleRecord(payload) || payload;
+  const normalized = normalizeMatch({ ...match, ...raw });
+  const index = state.matches.findIndex((item) => String(item.id) === String(match.id));
+  if (index >= 0) state.matches[index] = { ...state.matches[index], ...normalized };
+  return index >= 0 ? state.matches[index] : normalized;
 }
 
-
-function modalMarket(label, value) {
-  const safeValue = value === null || value === undefined || value === "" ? "—" : value;
-  return `
-    <div class="modal-market">
-      <small>${escapeHtml(label)}</small>
-      <strong>${escapeHtml(String(safeValue))}</strong>
-    </div>
-  `;
+function pickSingleRecord(payload) {
+  if (!payload) return null;
+  if (Array.isArray(payload)) return payload[0] || null;
+  if (payload.data && Array.isArray(payload.data)) return payload.data[0] || null;
+  if (payload.data && typeof payload.data === "object") return payload.data;
+  if (payload.match && typeof payload.match === "object") return payload.match;
+  if (payload.id || payload.match_id) return payload;
+  const list = getDataArray(payload);
+  return list[0] || null;
 }
 
-function numbersSection(title, icon, content) {
-  return `
-    <section class="numbers-section">
-      <div class="numbers-section__head"><i class="${icon}"></i><strong>${escapeHtml(title)}</strong></div>
-      ${content}
-    </section>
-  `;
-}
-
-function formatProbability(probability) {
-  return Number.isFinite(probability) ? `${round(probability * 100, 0)}%` : "—";
-}
-
-function probabilityLine(label, probability) {
-  const percent = Number.isFinite(probability) ? Math.round(probability * 100) : 0;
-  const value = Number.isFinite(probability) ? `${round(probability * 100, 1)}%` : "Dados indisponíveis";
-  return `
-    <div class="numbers-line">
-      <div class="numbers-line__meta"><span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong></div>
-      <div class="numbers-line__track"><span style="width:${percent}%"></span></div>
-    </div>
-  `;
-}
-
-function numbersStatRow(label, home, away, suffix = "") {
-  const hasData = home !== null && away !== null && home !== undefined && away !== undefined;
-  const homeValue = hasData ? `${round(home, 0)}${suffix}` : "—";
-  const awayValue = hasData ? `${round(away, 0)}${suffix}` : "—";
-  const homeWidth = hasData ? Math.round((Number(home) / Math.max(Number(home) + Number(away), 1)) * 100) : 0;
-  return `
-    <div class="numbers-stat-row">
-      <strong>${escapeHtml(homeValue)}</strong>
-      <div>
-        <span>${escapeHtml(label)}</span>
-        <div class="numbers-stat-bar">${hasData ? `<i style="width:${homeWidth}%"></i><b style="width:${100 - homeWidth}%"></b>` : ""}</div>
-      </div>
-      <strong>${escapeHtml(awayValue)}</strong>
-    </div>
-  `;
-}
-
-function statAvailabilityNote(home, away, message) {
-  if (home !== null && away !== null && home !== undefined && away !== undefined) return "";
-  return `<p class="numbers-empty-note">${escapeHtml(message)}</p>`;
-}
-
-function matchPlayers(match, side) {
-  const teamId = side === "home" ? match.homeId : match.awayId;
-  const teamName = side === "home" ? match.homeName : match.awayName;
-  const normalizedName = normalizeText(teamName);
-  return state.players
-    .filter((player) => (teamId && player.teamId === teamId) || normalizeText(player.team) === normalizedName)
-    .sort((a, b) => ((b.goals || 0) + (b.assists || 0)) - ((a.goals || 0) + (a.assists || 0)))
-    .slice(0, 5);
-}
-
-function playersList(title, players) {
-  if (!players.length) {
-    return `<div class="numbers-player-list"><h4>${escapeHtml(title)}</h4><p class="numbers-empty-note">Jogadores indisponíveis para este time na API atual.</p></div>`;
+async function ensurePlayersForMatch(match) {
+  const league = state.leagues.find((item) => item.key === match.leagueKey);
+  if (!league || state.loadedPlayerLeagueKeys.includes(league.key)) return;
+  try {
+    const payload = await apiFetch("/league-players", { league_id: league.seasonId, season_id: league.seasonId, page: 1 });
+    const teams = state.teams.length ? state.teams : state.matchTeams;
+    const players = getDataArray(payload).map((player) => normalizePlayer(player, teams));
+    const existing = new Set(state.players.map((player) => String(player.id)));
+    players.forEach((player) => { if (!existing.has(String(player.id))) state.players.push(player); });
+    state.loadedPlayerLeagueKeys.push(league.key);
+  } catch (error) {
+    console.warn(`Jogadores indisponíveis para ${league.name}:`, error);
+    state.loadedPlayerLeagueKeys.push(league.key);
   }
-  return `
-    <div class="numbers-player-list">
-      <h4>${escapeHtml(title)}</h4>
-      ${players.map((player) => `
-        <div class="numbers-player-row">
-          <span>${escapeHtml(initials(player.name))}</span>
-          <div><strong>${escapeHtml(player.name)}</strong><small>${displayApiValue(player.appearances)} jogos</small></div>
-          <em>${displayApiValue(player.goals)}G · ${displayApiValue(player.assists)}A</em>
-        </div>
-      `).join("")}
-    </div>
-  `;
-}
-
-
-
-function percentForDisplay(value) {
-  if (value === null || value === undefined || !Number.isFinite(Number(value))) return null;
-  const number = Number(value);
-  return number <= 1 ? Math.round(number * 100) : Math.round(number);
-}
-
-function metricTone(value) {
-  const percent = percentForDisplay(value);
-  if (percent === null) return { className: "is-empty", label: "—" };
-  return {
-    className: percent >= 70 ? "is-good" : percent >= 40 ? "is-mid" : "is-low",
-    label: `${percent}%`
-  };
-}
-
-function rawMetricValue(label, value, suffix = "") {
-  const isEmpty = value === null || value === undefined || value === "" || !Number.isFinite(Number(value));
-  const className = isEmpty ? "is-empty" : "is-good";
-  const formatted = isEmpty ? "—" : `${round(Number(value), 2)}${suffix}`;
-  return `
-    <div class="numbers-goal-metric ${className}">
-      <small>${escapeHtml(label)}</small>
-      <strong>${escapeHtml(formatted)}</strong>
-    </div>
-  `;
-}
-
-function percentMetricValue(label, value) {
-  const tone = metricTone(value);
-  return `
-    <div class="numbers-goal-metric ${tone.className}">
-      <small>${escapeHtml(label)}</small>
-      <strong>${escapeHtml(tone.label)}</strong>
-    </div>
-  `;
-}
-
-function metricCard(row, match) {
-  return `
-    <article class="numbers-goal-card" data-stat-key="${escapeHtml(row.key || row.label)}">
-      <div class="numbers-goal-card__label">
-        <span>${escapeHtml(row.label)}</span>
-      </div>
-      <div class="numbers-goal-card__metrics">
-        ${percentMetricValue(match.homeName, row.home ?? null)}
-        ${percentMetricValue(match.awayName, row.away ?? null)}
-        ${percentMetricValue("Média", row.average ?? null)}
-      </div>
-    </article>
-  `;
-}
-
-function metricGroup(title, rows, match, eyebrow = "Categoria") {
-  return `
-    <section class="numbers-goals-group">
-      <div class="numbers-goals-group__head">
-        <div>
-          <small>${escapeHtml(eyebrow)}</small>
-          <strong>${escapeHtml(title)}</strong>
-        </div>
-        <span>${rows.length} linhas</span>
-      </div>
-      <div class="numbers-goals-cards">
-        ${rows.map((row) => metricCard(row, match)).join("")}
-      </div>
-    </section>
-  `;
-}
-
-function numbersDataNote(text) {
-  return `<div class="numbers-goals-note">${escapeHtml(text)}</div>`;
-}
-
-
-function numbersSubtabs(groups, match) {
-  const safeGroups = groups.filter((group) => group && group.id && group.title);
-  if (!safeGroups.length) return "";
-  return `
-    <div class="numbers-subtabs-wrap" data-numbers-subtabs-root>
-      <div class="numbers-subtabs" role="tablist" aria-label="Subcategorias da estatística">
-        ${safeGroups.map((group, index) => `
-          <button type="button" class="numbers-subtab ${index === 0 ? "is-active" : ""}" data-numbers-subtab="${escapeHtml(group.id)}" role="tab" aria-selected="${index === 0 ? "true" : "false"}">${escapeHtml(group.title)}</button>
-        `).join("")}
-      </div>
-      <div class="numbers-subpanels">
-        ${safeGroups.map((group, index) => `
-          <div class="numbers-subpanel ${index === 0 ? "is-active" : ""}" data-numbers-subpanel="${escapeHtml(group.id)}" role="tabpanel">
-            ${metricGroup(group.title, group.rows || [], match, group.eyebrow || "Categoria")}
-          </div>
-        `).join("")}
-      </div>
-    </div>
-  `;
-}
-
-function switchNumbersSubtab(subtabId, root) {
-  if (!subtabId || !root) return;
-  root.querySelectorAll("[data-numbers-subtab]").forEach((button) => {
-    const isActive = button.dataset.numbersSubtab === subtabId;
-    button.classList.toggle("is-active", isActive);
-    button.setAttribute("aria-selected", isActive ? "true" : "false");
-  });
-  root.querySelectorAll("[data-numbers-subpanel]").forEach((panel) => {
-    panel.classList.toggle("is-active", panel.dataset.numbersSubpanel === subtabId);
-  });
-}
-
-function renderGoalsNumbersTab(match) {
-  const blank = { home: null, away: null, average: null };
-  const groups = [
-    {
-      id: "gols-partida",
-      title: "Gols da partida",
-      rows: [
-        { key: "over05", label: "Mais de 0,5", ...blank },
-        { key: "over15", label: "Mais de 1,5", ...blank },
-        { key: "over25", label: "Mais de 2,5", ...blank },
-        { key: "over35", label: "Mais de 3,5", ...blank },
-        { key: "over45", label: "Mais de 4,5", ...blank },
-        { key: "btts", label: "BTTS", ...blank },
-        { key: "bttsWin", label: "Ambas as equipes marcam e ganhem.", ...blank },
-        { key: "bttsDraw", label: "Ambas as equipes marcam e empate", ...blank },
-        { key: "bttsOver25", label: "Ambas as equipes marcam e mais de 2,5 gols", ...blank },
-        { key: "bttsNoOver25", label: "Ambas as equipes marcam Não e Mais de 2,5", ...blank }
-      ]
-    },
-    {
-      id: "gols-primeiro-tempo",
-      title: "Gols do primeiro tempo",
-      rows: [
-        { key: "bttsFirstHalf", label: "Ambas as equipes marcam no primeiro tempo.", ...blank },
-        { key: "over05FH", label: "Mais de 0,5 FH", ...blank },
-        { key: "over15FH", label: "Mais de 1,5 FH", ...blank },
-        { key: "over25FH", label: "Mais de 2,5 FH", ...blank }
-      ]
-    },
-    {
-      id: "gols-segundo-tempo",
-      title: "Gols do segundo tempo",
-      rows: [
-        { key: "bttsSecondHalf", label: "Ambas as equipes marcam no segundo tempo.", ...blank },
-        { key: "bttsBothHalves", label: "Ambas as equipes marcam nos dois tempos.", ...blank },
-        { key: "over05SH", label: "Mais de 0,5 2H", ...blank },
-        { key: "over15SH", label: "Mais de 1,5 2H", ...blank },
-        { key: "over25SH", label: "Mais de 2,5 2H", ...blank }
-      ]
-    },
-    {
-      id: "menos-de-x-gols",
-      title: "Menos de X gols",
-      rows: [
-        { key: "under05", label: "Menos de 0,5", ...blank },
-        { key: "under15", label: "Menos de 1,5", ...blank },
-        { key: "under25", label: "Menos de 2,5", ...blank },
-        { key: "under35", label: "Menos de 3,5", ...blank },
-        { key: "under45", label: "Menos de 4,5", ...blank }
-      ]
-    },
-    {
-      id: "primeiro-segundo-tempo",
-      title: "Primeiro/Segundo Tempo",
-      rows: [
-        { key: "under05FH", label: "Menos de 0,5 FH", ...blank },
-        { key: "under15FH", label: "Menos de 1,5 FH", ...blank },
-        { key: "under25FH", label: "Menos de 2,5 FH", ...blank },
-        { key: "under05SH", label: "Menos de 0,5 2H", ...blank },
-        { key: "under15SH", label: "Menos de 1,5 2H", ...blank },
-        { key: "under25SH", label: "Menos de 2,5 2H", ...blank }
-      ]
-    }
-  ];
-  return `
-    ${numbersDataNote("Linhas de gols organizadas por subaba. Onde ainda não houver endpoint oficial mapeado, mostramos — sem inventar número.")}
-    ${numbersSubtabs(groups, match)}
-  `;
-}
-
-function renderCornersNumbersTab(match) {
-  const blank = { home: null, away: null, average: null };
-  const groups = [
-    {
-      id: "escanteios-partida",
-      title: "Escanteios da partida",
-      rows: [
-        { key: "totalCorners", label: "Total de escanteios", ...blank },
-        { key: "cornersPerMatch", label: "Escanteios / jogo", ...blank },
-        { key: "homeCorners", label: "Escanteios do mandante", ...blank },
-        { key: "awayCorners", label: "Escanteios do visitante", ...blank }
-      ]
-    },
-    {
-      id: "total-escanteios",
-      title: "Total de escanteios",
-      rows: [
-        { key: "cornersOver6", label: "Mais de 6", ...blank },
-        { key: "cornersOver7", label: "Mais de 7", ...blank },
-        { key: "cornersOver8", label: "Mais de 8", ...blank },
-        { key: "cornersOver9", label: "Mais de 9", ...blank },
-        { key: "cornersOver10", label: "Mais de 10", ...blank },
-        { key: "cornersOver11", label: "Mais de 11", ...blank },
-        { key: "cornersOver12", label: "Mais de 12", ...blank },
-        { key: "cornersOver13", label: "Mais de 13", ...blank }
-      ]
-    },
-    {
-      id: "escanteios-time",
-      title: "Escanteios do time",
-      rows: [
-        { key: "cornersForMatch", label: "Escanteios a favor / jogo", ...blank },
-        { key: "cornersAgainstMatch", label: "Escanteios contra / jogo", ...blank },
-        { key: "cornersForOver25", label: "Mais de 2.5 escanteios a favor", ...blank },
-        { key: "cornersForOver35", label: "Mais de 3.5 escanteios a favor", ...blank },
-        { key: "cornersForOver45", label: "Mais de 4.5 escanteios a favor", ...blank },
-        { key: "cornersAgainstOver25", label: "Mais de 2.5 escanteios contra", ...blank },
-        { key: "cornersAgainstOver35", label: "Mais de 3.5 escanteios contra", ...blank },
-        { key: "cornersAgainstOver45", label: "Mais de 4.5 escanteios contra", ...blank }
-      ]
-    },
-    {
-      id: "primeiro-tempo-escanteios",
-      title: "Primeiro tempo",
-      rows: [
-        { key: "fhCornersAverage", label: "Média FH", ...blank },
-        { key: "fhCornersOver4", label: "Mais de 4 FH", ...blank },
-        { key: "fhCornersOver5", label: "Mais de 5 FH", ...blank },
-        { key: "fhCornersOver6", label: "Mais de 6 FH", ...blank }
-      ]
-    },
-    {
-      id: "segundo-tempo-escanteios",
-      title: "Segundo tempo",
-      rows: [
-        { key: "shCornersAverage", label: "Média 2H", ...blank },
-        { key: "shCornersOver4", label: "Mais de 4 2H", ...blank },
-        { key: "shCornersOver5", label: "Mais de 5 2H", ...blank },
-        { key: "shCornersOver6", label: "Mais de 6 2H", ...blank }
-      ]
-    }
-  ];
-  return `
-    ${numbersDataNote("Linhas de escanteios organizadas por subaba para receber o mapeamento dos endpoints oficiais.")}
-    ${numbersSubtabs(groups, match)}
-  `;
-}
-
-function renderCardsNumbersTab(match) {
-  const blank = { home: null, away: null, average: null };
-  const groups = [
-    {
-      id: "cartoes-partida",
-      title: "Cartões da partida",
-      rows: [
-        { key: "totalCardsPerMatch", label: "Total de cartões / jogo", ...blank },
-        { key: "homeCardsPerMatch", label: "Cartões do mandante / jogo", ...blank },
-        { key: "awayCardsPerMatch", label: "Cartões do visitante / jogo", ...blank }
-      ]
-    },
-    {
-      id: "total-cartoes",
-      title: "Total de cartões",
-      rows: [
-        { key: "cardsOver25", label: "Mais de 2.5", ...blank },
-        { key: "cardsOver35", label: "Mais de 3.5", ...blank },
-        { key: "cardsOver45", label: "Mais de 4.5", ...blank },
-        { key: "cardsOver55", label: "Mais de 5.5", ...blank },
-        { key: "cardsOver65", label: "Mais de 6.5", ...blank }
-      ]
-    },
-    {
-      id: "cartoes-time",
-      title: "Cartões do time",
-      rows: [
-        { key: "cardsForAverage", label: "Cartões a favor média", ...blank },
-        { key: "cardsOver05For", label: "Mais de 0.5 a favor", ...blank },
-        { key: "cardsOver15For", label: "Mais de 1.5 a favor", ...blank },
-        { key: "cardsOver25For", label: "Mais de 2.5 a favor", ...blank },
-        { key: "cardsOver35For", label: "Mais de 3.5 a favor", ...blank }
-      ]
-    },
-    {
-      id: "cartoes-contra",
-      title: "Cartões contra",
-      rows: [
-        { key: "cardsOver05Against", label: "Mais de 0.5 contra", ...blank },
-        { key: "cardsOver15Against", label: "Mais de 1.5 contra", ...blank },
-        { key: "cardsOver25Against", label: "Mais de 2.5 contra", ...blank },
-        { key: "cardsOver35Against", label: "Mais de 3.5 contra", ...blank }
-      ]
-    },
-    {
-      id: "cartoes-tempos",
-      title: "1º / 2º tempo cartões",
-      rows: [
-        { key: "fhOver05CardsFor", label: "1H Mais de 0.5 cartões a favor", ...blank },
-        { key: "shOver05CardsFor", label: "2H Mais de 0.5 cartões a favor", ...blank },
-        { key: "fhTotalUnder2", label: "1H Total abaixo de 2", ...blank },
-        { key: "shTotalUnder2", label: "2H Total abaixo de 2", ...blank },
-        { key: "fhTotal2to3", label: "1H entre 2–3 cartões totais", ...blank },
-        { key: "shTotal2to3", label: "2H entre 2–3 cartões totais", ...blank },
-        { key: "fhTotalOver3", label: "1H Total acima de 3", ...blank },
-        { key: "shTotalOver3", label: "2H Total acima de 3", ...blank }
-      ]
-    }
-  ];
-  return `
-    ${numbersDataNote("Linhas de cartões organizadas por subaba para o mapeamento dos endpoints oficiais.")}
-    ${numbersSubtabs(groups, match)}
-  `;
-}
-
-function renderShotsNumbersTab(match) {
-  const blank = { home: null, away: null, average: null };
-  const groups = [
-    {
-      id: "finalizacoes-time",
-      title: "Finalizações do time",
-      rows: [
-        { key: "shotsPerMatch", label: "Finalizações / jogo", ...blank },
-        { key: "shotsConversionRate", label: "Taxa de conversão de finalizações", ...blank },
-        { key: "shotsOnTargetPerMatch", label: "Finalizações no alvo / jogo", ...blank },
-        { key: "shotsOffTargetPerMatch", label: "Finalizações fora do alvo / jogo", ...blank },
-        { key: "shotsPerGoal", label: "Finalizações por gol marcado", ...blank },
-        { key: "teamShotsOver105", label: "Time com mais de 10.5 finalizações", ...blank },
-        { key: "teamShotsOver115", label: "Time com mais de 11.5 finalizações", ...blank },
-        { key: "teamShotsOver125", label: "Time com mais de 12.5 finalizações", ...blank },
-        { key: "teamShotsOver135", label: "Time com mais de 13.5 finalizações", ...blank },
-        { key: "teamShotsOver145", label: "Time com mais de 14.5 finalizações", ...blank },
-        { key: "teamShotsOver155", label: "Time com mais de 15.5 finalizações", ...blank },
-        { key: "teamSotOver35", label: "Time com mais de 3.5 finalizações no alvo", ...blank },
-        { key: "teamSotOver45", label: "Time com mais de 4.5 finalizações no alvo", ...blank },
-        { key: "teamSotOver55", label: "Time com mais de 5.5 finalizações no alvo", ...blank },
-        { key: "teamSotOver65", label: "Time com mais de 6.5 finalizações no alvo", ...blank }
-      ]
-    },
-    {
-      id: "finalizacoes-partida",
-      title: "Finalizações da partida",
-      rows: [
-        { key: "matchShotsOver235", label: "Jogo com mais de 23.5 finalizações", ...blank },
-        { key: "matchShotsOver245", label: "Jogo com mais de 24.5 finalizações", ...blank },
-        { key: "matchShotsOver255", label: "Jogo com mais de 25.5 finalizações", ...blank },
-        { key: "matchShotsOver265", label: "Jogo com mais de 26.5 finalizações", ...blank },
-        { key: "matchSotOver75", label: "Jogo com mais de 7.5 finalizações no alvo", ...blank },
-        { key: "matchSotOver85", label: "Jogo com mais de 8.5 finalizações no alvo", ...blank },
-        { key: "matchSotOver95", label: "Jogo com mais de 9.5 finalizações no alvo", ...blank }
-      ]
-    },
-    {
-      id: "impedimentos",
-      title: "Impedimentos",
-      rows: [
-        { key: "offsidesPerMatch", label: "Impedimentos / jogo", ...blank },
-        { key: "offsidesOver25", label: "Mais de 2.5 impedimentos", ...blank },
-        { key: "offsidesOver35", label: "Mais de 3.5 impedimentos", ...blank }
-      ]
-    },
-    {
-      id: "outras-estatisticas",
-      title: "Outras estatísticas",
-      rows: [
-        { key: "foulsCommitted", label: "Faltas cometidas / jogo", ...blank },
-        { key: "foulsAgainst", label: "Faltas sofridas / jogo", ...blank },
-        { key: "averagePossession", label: "Posse média", ...blank },
-        { key: "drawAtHalfTime", label: "Empate no intervalo", ...blank }
-      ]
-    }
-  ];
-  return `
-    ${numbersDataNote("Finalizações, impedimentos e faltas organizadas por subaba. Sem campo oficial mapeado, exibimos —.")}
-    ${numbersSubtabs(groups, match)}
-  `;
-}
-
-function playerMetricValue(player, metric) {
-  if (!player) return "—";
-  if (metric === "goals") return displayApiValue(player.goals);
-  if (metric === "cards") return displayApiValue(player.cards ?? player.yellowCards);
-  if (metric === "cardsPer90") return displayApiValue(player.cardsPer90);
-  return "—";
-}
-
-function playerRankingBlock(title, players, metric) {
-  const sorted = [...players]
-    .filter((player) => playerMetricValue(player, metric) !== "—")
-    .sort((a, b) => Number(playerMetricValue(b, metric)) - Number(playerMetricValue(a, metric)))
-    .slice(0, 6);
-  if (!sorted.length) {
-    return `<div class="numbers-player-list"><h4>${escapeHtml(title)}</h4><p class="numbers-empty-note">Dados indisponíveis para este mercado na API atual.</p></div>`;
-  }
-  const max = Math.max(...sorted.map((player) => Number(playerMetricValue(player, metric)) || 0), 1);
-  return `
-    <div class="numbers-player-list numbers-player-list--ranking">
-      <h4>${escapeHtml(title)}</h4>
-      ${sorted.map((player) => {
-        const value = Number(playerMetricValue(player, metric)) || 0;
-        return `
-          <div class="numbers-player-rank">
-            <div><strong>${escapeHtml(player.name)}</strong><em>${escapeHtml(player.team)}</em></div>
-            <span>${escapeHtml(playerMetricValue(player, metric))}</span>
-            <b style="width:${Math.max(8, Math.round((value / max) * 100))}%"></b>
-          </div>
-        `;
-      }).join("")}
-    </div>
-  `;
-}
-
-function renderPlayersNumbersTab(match) {
-  const homePlayers = matchPlayers(match, "home");
-  const awayPlayers = matchPlayers(match, "away");
-  return `
-    ${numbersDataNote("Jogadores aparecem quando o endpoint de atletas retornar dados oficiais para a liga/time. Sem dados oficiais, mostramos indisponível.")}
-    <div class="numbers-players">
-      ${playerRankingBlock(`Artilheiros - ${match.homeName}`, homePlayers, "goals")}
-      ${playerRankingBlock(`Artilheiros - ${match.awayName}`, awayPlayers, "goals")}
-      ${playerRankingBlock(`Cartões recebidos - ${match.homeName}`, homePlayers, "cards")}
-      ${playerRankingBlock(`Cartões recebidos - ${match.awayName}`, awayPlayers, "cards")}
-      ${playerRankingBlock(`Cartões / 90 - ${match.homeName}`, homePlayers, "cardsPer90")}
-      ${playerRankingBlock(`Cartões / 90 - ${match.awayName}`, awayPlayers, "cardsPer90")}
-    </div>
-  `;
 }
 
 /* Modal Ver números - versão com abas por estatística */
@@ -2539,6 +2031,21 @@ function formatAverage(value, decimals, suffix = "") {
 function positiveNumber(value, fallback = 0) {
   const number = Number(value);
   return Number.isFinite(number) && number >= 0 ? number : fallback;
+}
+
+function firstPositiveNumber(...values) {
+  for (const value of values) {
+    const number = nullablePositiveNumber(value);
+    if (number !== null && number > 0) return number;
+  }
+  return null;
+}
+
+function addNullable(a, b) {
+  const na = nullablePositiveNumber(a);
+  const nb = nullablePositiveNumber(b);
+  if (na === null && nb === null) return null;
+  return (na || 0) + (nb || 0);
 }
 
 function nullablePositiveNumber(value) {

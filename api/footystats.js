@@ -9,7 +9,8 @@ const ALLOWED_ENDPOINTS = new Set([
   "league-players",
   "team",
   "player-stats",
-  "match"
+  "match",
+  "lastx"
 ]);
 
 module.exports = async function handler(request, response) {

@@ -3490,3 +3490,31 @@ svg {
     font-size: 10px;
   }
 }
+
+.numbers-loading {
+  min-height: 260px;
+  display: grid;
+  place-items: center;
+  gap: 10px;
+  text-align: center;
+  color: var(--text-2);
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  padding: 32px;
+}
+
+.numbers-loading i {
+  color: var(--brand);
+  font-size: 28px;
+}
+
+.numbers-loading strong {
+  color: var(--text-1);
+  font-size: 16px;
+}
+
+.numbers-loading span {
+  color: var(--text-3);
+  font-size: 12px;
+}
