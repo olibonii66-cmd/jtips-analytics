@@ -1,5 +1,5 @@
 const FOOTYSTATS_BASE_URL = "https://api.football-data-api.com";
-const REQUEST_TIMEOUT = 20000;
+const UPSTREAM_TIMEOUT_MS = 15000;
 
 const ALLOWED_ENDPOINTS = new Set([
   "league-list",
@@ -25,6 +25,7 @@ module.exports = async function handler(request, response) {
   const apiKey = process.env.FOOTYSTATS_API_KEY;
   if (!apiKey) {
     return response.status(500).json({
+      ok: false,
       code: "MISSING_ENV",
       error: "A variável FOOTYSTATS_API_KEY não está configurada no Vercel."
     });
@@ -42,6 +43,7 @@ module.exports = async function handler(request, response) {
 
   if (!ALLOWED_ENDPOINTS.has(endpoint)) {
     return response.status(400).json({
+      ok: false,
       code: "INVALID_ENDPOINT",
       error: "Endpoint da FootyStats não permitido."
     });
@@ -60,7 +62,7 @@ module.exports = async function handler(request, response) {
   });
 
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT);
+  const timeout = setTimeout(() => controller.abort(), UPSTREAM_TIMEOUT_MS);
 
   try {
     const footyStatsResponse = await fetch(footyStatsUrl, {
@@ -70,18 +72,18 @@ module.exports = async function handler(request, response) {
       },
       signal: controller.signal
     });
-
     const contentType = footyStatsResponse.headers.get("content-type") || "";
     const payload = contentType.includes("application/json")
       ? await footyStatsResponse.json()
       : { error: await footyStatsResponse.text() };
 
-    response.setHeader("Cache-Control", "s-maxage=60, stale-while-revalidate=300");
+    response.setHeader("Cache-Control", cacheControlFor(endpoint));
     response.setHeader("X-ScoutBet-Upstream-Status", String(footyStatsResponse.status));
     return response.status(footyStatsResponse.status).json(payload);
   } catch (error) {
     console.error("Erro no proxy FootyStats:", error);
     return response.status(502).json({
+      ok: false,
       code: error.name === "AbortError" ? "UPSTREAM_TIMEOUT" : "UPSTREAM_CONNECTION",
       error: error.name === "AbortError"
         ? "A FootyStats demorou mais que o esperado para responder."
@@ -95,4 +97,16 @@ module.exports = async function handler(request, response) {
 function normalizeEndpoint(value) {
   const endpoint = Array.isArray(value) ? value[0] : value;
   return String(endpoint || "").replace(/^\/+|\/+$/g, "");
+}
+
+function cacheControlFor(endpoint) {
+  if (endpoint === "todays-matches" || endpoint === "match") {
+    return "no-store";
+  }
+
+  if (endpoint === "league-list") {
+    return "s-maxage=3600, stale-while-revalidate=86400";
+  }
+
+  return "s-maxage=300, stale-while-revalidate=1800";
 }
