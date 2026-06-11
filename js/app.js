@@ -1,6 +1,6 @@
 const API_BASE_URL = "/api/footystats";
 const APP_TIMEZONE = "America/Sao_Paulo";
-const API_TIMEOUT = 15000;
+const API_TIMEOUT = 20000;
 
 const TARGET_LEAGUES = [
   { key: "brasileirao-a", name: "Brasileirão Série A", short: "BRA", country: "Brasil", color: "#00c853", aliases: ["serie a", "brasileirao", "brasileirão"] },
@@ -114,16 +114,37 @@ async function loadApplicationData({ refresh = false } = {}) {
 }
 
 async function loadRealData() {
-  const leaguePayload = await apiFetch("/league-list", { chosen_leagues_only: "true" });
-  const availableLeagues = getDataArray(leaguePayload);
+  let availableLeagues = [];
+
+  try {
+    const leaguePayload = await apiFetch("/league-list", { chosen_leagues_only: "true" });
+    availableLeagues = getDataArray(leaguePayload);
+  } catch (error) {
+    console.warn("Lista de ligas indisponível; continuando com jogos do dia.", error);
+  }
+
   state.leagueIndex = buildLeagueIndex(availableLeagues);
   state.leagues = resolveTargetLeagues(availableLeagues);
 
-  if (!state.leagues.length) {
-    throw new Error("Nenhum dos campeonatos configurados está disponível no plano da API.");
+  if (!state.leagues.length && state.leagueIndex.length) {
+    state.leagues = state.leagueIndex
+      .slice()
+      .sort((a, b) => b.year - a.year || b.seasonId - a.seasonId)
+      .slice(0, 18)
+      .map((league) => ({
+        key: league.key,
+        name: league.name,
+        short: league.short,
+        country: league.country,
+        color: league.color,
+        id: league.id,
+        seasonId: league.seasonId,
+        season: league.year,
+        apiName: league.name
+      }));
   }
 
-  if (!state.leagues.some((league) => league.key === state.statsLeagueKey)) {
+  if (state.leagues.length && !state.leagues.some((league) => league.key === state.statsLeagueKey)) {
     state.statsLeagueKey = state.leagues[0].key;
   }
 
@@ -134,7 +155,6 @@ async function loadRealData() {
 
   await loadLeagueStats(state.statsLeagueKey, { silent: true });
 }
-
 async function loadMatchesForDate() {
   setLoading(true, "matches");
   try {
@@ -172,31 +192,35 @@ async function loadMatchesForDate() {
 async function fetchMatchesForSelectedDate() {
   const dateKey = formatApiDate(state.selectedDate);
 
-  // Primeiro tenta o endpoint leve da agenda do dia.
-  // Esse endpoint é o mais rápido para carregar a tela inicial e evita travar o site
-  // fazendo várias páginas de league-matches antes da primeira renderização.
+  // Primeiro carrega pelo endpoint mais leve do plano: jogos do dia.
   try {
     const todayPayload = await apiFetch("/todays-matches", { date: dateKey, timezone: APP_TIMEZONE });
     const todayMatches = uniqueMatches(getDataArray(todayPayload));
-    if (todayMatches.length) return todayMatches;
+    if (todayMatches.length) {
+      return todayMatches.filter((match) => isMatchOnSelectedDate(match, dateKey));
+    }
   } catch (error) {
-    console.warn("todays-matches indisponível, usando league-matches:", error);
+    console.warn("todays-matches indisponível; tentando league-matches.", error);
   }
 
-  // Fallback oficial por liga/temporada, com paginação controlada.
+  if (!state.leagues.length) {
+    return [];
+  }
+
   const leagueResults = await Promise.allSettled(state.leagues.map((league) => fetchLeagueMatchesForDate(league, dateKey)));
   const matches = leagueResults.flatMap((result) => result.status === "fulfilled" ? result.value : []);
   return uniqueMatches(matches);
 }
-
 async function fetchLeagueMatchesForDate(league, dateKey) {
   const matches = [];
   let page = 1;
   let maxPage = 1;
+  const leagueId = league.seasonId || league.id;
+  if (!leagueId) return [];
 
   do {
     const payload = await apiFetch("/league-matches", {
-      league_id: league.seasonId,
+      league_id: leagueId,
       page,
       max_per_page: 500
     });
@@ -207,11 +231,17 @@ async function fetchLeagueMatchesForDate(league, dateKey) {
     page += 1;
   } while (page <= maxPage && page <= 20);
 
-  return matches.filter((match) => formatApiDate(new Date(getMatchTimestamp(match))) === dateKey);
+  return matches.filter((match) => isMatchOnSelectedDate(match, dateKey));
 }
 
 function getPagerMaxPage(payload) {
   return Number(payload?.pager?.max_page || payload?.data?.pager?.max_page || payload?.pagination?.max_page || 1);
+}
+
+function isMatchOnSelectedDate(match, dateKey) {
+  const timestamp = getMatchTimestamp(match);
+  if (!timestamp || !Number.isFinite(timestamp)) return true;
+  return formatApiDate(new Date(timestamp)) === dateKey;
 }
 
 function uniqueMatches(matches) {
@@ -226,11 +256,16 @@ function uniqueMatches(matches) {
 
 
 async function loadMatchTeams() {
+  if (!state.leagues.length) {
+    state.matchTeams = [];
+    return;
+  }
+
   const teamRequests = state.leagues.map(async (league) => {
     try {
-      const payload = await apiFetch("/league-teams", {
-        league_id: league.seasonId
-      });
+      const leagueId = league.seasonId || league.id;
+      if (!leagueId) return [];
+      const payload = await apiFetch("/league-teams", { league_id: leagueId });
       return getDataArray(payload).map((team) => normalizeTeamIdentity(team, league));
     } catch (error) {
       console.warn(`Times indisponíveis para ${league.name}:`, error);
@@ -241,10 +276,13 @@ async function loadMatchTeams() {
   const groups = await Promise.all(teamRequests);
   state.matchTeams = groups.flat();
 }
-
 async function loadLeagueStats(leagueKey, { silent = false } = {}) {
   const league = state.leagues.find((item) => item.key === leagueKey) || state.leagues[0];
-  if (!league) return;
+  if (!league) {
+    state.teams = [];
+    state.players = [];
+    return;
+  }
 
   state.statsLeagueKey = league.key;
   if (!silent) {
@@ -254,11 +292,11 @@ async function loadLeagueStats(leagueKey, { silent = false } = {}) {
   try {
     const [teamsPayload, playersPayload] = await Promise.all([
       apiFetch("/league-teams", {
-        league_id: league.seasonId,
+        league_id: league.seasonId || league.id,
         include: "stats"
       }),
       apiFetch("/league-players", {
-        league_id: league.seasonId,
+        league_id: league.seasonId || league.id,
         page: 1
       })
     ]);
@@ -588,26 +626,20 @@ function renderAll() {
 function populateLeagueFilters() {
   const allOption = `<option value="all">Todos os campeonatos</option>`;
   const options = state.leagues.map((league) => `<option value="${league.key}">${escapeHtml(league.name)}</option>`).join("");
-
   if (els.matchLeagueFilter) {
     els.matchLeagueFilter.innerHTML = allOption + options;
     els.matchLeagueFilter.value = state.matchLeague;
   }
-
   if (els.oddsLeagueFilter) {
     els.oddsLeagueFilter.innerHTML = allOption + options;
     els.oddsLeagueFilter.value = state.oddsLeague;
   }
-
   if (els.statsLeagueFilter) {
-    els.statsLeagueFilter.innerHTML = state.leagues.length
-      ? state.leagues.map((league) => `
-        <option value="${league.key}" ${league.key === state.statsLeagueKey ? "selected" : ""}>${escapeHtml(league.name)}</option>
-      `).join("")
-      : `<option value="all">Sem ligas carregadas</option>`;
+    els.statsLeagueFilter.innerHTML = state.leagues.map((league) => `
+      <option value="${league.key}" ${league.key === state.statsLeagueKey ? "selected" : ""}>${escapeHtml(league.name)}</option>
+    `).join("");
   }
 }
-
 function renderDashboard() {
   const liveCount = state.matches.filter((match) => match.status === "live").length;
 
@@ -1202,8 +1234,8 @@ async function renderH2H({ fetchReal = false } = {}) {
 async function fetchH2HHistory(home, away) {
   const league = getLeague(state.statsLeagueKey);
   const schedulePayload = await apiFetch("/league-matches", {
-    league_id: league.seasonId,
-    max_per_page: 500
+    league_id: league.seasonId || league.id,
+    max_per_page: 1000
   });
   const schedule = getDataArray(schedulePayload).map((match) => normalizeMatch(match));
   const meeting = schedule.find((match) =>
@@ -1429,12 +1461,14 @@ function setupFilters() {
     });
   });
 
-  els.statsLeagueFilter.addEventListener("change", async (event) => {
-    await loadLeagueStats(event.target.value);
-    populateTeamSelectors();
-    renderStats();
-    renderH2H();
-  });
+  if (els.statsLeagueFilter) {
+    els.statsLeagueFilter.addEventListener("change", async (event) => {
+      await loadLeagueStats(event.target.value);
+      populateTeamSelectors();
+      renderStats();
+      renderH2H();
+    });
+  }
 
   if (els.oddsLeagueFilter) {
     els.oddsLeagueFilter.addEventListener("change", (event) => {
@@ -1464,8 +1498,8 @@ function setupFilters() {
     });
   });
 
-  els.compareTeamsButton.addEventListener("click", () => renderH2H({ fetchReal: true }));
-  els.refreshButton.addEventListener("click", () => loadApplicationData({ refresh: true }));
+  if (els.compareTeamsButton) els.compareTeamsButton.addEventListener("click", () => renderH2H({ fetchReal: true }));
+  if (els.refreshButton) els.refreshButton.addEventListener("click", () => loadApplicationData({ refresh: true }));
 }
 
 function setupTheme() {
@@ -1553,7 +1587,7 @@ async function ensurePlayersForMatch(match) {
   const league = state.leagues.find((item) => item.key === match.leagueKey);
   if (!league || state.loadedPlayerLeagueKeys.includes(league.key)) return;
   try {
-    const payload = await apiFetch("/league-players", { league_id: league.seasonId, page: 1 });
+    const payload = await apiFetch("/league-players", { league_id: league.seasonId || league.id, page: 1 });
     const teams = state.teams.length ? state.teams : state.matchTeams;
     const players = getDataArray(payload).map((player) => normalizePlayer(player, teams));
     const existing = new Set(state.players.map((player) => String(player.id)));
@@ -2135,12 +2169,28 @@ function setActiveButton(container, activeButton) {
 
 function getDataArray(payload) {
   if (Array.isArray(payload)) return payload;
-  if (Array.isArray(payload?.data)) return payload.data;
-  if (Array.isArray(payload?.data?.data)) return payload.data.data;
-  if (Array.isArray(payload?.response)) return payload.response;
+  const candidates = [
+    payload?.data,
+    payload?.data?.data,
+    payload?.data?.matches,
+    payload?.data?.fixtures,
+    payload?.matches,
+    payload?.fixtures,
+    payload?.teams,
+    payload?.players,
+    payload?.leagues,
+    payload?.response,
+    payload?.results
+  ];
+  for (const candidate of candidates) {
+    if (Array.isArray(candidate)) return candidate;
+  }
+  if (payload?.data && typeof payload.data === "object") {
+    const nested = Object.values(payload.data).find((value) => Array.isArray(value));
+    if (Array.isArray(nested)) return nested;
+  }
   return [];
 }
-
 function cleanLeagueName(value) {
   const raw = String(value || "").trim();
   if (!raw) return "Campeonato";
