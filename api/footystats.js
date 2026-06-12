@@ -2,13 +2,10 @@ const FOOTYSTATS_BASE_URL = "https://api.football-data-api.com";
 
 const ALLOWED_ENDPOINTS = new Set([
   "league-list",
-  "league-tables",
   "todays-matches",
   "league-matches",
   "league-teams",
   "league-players",
-  "team",
-  "player-stats",
   "match"
 ]);
 

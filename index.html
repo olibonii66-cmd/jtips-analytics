@@ -41,14 +41,8 @@
           <i class="fa-regular fa-calendar"></i><span>Jogos e resultados</span>
           <span class="nav-badge" id="liveNavBadge">3</span>
         </a>
-        <a class="nav-item" href="#estatisticas" data-section="estatisticas">
-          <i class="fa-solid fa-chart-column"></i><span>Estatísticas</span>
-        </a>
         <a class="nav-item" href="#odds" data-section="odds">
           <i class="fa-solid fa-arrow-trend-up"></i><span>Odds e valor</span>
-        </a>
-        <a class="nav-item" href="#h2h" data-section="h2h">
-          <i class="fa-solid fa-code-compare"></i><span>Confrontos H2H</span>
         </a>
         <a class="nav-item" href="#tips" data-section="tips">
           <i class="fa-regular fa-lightbulb"></i><span>Tips do dia</span>
@@ -189,45 +183,6 @@
           </div>
         </section>
 
-        <section class="page-section" id="estatisticas" aria-labelledby="stats-title">
-          <div class="section-heading">
-            <div><p class="eyebrow">Performance em números</p><h2 id="stats-title">Times e jogadores</h2><p>Compare forma, produção ofensiva e disciplina.</p></div>
-            <select id="statsLeagueFilter" class="large-select" aria-label="Campeonato das estatísticas"></select>
-          </div>
-
-          <div class="stats-tabs">
-            <button class="active" type="button" data-stats-tab="teams"><i class="fa-solid fa-shield-halved"></i> Times</button>
-            <button type="button" data-stats-tab="players"><i class="fa-solid fa-person-running"></i> Jogadores</button>
-          </div>
-
-          <div class="stats-view active" id="teamsStatsView">
-            <div class="stats-overview" id="statsOverview"></div>
-            <div class="stats-layout">
-              <article class="panel">
-                <div class="panel__header"><div><h3>Ranking de performance</h3><p>Produção geral na temporada</p></div></div>
-                <div class="ranking-list" id="teamRanking"></div>
-              </article>
-              <article class="panel">
-                <div class="panel__header"><div><h3>Comparativo de forças</h3><p>Médias das equipes líderes</p></div></div>
-                <div class="chart-wrap chart-wrap--radar"><canvas id="teamRadarChart"></canvas></div>
-              </article>
-            </div>
-          </div>
-
-          <div class="stats-view" id="playersStatsView">
-            <div class="player-leaders" id="playerLeaders"></div>
-            <article class="panel">
-              <div class="panel__header"><div><h3>Ranking de jogadores</h3><p>Gols, assistências e participação direta</p></div></div>
-              <div class="table-scroll">
-                <table class="data-table player-table">
-                  <thead><tr><th>#</th><th>Jogador</th><th>Time</th><th>Jogos</th><th>Gols</th><th>Assist.</th><th>Min./gol</th><th>Nota</th></tr></thead>
-                  <tbody id="playersTableBody"></tbody>
-                </table>
-              </div>
-            </article>
-          </div>
-        </section>
-
         <section class="page-section" id="odds" aria-labelledby="odds-title">
           <div class="section-heading">
             <div><p class="eyebrow">Encontre vantagem</p><h2 id="odds-title">Probabilidades e odds</h2><p>Compare a probabilidade estimada com a odd de mercado.</p></div>
@@ -239,20 +194,6 @@
             <label class="range-filter">Value mínimo <strong id="valueRangeLabel">3%</strong><input id="valueRange" type="range" min="0" max="15" value="3"></label>
           </div>
           <div class="value-bets-grid" id="valueBetsGrid"></div>
-        </section>
-
-        <section class="page-section" id="h2h" aria-labelledby="h2h-title">
-          <div class="section-heading">
-            <div><p class="eyebrow">Frente a frente</p><h2 id="h2h-title">Histórico de confrontos</h2><p>Compare dois times e encontre padrões nos últimos 10 encontros.</p></div>
-          </div>
-
-          <div class="h2h-selector panel">
-            <label><span>Time da casa</span><select id="homeTeamSelect"></select></label>
-            <div class="versus-badge">VS</div>
-            <label><span>Time visitante</span><select id="awayTeamSelect"></select></label>
-            <button class="button button--primary" id="compareTeamsButton" type="button"><i class="fa-solid fa-code-compare"></i> Comparar</button>
-          </div>
-          <div id="h2hContent"></div>
         </section>
 
         <section class="page-section" id="tips" aria-labelledby="tips-title">
@@ -291,7 +232,6 @@
 
   <div class="toast-region" id="toastRegion" aria-live="polite"></div>
 
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
   <script src="./js/app.js" defer></script>
 </body>
 </html>
