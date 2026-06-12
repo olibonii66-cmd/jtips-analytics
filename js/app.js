@@ -519,20 +519,28 @@ function normalizeMatch(raw) {
       home: firstProbability(raw.home_win_percentage, raw.homeWinProbability, raw.probability_home),
       draw: firstProbability(raw.draw_percentage, raw.drawProbability, raw.probability_draw),
       away: firstProbability(raw.away_win_percentage, raw.awayWinProbability, raw.probability_away),
-      over05: firstProbability(raw.over05, raw.over_05_percentage, raw.o05_potential, raw.over05Probability),
-      over15: firstProbability(raw.over15, raw.over_15_percentage, raw.o15_potential, raw.over15Probability),
-      over25: firstProbability(raw.over25, raw.over_25_percentage, raw.o25_potential, raw.over25Probability),
-      over35: firstProbability(raw.over35, raw.over_35_percentage, raw.o35_potential, raw.over35Probability),
-      over45: firstProbability(raw.over45, raw.over_45_percentage, raw.o45_potential, raw.over45Probability),
-      btts: firstProbability(raw.btts, raw.btts_percentage, raw.btts_potential, raw.bttsProbability),
+      // Campos overXX são booleanos de resultado; os campos *_potential são as probabilidades.
+      over05: firstProbability(raw.o05_potential, raw.over_05_percentage, raw.over05Probability),
+      over15: firstProbability(raw.o15_potential, raw.over_15_percentage, raw.over15Probability),
+      over25: firstProbability(raw.o25_potential, raw.over_25_percentage, raw.over25Probability),
+      over35: firstProbability(raw.o35_potential, raw.over_35_percentage, raw.over35Probability),
+      over45: firstProbability(raw.o45_potential, raw.over_45_percentage, raw.over45Probability),
+      under05: firstProbability(raw.u05_potential, raw.under_05_percentage),
+      under15: firstProbability(raw.u15_potential, raw.under_15_percentage),
+      under25: firstProbability(raw.u25_potential, raw.under_25_percentage),
+      under35: firstProbability(raw.u35_potential, raw.under_35_percentage),
+      under45: firstProbability(raw.u45_potential, raw.under_45_percentage),
+      btts: firstProbability(raw.btts_potential, raw.btts_percentage, raw.bttsProbability),
       bttsFh: firstProbability(raw.btts_fhg_potential, raw.btts_fh_potential, raw.bttsFirstHalfProbability),
       btts2h: firstProbability(raw.btts_2hg_potential, raw.btts_2h_potential, raw.bttsSecondHalfProbability),
-      corners: firstProbability(raw.corners_potential, raw.cornersPotential),
+      over05Ht: firstProbability(raw.o05HT_potential, raw.o05_ht_potential, raw.over05_fh_potential),
+      over15Ht: firstProbability(raw.o15HT_potential, raw.o15_ht_potential, raw.over15_fh_potential),
+      over05_2h: firstProbability(raw.o05_2H_potential, raw.o05_2h_potential, raw.over05_2h_potential),
+      over15_2h: firstProbability(raw.o15_2H_potential, raw.o15_2h_potential, raw.over15_2h_potential),
       cornersOver85: firstProbability(raw.corners_o85_potential, raw.corners_over_85_percentage, raw.cornersOver85Probability),
       cornersOver95: firstProbability(raw.corners_o95_potential, raw.corners_over_95_percentage, raw.cornersOver95Probability),
       cornersOver105: firstProbability(raw.corners_o105_potential, raw.corners_over_105_percentage, raw.cornersOver105Probability),
-      cards: firstProbability(raw.cards_potential, raw.cardsPotential),
-      cardsOver35: firstProbability(raw.cards_o35_potential, raw.cards_over_35_percentage, raw.cardsOver35Probability, raw.cards_potential),
+      cardsOver35: firstProbability(raw.cards_o35_potential, raw.cards_over_35_percentage, raw.cardsOver35Probability),
       cardsOver45: firstProbability(raw.cards_o45_potential, raw.cards_over_45_percentage, raw.cardsOver45Probability),
       cardsOver55: firstProbability(raw.cards_o55_potential, raw.cards_over_55_percentage, raw.cardsOver55Probability)
     },
@@ -565,7 +573,29 @@ function normalizeMatch(raw) {
       xgPrematchAway: nullablePositiveNumber(raw.team_b_xg_prematch),
       xgPrematchTotal: nullablePositiveNumber(raw.total_xg_prematch),
       homePpg: nullablePositiveNumber(raw.pre_match_home_ppg ?? raw.pre_match_teamA_overall_ppg),
-      awayPpg: nullablePositiveNumber(raw.pre_match_away_ppg ?? raw.pre_match_teamB_overall_ppg)
+      awayPpg: nullablePositiveNumber(raw.pre_match_away_ppg ?? raw.pre_match_teamB_overall_ppg),
+      totalGoals: nullablePositiveNumber(raw.totalGoalCount),
+      htGoals: nullablePositiveNumber(raw.HTGoalCount),
+      secondHalfGoals: nullablePositiveNumber(raw.GoalCount_2hg),
+      htGoalsHome: nullablePositiveNumber(raw.ht_goals_team_a),
+      htGoalsAway: nullablePositiveNumber(raw.ht_goals_team_b),
+      secondHalfGoalsHome: nullablePositiveNumber(raw.goals_2hg_team_a),
+      secondHalfGoalsAway: nullablePositiveNumber(raw.goals_2hg_team_b),
+      cornersPotential: nullablePositiveNumber(raw.corners_potential),
+      cornersFhHome: nullablePositiveNumber(raw.team_a_fh_corners),
+      cornersFhAway: nullablePositiveNumber(raw.team_b_fh_corners),
+      cornersFhTotal: nullablePositiveNumber(raw.corner_fh_count),
+      corners2hHome: nullablePositiveNumber(raw.team_a_2h_corners),
+      corners2hAway: nullablePositiveNumber(raw.team_b_2h_corners),
+      corners2hTotal: nullablePositiveNumber(raw.corner_2h_count),
+      cardsPotential: nullablePositiveNumber(raw.cards_potential),
+      cardsFhHome: nullablePositiveNumber(raw.team_a_fh_cards),
+      cardsFhAway: nullablePositiveNumber(raw.team_b_fh_cards),
+      cardsFhTotal: nullablePositiveNumber(raw.total_fh_cards),
+      cards2hHome: nullablePositiveNumber(raw.team_a_2h_cards),
+      cards2hAway: nullablePositiveNumber(raw.team_b_2h_cards),
+      cards2hTotal: nullablePositiveNumber(raw.total_2h_cards),
+      attacksRecorded: nullablePositiveNumber(raw.attacks_recorded)
     }
   };
 }
@@ -1811,88 +1841,93 @@ function switchNumbersTab(tabId) {
 
 
 function renderGoalsNumbersTab(match) {
+  const actual = (value) => match.status === "complete" ? value : null;
   const groups = [
     ["gols-partida", "Gols da partida", [
-      goalLine("Mais de 0.5", match.probabilities.over05),
-      goalLine("Mais de 1.5", match.probabilities.over15),
-      goalLine("Mais de 2.5", match.probabilities.over25),
-      goalLine("Mais de 3.5", match.probabilities.over35),
-      goalLine("Mais de 4.5", match.probabilities.over45),
+      statLine("Gols da partida", actual(match.homeGoals), actual(match.awayGoals), actual(match.stats.totalGoals)),
+      goalLine("Mais de 0,5", match.probabilities.over05),
+      goalLine("Mais de 1,5", match.probabilities.over15),
+      goalLine("Mais de 2,5", match.probabilities.over25),
+      goalLine("Mais de 3,5", match.probabilities.over35),
+      goalLine("Mais de 4,5", match.probabilities.over45),
       goalLine("BTTS", match.probabilities.btts),
-      goalLine("Ambas marcam e ganham", null),
-      goalLine("Ambas marcam e empate", null),
-      goalLine("Ambas marcam e mais de 2.5", null),
-      goalLine("Ambas marcam Não e Mais de 2.5", null)
+      goalLine("Ambas as equipes marcam e ganhem", null),
+      goalLine("Ambas as equipes marcam e empate", null),
+      goalLine("Ambas as equipes marcam e mais de 2,5 gols", null),
+      goalLine("Ambas as equipes marcam Não e Mais de 2,5", null)
     ]],
     ["gols-1t", "Gols do primeiro tempo", [
-      goalLine("Ambas marcam no primeiro tempo", match.probabilities.bttsFh),
-      goalLine("Mais de 0.5 FH", firstProbability(match.odds?.firstHalfOver05, match.odds_1st_half_over05, match.over05_fh_potential)),
-      goalLine("Mais de 1.5 FH", firstProbability(match.odds?.firstHalfOver15, match.odds_1st_half_over15, match.over15_fh_potential)),
-      goalLine("Mais de 2.5 FH", firstProbability(match.over25_fh_potential))
+      statLine("Gols no 1º tempo", actual(match.stats.htGoalsHome), actual(match.stats.htGoalsAway), actual(match.stats.htGoals)),
+      goalLine("Ambas as equipes marcam no primeiro tempo", match.probabilities.bttsFh),
+      goalLine("Mais de 0,5 FH", match.probabilities.over05Ht),
+      goalLine("Mais de 1,5 FH", match.probabilities.over15Ht),
+      goalLine("Mais de 2,5 FH", null)
     ]],
     ["gols-2t", "Gols do segundo tempo", [
-      goalLine("Ambas marcam no segundo tempo", match.probabilities.btts2h),
-      goalLine("Ambas marcam nos dois tempos", null),
-      goalLine("Mais de 0.5 2H", firstProbability(match.odds?.secondHalfOver05, match.odds_2nd_half_over05, match.over05_2h_potential)),
-      goalLine("Mais de 1.5 2H", firstProbability(match.odds?.secondHalfOver15, match.odds_2nd_half_over15, match.over15_2h_potential)),
-      goalLine("Mais de 2.5 2H", firstProbability(match.over25_2h_potential))
+      statLine("Gols no 2º tempo", actual(match.stats.secondHalfGoalsHome), actual(match.stats.secondHalfGoalsAway), actual(match.stats.secondHalfGoals)),
+      goalLine("Ambas as equipes marcam no segundo tempo", match.probabilities.btts2h),
+      goalLine("Ambas as equipes marcam nos dois tempos", null),
+      goalLine("Mais de 0,5 2H", match.probabilities.over05_2h),
+      goalLine("Mais de 1,5 2H", match.probabilities.over15_2h),
+      goalLine("Mais de 2,5 2H", null)
     ]],
     ["menos-gols", "Menos de X gols", [
-      goalLine("Menos de 0.5", inverseProbability(match.probabilities.over05)),
-      goalLine("Menos de 1.5", inverseProbability(match.probabilities.over15)),
-      goalLine("Menos de 2.5", firstProbability(match.under25, match.probabilities.under25) || inverseProbability(match.probabilities.over25)),
-      goalLine("Menos de 3.5", inverseProbability(match.probabilities.over35)),
-      goalLine("Menos de 4.5", inverseProbability(match.probabilities.over45))
+      goalLine("Menos de 0,5", match.probabilities.under05),
+      goalLine("Menos de 1,5", match.probabilities.under15),
+      goalLine("Menos de 2,5", match.probabilities.under25),
+      goalLine("Menos de 3,5", match.probabilities.under35),
+      goalLine("Menos de 4,5", match.probabilities.under45)
     ]],
     ["tempos", "Primeiro/Segundo Tempo", [
-      goalLine("Menos de 0.5 FH", null),
-      goalLine("Menos de 1.5 FH", null),
-      goalLine("Menos de 2.5 FH", null),
-      goalLine("Menos de 0.5 2H", null),
-      goalLine("Menos de 1.5 2H", null),
-      goalLine("Menos de 2.5 2H", null)
+      statLine("xG pré-jogo", match.stats.xgPrematchHome, match.stats.xgPrematchAway, match.stats.xgPrematchTotal),
+      goalLine("Menos de 0,5 FH", null),
+      goalLine("Menos de 1,5 FH", null),
+      goalLine("Menos de 2,5 FH", null),
+      goalLine("Menos de 0,5 2H", null),
+      goalLine("Menos de 1,5 2H", null),
+      goalLine("Menos de 2,5 2H", null)
     ]]
   ];
   return renderNumbersSubtabs("gols", groups);
 }
 
 function renderCornersNumbersTab(match) {
-  const totalCorners = firstNumber(match.stats.cornersTotal, addNullable(match.stats.cornersHome, match.stats.cornersAway));
+  const actual = (value) => match.status === "complete" ? value : null;
+  const totalCorners = firstNumber(actual(match.stats.cornersTotal), addNullable(actual(match.stats.cornersHome), actual(match.stats.cornersAway)));
   const groups = [
     ["escanteios-partida", "Escanteios da partida", [
-      statLine("Total de escanteios", match.stats.cornersHome, match.stats.cornersAway, totalCorners),
-      statLine("Escanteios / jogo", null, null, match.probabilities.corners),
-      statLine("Escanteios do mandante", match.stats.cornersHome, null, null),
-      statLine("Escanteios do visitante", null, match.stats.cornersAway, null)
+      statLine("Total de escanteios", actual(match.stats.cornersHome), actual(match.stats.cornersAway), totalCorners),
+      numberLine("Escanteios / jogo", match.stats.cornersPotential),
+      statLine("Escanteios do mandante", actual(match.stats.cornersHome), null, null),
+      statLine("Escanteios do visitante", null, actual(match.stats.cornersAway), null)
     ]],
     ["total-escanteios", "Total de escanteios", [
-      goalLine("Mais de 6", estimateFromPotential(match.probabilities.corners, 8)),
-      goalLine("Mais de 7", estimateFromPotential(match.probabilities.corners, 5)),
-      goalLine("Mais de 8", match.probabilities.cornersOver85),
-      goalLine("Mais de 9", match.probabilities.cornersOver95),
-      goalLine("Mais de 10", match.probabilities.cornersOver105),
-      goalLine("Mais de 11", estimateFromPotential(match.probabilities.cornersOver105, -8)),
-      goalLine("Mais de 12", estimateFromPotential(match.probabilities.cornersOver105, -14)),
-      goalLine("Mais de 13", estimateFromPotential(match.probabilities.cornersOver105, -20))
+      numberLine("Potencial de escanteios", match.stats.cornersPotential),
+      goalLine("Mais de 8,5 escanteios", match.probabilities.cornersOver85),
+      goalLine("Mais de 9,5 escanteios", match.probabilities.cornersOver95),
+      goalLine("Mais de 10,5 escanteios", match.probabilities.cornersOver105),
+      numberLine("Odd over 8,5", match.odds.cornersOver85),
+      numberLine("Odd over 9,5", match.odds.cornersOver95),
+      numberLine("Odd under 10,5", match.odds.cornersUnder105)
     ]],
     ["escanteios-time", "Escanteios do time", [
-      statLine("Escanteios a favor / jogo", match.stats.cornersHome, match.stats.cornersAway, totalCorners),
+      statLine("Escanteios a favor / jogo", actual(match.stats.cornersHome), actual(match.stats.cornersAway), totalCorners),
       statLine("Escanteios contra / jogo", null, null, null),
-      goalLine("Mais de 2.5 escanteios a favor", null),
-      goalLine("Mais de 3.5 escanteios a favor", null),
-      goalLine("Mais de 4.5 escanteios a favor", null),
-      goalLine("Mais de 2.5 escanteios contra", null),
-      goalLine("Mais de 3.5 escanteios contra", null),
-      goalLine("Mais de 4.5 escanteios contra", null)
+      goalLine("Mais de 2,5 escanteios a favor", null),
+      goalLine("Mais de 3,5 escanteios a favor", null),
+      goalLine("Mais de 4,5 escanteios a favor", null),
+      goalLine("Mais de 2,5 escanteios contra", null),
+      goalLine("Mais de 3,5 escanteios contra", null),
+      goalLine("Mais de 4,5 escanteios contra", null)
     ]],
     ["escanteios-1t", "Primeiro tempo", [
-      statLine("Média FH", null, null, null),
+      statLine("Escanteios 1º tempo", actual(match.stats.cornersFhHome), actual(match.stats.cornersFhAway), actual(match.stats.cornersFhTotal)),
       goalLine("Mais de 4 FH", null),
       goalLine("Mais de 5 FH", null),
       goalLine("Mais de 6 FH", null)
     ]],
     ["escanteios-2t", "Segundo tempo", [
-      statLine("Média 2H", null, null, null),
+      statLine("Escanteios 2º tempo", actual(match.stats.corners2hHome), actual(match.stats.corners2hAway), actual(match.stats.corners2hTotal)),
       goalLine("Mais de 4 2H", null),
       goalLine("Mais de 5 2H", null),
       goalLine("Mais de 6 2H", null)
@@ -1902,36 +1937,38 @@ function renderCornersNumbersTab(match) {
 }
 
 function renderCardsNumbersTab(match) {
-  const totalCards = firstNumber(addNullable(match.stats.cardsHome, match.stats.cardsAway), addNullable(addNullable(match.stats.yellowHome, match.stats.yellowAway), addNullable(match.stats.redHome, match.stats.redAway)));
+  const actual = (value) => match.status === "complete" ? value : null;
+  const totalCards = addNullable(addNullable(actual(match.stats.yellowHome), actual(match.stats.yellowAway)), addNullable(actual(match.stats.redHome), actual(match.stats.redAway)));
   const groups = [
     ["cartoes-partida", "Cartões da partida", [
-      statLine("Total de cartões / jogo", match.stats.cardsHome, match.stats.cardsAway, totalCards),
-      statLine("Cartões do mandante / jogo", match.stats.cardsHome, null, null),
-      statLine("Cartões do visitante / jogo", null, match.stats.cardsAway, null)
+      statLine("Cartões amarelos", actual(match.stats.yellowHome), actual(match.stats.yellowAway), addNullable(actual(match.stats.yellowHome), actual(match.stats.yellowAway))),
+      statLine("Cartões vermelhos", actual(match.stats.redHome), actual(match.stats.redAway), addNullable(actual(match.stats.redHome), actual(match.stats.redAway))),
+      statLine("Total de cartões", addNullable(actual(match.stats.yellowHome), actual(match.stats.redHome)), addNullable(actual(match.stats.yellowAway), actual(match.stats.redAway)), totalCards)
     ]],
     ["total-cartoes", "Total de cartões", [
-      goalLine("Mais de 2.5", estimateFromPotential(match.probabilities.cards, 10)),
-      goalLine("Mais de 3.5", match.probabilities.cardsOver35),
-      goalLine("Mais de 4.5", match.probabilities.cardsOver45),
-      goalLine("Mais de 5.5", match.probabilities.cardsOver55),
-      goalLine("Mais de 6.5", estimateFromPotential(match.probabilities.cardsOver55, -10))
+      numberLine("Potencial de cartões", match.stats.cardsPotential),
+      goalLine("Mais de 2,5", null),
+      goalLine("Mais de 3,5", match.probabilities.cardsOver35),
+      goalLine("Mais de 4,5", match.probabilities.cardsOver45),
+      goalLine("Mais de 5,5", match.probabilities.cardsOver55),
+      goalLine("Mais de 6,5", null)
     ]],
     ["cartoes-time", "Cartões do time", [
-      statLine("Cartões a favor média", match.stats.cardsHome, match.stats.cardsAway, totalCards),
-      goalLine("Mais de 0.5 a favor", null),
-      goalLine("Mais de 1.5 a favor", null),
-      goalLine("Mais de 2.5 a favor", null),
-      goalLine("Mais de 3.5 a favor", null)
+      statLine("Cartões a favor média/projeção", match.stats.cardsHome, match.stats.cardsAway, addNullable(match.stats.cardsHome, match.stats.cardsAway)),
+      goalLine("Mais de 0,5 a favor", null),
+      goalLine("Mais de 1,5 a favor", null),
+      goalLine("Mais de 2,5 a favor", null),
+      goalLine("Mais de 3,5 a favor", null)
     ]],
     ["cartoes-contra", "Cartões contra", [
-      goalLine("Mais de 0.5 contra", null),
-      goalLine("Mais de 1.5 contra", null),
-      goalLine("Mais de 2.5 contra", null),
-      goalLine("Mais de 3.5 contra", null)
+      goalLine("Mais de 0,5 contra", null),
+      goalLine("Mais de 1,5 contra", null),
+      goalLine("Mais de 2,5 contra", null),
+      goalLine("Mais de 3,5 contra", null)
     ]],
     ["cartoes-tempos", "1º / 2º tempo cartões", [
-      goalLine("1H Mais de 0.5 cartões a favor", null),
-      goalLine("2H Mais de 0.5 cartões a favor", null),
+      statLine("Cartões 1º tempo", actual(match.stats.cardsFhHome), actual(match.stats.cardsFhAway), actual(match.stats.cardsFhTotal)),
+      statLine("Cartões 2º tempo", actual(match.stats.cards2hHome), actual(match.stats.cards2hAway), actual(match.stats.cards2hTotal)),
       goalLine("1H Total abaixo de 2", null),
       goalLine("2H Total abaixo de 2", null),
       goalLine("1H entre 2–3 cartões totais", null),
@@ -1944,66 +1981,42 @@ function renderCardsNumbersTab(match) {
 }
 
 function renderShotsNumbersTab(match) {
-  const totalShots = firstNumber(addNullable(match.stats.shotsHome, match.stats.shotsAway));
-  const totalOnTarget = firstNumber(addNullable(match.stats.shotsOnTargetHome, match.stats.shotsOnTargetAway));
+  const actual = (value) => match.status === "complete" ? value : null;
+  const totalShots = addNullable(actual(match.stats.shotsHome), actual(match.stats.shotsAway));
+  const totalOnTarget = addNullable(actual(match.stats.shotsOnTargetHome), actual(match.stats.shotsOnTargetAway));
+  const totalOffTarget = addNullable(actual(match.stats.shotsOffTargetHome), actual(match.stats.shotsOffTargetAway));
+  const totalOffsides = addNullable(actual(match.stats.offsidesHome), actual(match.stats.offsidesAway));
+  const totalFouls = addNullable(actual(match.stats.foulsHome), actual(match.stats.foulsAway));
   const groups = [
     ["finalizacoes-time", "Finalizações do time", [
-      statLine("Finalizações / jogo", match.stats.shotsHome, match.stats.shotsAway, totalShots),
+      statLine("Finalizações", actual(match.stats.shotsHome), actual(match.stats.shotsAway), totalShots),
+      statLine("Finalizações no alvo", actual(match.stats.shotsOnTargetHome), actual(match.stats.shotsOnTargetAway), totalOnTarget),
+      statLine("Finalizações fora do alvo", actual(match.stats.shotsOffTargetHome), actual(match.stats.shotsOffTargetAway), totalOffTarget),
       statLine("Taxa de conversão de finalizações", shotConversion(match, "home"), shotConversion(match, "away"), null, "%"),
-      statLine("Finalizações no alvo / jogo", match.stats.shotsOnTargetHome, match.stats.shotsOnTargetAway, totalOnTarget),
-      statLine("Finalizações fora do alvo / jogo", match.stats.shotsOffTargetHome, match.stats.shotsOffTargetAway, firstNumber(addNullable(match.stats.shotsOffTargetHome, match.stats.shotsOffTargetAway))),
-      statLine("Finalizações por gol marcado", shotsPerGoal(match, "home"), shotsPerGoal(match, "away"), null),
-      goalLine("Time com mais de 10.5 finalizações", probabilityFromStat(match.stats.shotsHome, match.stats.shotsAway, 10.5)),
-      goalLine("Time com mais de 11.5 finalizações", probabilityFromStat(match.stats.shotsHome, match.stats.shotsAway, 11.5)),
-      goalLine("Time com mais de 12.5 finalizações", probabilityFromStat(match.stats.shotsHome, match.stats.shotsAway, 12.5)),
-      goalLine("Time com mais de 13.5 finalizações", probabilityFromStat(match.stats.shotsHome, match.stats.shotsAway, 13.5)),
-      goalLine("Time com mais de 14.5 finalizações", probabilityFromStat(match.stats.shotsHome, match.stats.shotsAway, 14.5)),
-      goalLine("Time com mais de 15.5 finalizações", probabilityFromStat(match.stats.shotsHome, match.stats.shotsAway, 15.5)),
-      goalLine("Time com mais de 3.5 finalizações no alvo", probabilityFromStat(match.stats.shotsOnTargetHome, match.stats.shotsOnTargetAway, 3.5)),
-      goalLine("Time com mais de 4.5 finalizações no alvo", probabilityFromStat(match.stats.shotsOnTargetHome, match.stats.shotsOnTargetAway, 4.5)),
-      goalLine("Time com mais de 5.5 finalizações no alvo", probabilityFromStat(match.stats.shotsOnTargetHome, match.stats.shotsOnTargetAway, 5.5)),
-      goalLine("Time com mais de 6.5 finalizações no alvo", probabilityFromStat(match.stats.shotsOnTargetHome, match.stats.shotsOnTargetAway, 6.5))
+      statLine("Finalizações por gol marcado", shotsPerGoal(match, "home"), shotsPerGoal(match, "away"), null)
     ]],
     ["finalizacoes-partida", "Finalizações da partida", [
-      goalLine("Jogo com mais de 23.5 finalizações", probabilityFromTotal(totalShots, 23.5)),
-      goalLine("Jogo com mais de 24.5 finalizações", probabilityFromTotal(totalShots, 24.5)),
-      goalLine("Jogo com mais de 25.5 finalizações", probabilityFromTotal(totalShots, 25.5)),
-      goalLine("Jogo com mais de 26.5 finalizações", probabilityFromTotal(totalShots, 26.5)),
-      goalLine("Jogo com mais de 7.5 finalizações no alvo", probabilityFromTotal(totalOnTarget, 7.5)),
-      goalLine("Jogo com mais de 8.5 finalizações no alvo", probabilityFromTotal(totalOnTarget, 8.5)),
-      goalLine("Jogo com mais de 9.5 finalizações no alvo", probabilityFromTotal(totalOnTarget, 9.5))
+      numberLine("Total de finalizações", totalShots),
+      numberLine("Total finalizações no alvo", totalOnTarget),
+      numberLine("Total finalizações fora do alvo", totalOffTarget),
+      goalLine("Jogo com mais de 23,5 finalizações", null),
+      goalLine("Jogo com mais de 24,5 finalizações", null),
+      goalLine("Jogo com mais de 25,5 finalizações", null),
+      goalLine("Jogo com mais de 26,5 finalizações", null)
     ]],
     ["impedimentos", "Impedimentos", [
-      statLine("Impedimentos / jogo", match.stats.offsidesHome, match.stats.offsidesAway, firstNumber(addNullable(match.stats.offsidesHome, match.stats.offsidesAway))),
-      goalLine("Mais de 2.5 impedimentos", probabilityFromTotal(addNullable(match.stats.offsidesHome, match.stats.offsidesAway), 2.5)),
-      goalLine("Mais de 3.5 impedimentos", probabilityFromTotal(addNullable(match.stats.offsidesHome, match.stats.offsidesAway), 3.5))
+      statLine("Impedimentos", actual(match.stats.offsidesHome), actual(match.stats.offsidesAway), totalOffsides),
+      goalLine("Mais de 2,5 impedimentos", null),
+      goalLine("Mais de 3,5 impedimentos", null)
     ]],
     ["outras", "Outras estatísticas", [
-      statLine("Faltas cometidas / jogo", match.stats.foulsHome, match.stats.foulsAway, firstNumber(addNullable(match.stats.foulsHome, match.stats.foulsAway))),
-      statLine("Faltas sofridas / jogo", null, null, null),
-      statLine("Posse média", match.stats.possessionHome, match.stats.possessionAway, null, "%"),
+      statLine("Faltas cometidas", actual(match.stats.foulsHome), actual(match.stats.foulsAway), totalFouls),
+      statLine("Faltas sofridas", null, null, null),
+      statLine("Posse", actual(match.stats.possessionHome), actual(match.stats.possessionAway), null, "%"),
       goalLine("Empate no intervalo", null)
     ]]
   ];
   return renderNumbersSubtabs("finalizacoes", groups);
-}
-
-function modalMarket(label, value) {
-  return `
-    <div class="numbers-metric-card">
-      <small>${escapeHtml(label)}</small>
-      <strong>${escapeHtml(value === null || value === undefined || value === "" ? "—" : String(value))}</strong>
-    </div>
-  `;
-}
-
-function matchPlayers(match, side) {
-  const teamId = side === "home" ? match.homeId : match.awayId;
-  const teamName = normalizeText(side === "home" ? match.homeName : match.awayName);
-  return state.players.filter((player) => {
-    if (teamId && Number(player.teamId) === Number(teamId)) return true;
-    return teamName && normalizeText(player.team || "") === teamName;
-  });
 }
 
 function renderPlayersNumbersTab(match) {
@@ -2051,6 +2064,14 @@ function switchNumbersSubtab(subtabId, root) {
   if (!subtabId || !root) return;
   root.querySelectorAll("[data-numbers-subtab]").forEach((button) => button.classList.toggle("is-active", button.dataset.numbersSubtab === subtabId));
   root.querySelectorAll("[data-numbers-subpanel]").forEach((panel) => panel.classList.toggle("is-active", panel.dataset.numbersSubpanel === subtabId));
+}
+
+function numberLine(label, value, suffix = "") {
+  return `
+    <div class="numbers-line numbers-line--plain">
+      <div class="numbers-line__meta"><span>${escapeHtml(label)}</span><strong>${formatStatValue(value, suffix)}</strong></div>
+    </div>
+  `;
 }
 
 function goalLine(label, probability) {
@@ -2126,6 +2147,7 @@ function probabilityFromStat(homeValue, awayValue, line) {
 }
 
 function shotConversion(match, side) {
+  if (match.status !== "complete") return null;
   const shots = side === "home" ? match.stats.shotsHome : match.stats.shotsAway;
   const goals = side === "home" ? match.homeGoals : match.awayGoals;
   if (!nullablePositiveNumber(shots) || !nullablePositiveNumber(goals)) return null;
@@ -2133,6 +2155,7 @@ function shotConversion(match, side) {
 }
 
 function shotsPerGoal(match, side) {
+  if (match.status !== "complete") return null;
   const shots = side === "home" ? match.stats.shotsHome : match.stats.shotsAway;
   const goals = side === "home" ? match.homeGoals : match.awayGoals;
   if (!nullablePositiveNumber(shots) || !nullablePositiveNumber(goals)) return null;
