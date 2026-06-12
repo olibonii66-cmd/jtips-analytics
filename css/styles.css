@@ -3116,3 +3116,405 @@ svg {
   color: var(--text-3);
   font-size: 10px;
 }
+
+.goal-predictions {
+  overflow: hidden;
+  border: 1px solid var(--border-soft);
+  border-radius: 14px;
+  background: var(--surface);
+}
+
+.goal-predictions__title {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 16px 18px;
+  border-bottom: 1px solid var(--border-soft);
+}
+
+.goal-predictions__title strong {
+  color: #1684e8;
+  font-size: 17px;
+}
+
+.goal-predictions__title span {
+  color: var(--text-3);
+  font-size: 12px;
+}
+
+.goal-predictions__description {
+  margin: 0 18px;
+  padding: 17px 0;
+  border-bottom: 1px solid var(--border-soft);
+  color: var(--text);
+  font-size: 13px;
+}
+
+.goal-predictions__tabs {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+  padding: 14px 18px;
+}
+
+.prediction-layout {
+  overflow: hidden;
+  border: 1px solid var(--border-soft);
+  border-radius: 14px;
+  background: var(--surface);
+}
+
+.prediction-layout__title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 15px 18px;
+  border-bottom: 1px solid var(--border-soft);
+}
+
+.prediction-layout__title i,
+.prediction-layout__title strong {
+  color: #1684e8;
+}
+
+.prediction-layout__title strong {
+  font-size: 17px;
+}
+
+.prediction-layout__title span {
+  color: var(--text-3);
+  font-size: 12px;
+}
+
+.prediction-summary {
+  display: grid;
+  grid-template-columns: minmax(190px, 1.2fr) repeat(2, minmax(140px, 0.8fr));
+  align-items: center;
+  gap: 12px;
+  margin: 18px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid var(--border-soft);
+}
+
+.prediction-summary__main {
+  text-align: center;
+}
+
+.prediction-summary__main strong,
+.prediction-summary__main b,
+.prediction-summary__main small {
+  display: block;
+}
+
+.prediction-summary__main strong {
+  color: var(--text);
+  font-size: 17px;
+}
+
+.prediction-summary__main b {
+  margin-top: 5px;
+  color: var(--text);
+  font-size: 16px;
+}
+
+.prediction-summary__main small {
+  margin-top: 7px;
+  color: var(--text-3);
+  font-size: 10px;
+}
+
+.prediction-team-card {
+  padding: 14px;
+  border: 1px solid #d5dde7;
+  border-radius: 5px;
+  background: var(--surface);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.07);
+}
+
+.prediction-team-card strong {
+  color: var(--text);
+  font-size: 17px;
+}
+
+.prediction-team-card span {
+  margin-left: 7px;
+  color: var(--text-2);
+  font-size: 12px;
+}
+
+.prediction-team-card small {
+  display: block;
+  margin-top: 5px;
+  color: var(--text-3);
+  font-size: 9px;
+}
+
+.prediction-layout__tabs {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+  padding: 0 18px 8px;
+}
+
+.prediction-layout__tabs .numbers-subtab {
+  width: 100%;
+  min-height: 38px;
+  border: 0;
+  border-radius: 4px;
+  color: #8292aa;
+}
+
+.prediction-layout__tabs .numbers-subtab:hover,
+.prediction-layout__tabs .numbers-subtab.is-active {
+  color: #1766c0;
+  border-color: transparent;
+  background: #dce8f5;
+}
+
+.prediction-description {
+  margin: 0;
+  padding: 14px 18px;
+  color: var(--text);
+  font-size: 12px;
+}
+
+.comparison-table-wrap {
+  overflow-x: auto;
+  padding: 0 18px 12px;
+}
+
+.comparison-table-wrap + .comparison-table-wrap {
+  padding-top: 8px;
+}
+
+.comparison-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 3px;
+  color: #111827;
+  font-size: 11px;
+}
+
+.comparison-table th,
+.comparison-table td {
+  min-width: 92px;
+  padding: 6px 9px;
+  text-align: center;
+}
+
+.comparison-table thead th {
+  background: #e9eef2;
+  font-weight: 500;
+}
+
+.comparison-table thead th:first-child,
+.comparison-table tbody th {
+  min-width: 185px;
+  text-align: left;
+}
+
+.comparison-table tbody th {
+  background: #edf1f4;
+  font-weight: 500;
+}
+
+.comparison-table td.positive {
+  color: #087d1e;
+  background: #d6f3c5;
+}
+
+.comparison-table td.negative {
+  color: #e12a18;
+  background: #fde3e1;
+}
+
+.comparison-table td.empty {
+  color: #7f8b99;
+  background: #f0f3f5;
+}
+
+.comparison-table__group th {
+  padding-top: 12px;
+  background: #e9eef2;
+  font-weight: 700;
+}
+
+.prediction-layout > .numbers-empty-note {
+  margin: 0;
+  padding: 0 18px 16px;
+}
+
+.player-predictions {
+  display: grid;
+  gap: 18px;
+}
+
+.player-predictions__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.player-predictions__divider {
+  margin: 0;
+  padding: 13px;
+  border: 1px solid var(--border-soft);
+  background: var(--surface);
+  color: var(--text);
+  font-size: 14px;
+}
+
+.player-predictions__divider i {
+  color: var(--warning);
+}
+
+.player-ranking-card {
+  overflow: hidden;
+  border: 1px solid var(--border-soft);
+  border-radius: 4px;
+  background: var(--surface);
+}
+
+.player-ranking-card h4 {
+  margin: 0;
+  padding: 13px;
+  border-bottom: 1px solid var(--border-soft);
+  color: var(--text);
+  font-size: 13px;
+}
+
+.player-ranking-card > div {
+  display: grid;
+  gap: 5px;
+  padding: 10px;
+}
+
+.player-ranking-row {
+  position: relative;
+  min-height: 24px;
+  overflow: hidden;
+  background: var(--surface-2);
+}
+
+.player-ranking-row > span {
+  position: absolute;
+  inset: 0 auto 0 0;
+  background: #a9ddfb;
+}
+
+.player-ranking-card--away .player-ranking-row > span {
+  background: #f3b3aa;
+}
+
+.player-ranking-row p {
+  position: relative;
+  z-index: 1;
+  margin: 0;
+  padding: 5px 7px;
+  color: var(--text);
+  font-size: 10px;
+}
+
+.player-ranking-row b {
+  font-weight: 500;
+}
+
+.player-ranking-card > small {
+  display: block;
+  padding: 0 10px 10px;
+  color: var(--text-3);
+  font-size: 8px;
+}
+
+.goal-predictions__tabs .numbers-subtab {
+  width: 100%;
+  min-height: 38px;
+  border: 0;
+  border-radius: 4px;
+  color: #8292aa;
+}
+
+.goal-predictions__tabs .numbers-subtab:hover,
+.goal-predictions__tabs .numbers-subtab.is-active {
+  color: #1766c0;
+  border-color: transparent;
+  background: #dce8f5;
+}
+
+.goal-predictions__table-wrap {
+  overflow-x: auto;
+  padding: 0 18px 16px;
+}
+
+.goal-predictions__table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 3px;
+  color: #111827;
+  font-size: 12px;
+}
+
+.goal-predictions__table th,
+.goal-predictions__table td {
+  min-width: 96px;
+  padding: 6px 10px;
+  text-align: center;
+}
+
+.goal-predictions__table thead th {
+  background: #e9eef2;
+  font-weight: 500;
+}
+
+.goal-predictions__table thead th:first-child,
+.goal-predictions__table tbody th {
+  min-width: 165px;
+  text-align: left;
+}
+
+.goal-predictions__table tbody th {
+  background: #edf1f4;
+  font-weight: 500;
+}
+
+.goal-predictions__table td.positive {
+  color: #087d1e;
+  background: #c9f0b4;
+}
+
+.goal-predictions__table td.negative {
+  color: #e12a18;
+  background: #fde3e1;
+}
+
+.goal-predictions__table td.empty {
+  color: #7f8b99;
+  background: #f0f3f5;
+}
+
+.goal-predictions > .numbers-empty-note {
+  margin: 0;
+  padding: 0 18px 16px;
+}
+
+@media (max-width: 760px) {
+  .goal-predictions__title {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .goal-predictions__tabs {
+    grid-template-columns: 1fr;
+  }
+
+  .prediction-summary,
+  .prediction-layout__tabs,
+  .player-predictions__grid {
+    grid-template-columns: 1fr;
+  }
+
+  .prediction-layout__title {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}

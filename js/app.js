@@ -597,8 +597,15 @@ function normalizeTeam(raw, league) {
       (played && goals !== null ? goals / played : null),
     possession: nullablePositiveNumber(stats.possessionAVG_overall ?? stats.average_possession),
     cards: nullablePositiveNumber(stats.cardsAVG_overall ?? stats.cards_per_match),
+    cardsAgainst: nullablePositiveNumber(stats.cardsAgainstAVG_overall ?? stats.cards_against_per_match ?? stats.cards_against),
     corners: nullablePositiveNumber(stats.cornersAVG_overall ?? stats.corners_per_match ?? stats.average_corners),
+    cornersAgainst: nullablePositiveNumber(stats.cornersAgainstAVG_overall ?? stats.corners_against_per_match ?? stats.corners_against),
     shots: nullablePositiveNumber(stats.shotsAVG_overall ?? stats.shots_per_match ?? stats.average_shots ?? stats.shotsAVG),
+    shotsOnTarget: nullablePositiveNumber(stats.shotsOnTargetAVG_overall ?? stats.shots_on_target_per_match ?? stats.shots_on_target),
+    shotsOffTarget: nullablePositiveNumber(stats.shotsOffTargetAVG_overall ?? stats.shots_off_target_per_match ?? stats.shots_off_target),
+    offsides: nullablePositiveNumber(stats.offsidesAVG_overall ?? stats.offsides_per_match),
+    fouls: nullablePositiveNumber(stats.foulsAVG_overall ?? stats.fouls_per_match),
+    fouled: nullablePositiveNumber(stats.fouledAVG_overall ?? stats.fouled_per_match ?? stats.fouls_suffered_per_match),
     concededPerMatch: nullablePositiveNumber(stats.seasonConcededAVG_overall ?? stats.goals_conceded_per_match ?? stats.conceded_per_match),
     ppg: nullablePositiveNumber(stats.seasonPPG_overall ?? stats.ppg) ??
       (played && wins !== null && draws !== null ? ((wins * 3) + draws) / played : null)
@@ -1434,202 +1441,374 @@ function switchNumbersTab(tabId) {
 
 
 function renderGoalsNumbersTab(match) {
-  const actual = (value) => match.status === "complete" ? value : null;
-  const groups = [
-    ["gols-partida", "Gols da partida", [
-      statLine("Gols da partida", actual(match.homeGoals), actual(match.awayGoals), actual(match.stats.totalGoals)),
-      goalLine("Mais de 0,5", match.probabilities.over05),
-      goalLine("Mais de 1,5", match.probabilities.over15),
-      goalLine("Mais de 2,5", match.probabilities.over25),
-      goalLine("Mais de 3,5", match.probabilities.over35),
-      goalLine("Mais de 4,5", match.probabilities.over45),
-      goalLine("BTTS", match.probabilities.btts),
-      goalLine("Ambas as equipes marcam e ganhem", null),
-      goalLine("Ambas as equipes marcam e empate", null),
-      goalLine("Ambas as equipes marcam e mais de 2,5 gols", null),
-      goalLine("Ambas as equipes marcam Não e Mais de 2,5", null)
-    ]],
-    ["gols-1t", "Gols do primeiro tempo", [
-      statLine("Gols no 1º tempo", actual(match.stats.htGoalsHome), actual(match.stats.htGoalsAway), actual(match.stats.htGoals)),
-      goalLine("Ambas as equipes marcam no primeiro tempo", match.probabilities.bttsFh),
-      goalLine("Mais de 0,5 FH", match.probabilities.over05Ht),
-      goalLine("Mais de 1,5 FH", match.probabilities.over15Ht),
-      goalLine("Mais de 2,5 FH", null)
-    ]],
-    ["gols-2t", "Gols do segundo tempo", [
-      statLine("Gols no 2º tempo", actual(match.stats.secondHalfGoalsHome), actual(match.stats.secondHalfGoalsAway), actual(match.stats.secondHalfGoals)),
-      goalLine("Ambas as equipes marcam no segundo tempo", match.probabilities.btts2h),
-      goalLine("Ambas as equipes marcam nos dois tempos", null),
-      goalLine("Mais de 0,5 2H", match.probabilities.over05_2h),
-      goalLine("Mais de 1,5 2H", match.probabilities.over15_2h),
-      goalLine("Mais de 2,5 2H", null)
-    ]],
-    ["menos-gols", "Menos de X gols", [
-      goalLine("Menos de 0,5", match.probabilities.under05),
-      goalLine("Menos de 1,5", match.probabilities.under15),
-      goalLine("Menos de 2,5", match.probabilities.under25),
-      goalLine("Menos de 3,5", match.probabilities.under35),
-      goalLine("Menos de 4,5", match.probabilities.under45)
-    ]],
-    ["tempos", "Primeiro/Segundo Tempo", [
-      statLine("xG pré-jogo", match.stats.xgPrematchHome, match.stats.xgPrematchAway, match.stats.xgPrematchTotal),
-      goalLine("Menos de 0,5 FH", null),
-      goalLine("Menos de 1,5 FH", null),
-      goalLine("Menos de 2,5 FH", null),
-      goalLine("Menos de 0,5 2H", null),
-      goalLine("Menos de 1,5 2H", null),
-      goalLine("Menos de 2,5 2H", null)
-    ]]
+  const overRows = [
+    goalPredictionRow("Over 0.5", match, "over05"),
+    goalPredictionRow("Over 1.5", match, "over15"),
+    goalPredictionRow("Over 2.5", match, "over25"),
+    goalPredictionRow("Over 3.5", match, "over35"),
+    goalPredictionRow("Over 4.5", match, "over45"),
+    goalPredictionRow("BTTS", match, "btts"),
+    goalPredictionRow("BTTS & Win", match, "bttsWin"),
+    goalPredictionRow("BTTS & Draw", match, "bttsDraw"),
+    goalPredictionRow("BTTS & Over 2.5", match, "bttsOver25"),
+    goalPredictionRow("BTTS No & Over 2.5", match, "bttsNoOver25")
   ];
-  return renderNumbersSubtabs("gols", groups);
+  const underRows = [
+    goalPredictionRow("Under 0.5", match, "under05"),
+    goalPredictionRow("Under 1.5", match, "under15"),
+    goalPredictionRow("Under 2.5", match, "under25"),
+    goalPredictionRow("Under 3.5", match, "under35"),
+    goalPredictionRow("Under 4.5", match, "under45")
+  ];
+  return `
+    <div class="goal-predictions" data-numbers-subtabs-root="gols">
+      <div class="goal-predictions__title">
+        <strong>Over 2.5 &amp; BTTS Predictions</strong>
+        <span>Quantos gols haverá nesta partida?</span>
+      </div>
+      <p class="goal-predictions__description">${escapeHtml(match.homeName)} e ${escapeHtml(match.awayName)}: dados de Over 0.5 a 4.5 e BTTS.</p>
+      <div class="goal-predictions__tabs" role="tablist">
+        <button type="button" class="numbers-subtab is-active" data-numbers-subtab="over-goals"><i class="fa-regular fa-futbol"></i> Over X Goals</button>
+        <button type="button" class="numbers-subtab" data-numbers-subtab="under-goals">Under X Goals</button>
+      </div>
+      ${goalPredictionPanel("over-goals", "Match Goals", match, overRows, true)}
+      ${goalPredictionPanel("under-goals", "Under X Goals", match, underRows)}
+      ${officialDataLegend()}
+    </div>
+  `;
+}
+
+function goalPredictionPanel(id, heading, match, rows, active = false) {
+  return `
+    <div class="numbers-subpanel ${active ? "is-active" : ""}" data-numbers-subpanel="${id}">
+      <div class="goal-predictions__table-wrap">
+        <table class="goal-predictions__table">
+          <thead>
+            <tr>
+              <th>${escapeHtml(heading)}</th>
+              <th>${escapeHtml(match.homeName)}</th>
+              <th>${escapeHtml(match.awayName)}</th>
+              <th>Average</th>
+            </tr>
+          </thead>
+          <tbody>${rows.join("")}</tbody>
+        </table>
+      </div>
+    </div>
+  `;
+}
+
+function goalPredictionRow(label, match, key) {
+  const home = goalSideProbability(match, key, "home");
+  const away = goalSideProbability(match, key, "away");
+  const average = goalOverallProbability(match, key, averageProbability(home, away));
+  return `
+    <tr>
+      <th>${escapeHtml(label)}</th>
+      ${goalPredictionCell(home)}
+      ${goalPredictionCell(away)}
+      ${goalPredictionCell(average)}
+    </tr>
+  `;
+}
+
+function goalSideProbability(match, key, side) {
+  const prefix = side === "home" ? "home" : "away";
+  const teamPrefix = side === "home" ? "team_a" : "team_b";
+  const aliases = {
+    over05: ["o05", "over_05", "over05"],
+    over15: ["o15", "over_15", "over15"],
+    over25: ["o25", "over_25", "over25"],
+    over35: ["o35", "over_35", "over35"],
+    over45: ["o45", "over_45", "over45"],
+    under05: ["u05", "under_05", "under05"],
+    under15: ["u15", "under_15", "under15"],
+    under25: ["u25", "under_25", "under25"],
+    under35: ["u35", "under_35", "under35"],
+    under45: ["u45", "under_45", "under45"],
+    btts: ["btts"],
+    bttsWin: ["btts_win", "btts_and_win"],
+    bttsDraw: ["btts_draw", "btts_and_draw"],
+    bttsOver25: ["btts_o25", "btts_over_25"],
+    bttsNoOver25: ["btts_no_o25", "btts_no_over_25"],
+    over05Ht: ["o05HT", "o05_ht", "over05_fh"],
+    over15Ht: ["o15HT", "o15_ht", "over15_fh"],
+    bttsFh: ["btts_fhg", "btts_fh"],
+    over05_2h: ["o05_2H", "o05_2h", "over05_2h"],
+    over15_2h: ["o15_2H", "o15_2h", "over15_2h"],
+    btts2h: ["btts_2hg", "btts_2h"]
+  };
+  const values = (aliases[key] || [key]).flatMap((name) => [
+    match[`${prefix}_${name}_potential`],
+    match[`${teamPrefix}_${name}_potential`],
+    match[`${prefix}_${name}_percentage`],
+    match[`${teamPrefix}_${name}_percentage`]
+  ]);
+  return firstGoalProbability(...values);
+}
+
+function goalOverallProbability(match, key, fallback = null) {
+  const aliases = {
+    over05: ["o05_potential", "over_05_percentage", "over05Probability"],
+    over15: ["o15_potential", "over_15_percentage", "over15Probability"],
+    over25: ["o25_potential", "over_25_percentage", "over25Probability"],
+    over35: ["o35_potential", "over_35_percentage", "over35Probability"],
+    over45: ["o45_potential", "over_45_percentage", "over45Probability"],
+    under05: ["u05_potential", "under_05_percentage"],
+    under15: ["u15_potential", "under_15_percentage"],
+    under25: ["u25_potential", "under_25_percentage"],
+    under35: ["u35_potential", "under_35_percentage"],
+    under45: ["u45_potential", "under_45_percentage"],
+    btts: ["btts_potential", "btts_percentage", "bttsProbability"],
+    bttsWin: ["btts_win_potential", "btts_and_win_potential"],
+    bttsDraw: ["btts_draw_potential", "btts_and_draw_potential"],
+    bttsOver25: ["btts_o25_potential", "btts_over_25_potential"],
+    bttsNoOver25: ["btts_no_o25_potential", "btts_no_over_25_potential"],
+    over05Ht: ["o05HT_potential", "o05_ht_potential", "over05_fh_potential"],
+    over15Ht: ["o15HT_potential", "o15_ht_potential", "over15_fh_potential"],
+    bttsFh: ["btts_fhg_potential", "btts_fh_potential"],
+    over05_2h: ["o05_2H_potential", "o05_2h_potential", "over05_2h_potential"],
+    over15_2h: ["o15_2H_potential", "o15_2h_potential", "over15_2h_potential"],
+    btts2h: ["btts_2hg_potential", "btts_2h_potential"]
+  };
+  const values = (aliases[key] || []).map((name) => match[name]);
+  return firstGoalProbability(...values, match.probabilities?.[key], fallback);
+}
+
+function firstGoalProbability(...values) {
+  for (const value of values) {
+    if (value === null || value === undefined || value === "") continue;
+    const number = Number(value);
+    if (!Number.isFinite(number) || number < 0) continue;
+    return clamp(number > 1 ? number / 100 : number, 0, 1);
+  }
+  return null;
+}
+
+function averageProbability(...values) {
+  const valid = values.filter(Number.isFinite);
+  return valid.length ? valid.reduce((sum, value) => sum + value, 0) / valid.length : null;
+}
+
+function goalPredictionCell(probability) {
+  const percentage = Number.isFinite(probability) ? Math.round(probability * 100) : null;
+  const tone = percentage === null ? "empty" : percentage >= 50 ? "positive" : "negative";
+  return `<td class="${tone}">${percentage === null ? "—" : `${percentage}%`}</td>`;
 }
 
 function renderCornersNumbersTab(match) {
-  const actual = (value) => match.status === "complete" ? value : null;
-  const totalCorners = firstNumber(actual(match.stats.cornersTotal), addNullable(actual(match.stats.cornersHome), actual(match.stats.cornersAway)));
-  const groups = [
-    ["escanteios-partida", "Escanteios da partida", [
-      statLine("Total de escanteios", actual(match.stats.cornersHome), actual(match.stats.cornersAway), totalCorners),
-      numberLine("Escanteios / jogo", match.stats.cornersPotential),
-      statLine("Escanteios do mandante", actual(match.stats.cornersHome), null, null),
-      statLine("Escanteios do visitante", null, actual(match.stats.cornersAway), null)
-    ]],
-    ["total-escanteios", "Total de escanteios", [
-      numberLine("Potencial de escanteios", match.stats.cornersPotential),
-      goalLine("Mais de 8,5 escanteios", match.probabilities.cornersOver85),
-      goalLine("Mais de 9,5 escanteios", match.probabilities.cornersOver95),
-      goalLine("Mais de 10,5 escanteios", match.probabilities.cornersOver105),
-      numberLine("Odd over 8,5", match.odds.cornersOver85),
-      numberLine("Odd over 9,5", match.odds.cornersOver95),
-      numberLine("Odd under 10,5", match.odds.cornersUnder105)
-    ]],
-    ["escanteios-time", "Escanteios do time", [
-      statLine("Escanteios a favor / jogo", actual(match.stats.cornersHome), actual(match.stats.cornersAway), totalCorners),
-      statLine("Escanteios contra / jogo", null, null, null),
-      goalLine("Mais de 2,5 escanteios a favor", null),
-      goalLine("Mais de 3,5 escanteios a favor", null),
-      goalLine("Mais de 4,5 escanteios a favor", null),
-      goalLine("Mais de 2,5 escanteios contra", null),
-      goalLine("Mais de 3,5 escanteios contra", null),
-      goalLine("Mais de 4,5 escanteios contra", null)
-    ]],
-    ["escanteios-1t", "Primeiro tempo", [
-      statLine("Escanteios 1º tempo", actual(match.stats.cornersFhHome), actual(match.stats.cornersFhAway), actual(match.stats.cornersFhTotal)),
-      goalLine("Mais de 4 FH", null),
-      goalLine("Mais de 5 FH", null),
-      goalLine("Mais de 6 FH", null)
-    ]],
-    ["escanteios-2t", "Segundo tempo", [
-      statLine("Escanteios 2º tempo", actual(match.stats.corners2hHome), actual(match.stats.corners2hAway), actual(match.stats.corners2hTotal)),
-      goalLine("Mais de 4 2H", null),
-      goalLine("Mais de 5 2H", null),
-      goalLine("Mais de 6 2H", null)
-    ]]
+  const home = teamNumbersForMatch(match, "home");
+  const away = teamNumbersForMatch(match, "away");
+  const total = firstNumber(match.stats.cornersPotential, sumIfKnown(home.corners, away.corners));
+  const totalRows = [6, 7, 8, 9, 10, 11, 12, 13].map((line) =>
+    comparisonProbabilityRow(`Mais de ${line}`, match, `corners_over_${line}`, probabilityFromAverage(home.corners, line), probabilityFromAverage(away.corners, line))
+  );
+  const teamRows = [
+    comparisonValueRow("Escanteios conquistados por partida", home.corners, away.corners),
+    comparisonValueRow("Escanteios contra / Partida", home.cornersAgainst, away.cornersAgainst),
+    ...[2.5, 3.5, 4.5].map((line) => comparisonProbabilityRow(`Mais de ${formatLine(line)} cantos para`, match, `team_corners_for_${line}`, probabilityFromAverage(home.corners, line), probabilityFromAverage(away.corners, line))),
+    ...[2.5, 3.5, 4.5].map((line) => comparisonProbabilityRow(`Mais de ${formatLine(line)} escanteios contra`, match, `team_corners_against_${line}`, probabilityFromAverage(home.cornersAgainst, line), probabilityFromAverage(away.cornersAgainst, line)))
   ];
-  return renderNumbersSubtabs("escanteios", groups);
+  return predictionSection({
+    root: "escanteios",
+    title: "Número de escanteios:",
+    subtitle: "Quantos escanteios haverá?",
+    icon: "fa-solid fa-flag",
+    summary: predictionSummary(total, "Escanteios / Partida", match, home.corners, away.corners, "Escanteios"),
+    tabs: [
+      ["corners-total", "Total de escanteios", comparisonTable("Escanteios da partida", match, totalRows), true],
+      ["corners-team", "Escanteios da equipe", `<p class="prediction-description">Dados individuais de escanteios das equipes ${escapeHtml(match.homeName)} e ${escapeHtml(match.awayName)}.</p>${comparisonTable("Cantos da equipe", match, teamRows)}`]
+    ]
+  });
 }
 
 function renderCardsNumbersTab(match) {
-  const actual = (value) => match.status === "complete" ? value : null;
-  const totalCards = addNullable(addNullable(actual(match.stats.yellowHome), actual(match.stats.yellowAway)), addNullable(actual(match.stats.redHome), actual(match.stats.redAway)));
-  const groups = [
-    ["cartoes-partida", "Cartões da partida", [
-      statLine("Cartões amarelos", actual(match.stats.yellowHome), actual(match.stats.yellowAway), addNullable(actual(match.stats.yellowHome), actual(match.stats.yellowAway))),
-      statLine("Cartões vermelhos", actual(match.stats.redHome), actual(match.stats.redAway), addNullable(actual(match.stats.redHome), actual(match.stats.redAway))),
-      statLine("Total de cartões", addNullable(actual(match.stats.yellowHome), actual(match.stats.redHome)), addNullable(actual(match.stats.yellowAway), actual(match.stats.redAway)), totalCards)
-    ]],
-    ["total-cartoes", "Total de cartões", [
-      numberLine("Potencial de cartões", match.stats.cardsPotential),
-      goalLine("Mais de 2,5", null),
-      goalLine("Mais de 3,5", match.probabilities.cardsOver35),
-      goalLine("Mais de 4,5", match.probabilities.cardsOver45),
-      goalLine("Mais de 5,5", match.probabilities.cardsOver55),
-      goalLine("Mais de 6,5", null)
-    ]],
-    ["cartoes-time", "Cartões do time", [
-      statLine("Cartões a favor média/projeção", match.stats.cardsHome, match.stats.cardsAway, addNullable(match.stats.cardsHome, match.stats.cardsAway)),
-      goalLine("Mais de 0,5 a favor", null),
-      goalLine("Mais de 1,5 a favor", null),
-      goalLine("Mais de 2,5 a favor", null),
-      goalLine("Mais de 3,5 a favor", null)
-    ]],
-    ["cartoes-contra", "Cartões contra", [
-      goalLine("Mais de 0,5 contra", null),
-      goalLine("Mais de 1,5 contra", null),
-      goalLine("Mais de 2,5 contra", null),
-      goalLine("Mais de 3,5 contra", null)
-    ]],
-    ["cartoes-tempos", "1º / 2º tempo cartões", [
-      statLine("Cartões 1º tempo", actual(match.stats.cardsFhHome), actual(match.stats.cardsFhAway), actual(match.stats.cardsFhTotal)),
-      statLine("Cartões 2º tempo", actual(match.stats.cards2hHome), actual(match.stats.cards2hAway), actual(match.stats.cards2hTotal)),
-      goalLine("1H Total abaixo de 2", null),
-      goalLine("2H Total abaixo de 2", null),
-      goalLine("1H entre 2–3 cartões totais", null),
-      goalLine("2H entre 2–3 cartões totais", null),
-      goalLine("1H Total acima de 3", null),
-      goalLine("2H Total acima de 3", null)
-    ]]
+  const home = teamNumbersForMatch(match, "home");
+  const away = teamNumbersForMatch(match, "away");
+  const total = firstNumber(match.stats.cardsPotential, sumIfKnown(home.cards, away.cards));
+  const totalRows = [2.5, 3.5, 4.5, 5.5, 6.5].map((line) =>
+    comparisonProbabilityRow(`Mais de ${formatLine(line)}`, match, `cards_over_${line}`, probabilityFromAverage(home.cards, line), probabilityFromAverage(away.cards, line))
+  );
+  const teamRows = [
+    comparisonValueRow("Cartas para média", home.cards, away.cards),
+    ...[0.5, 1.5, 2.5, 3.5].map((line) => comparisonProbabilityRow(`Mais de ${formatLine(line)} para`, match, `team_cards_for_${line}`, probabilityFromAverage(home.cards, line), probabilityFromAverage(away.cards, line))),
+    comparisonGroupRow("Cartas Contra"),
+    ...[0.5, 1.5, 2.5, 3.5].map((line) => comparisonProbabilityRow(`Mais de ${formatLine(line)} contra`, match, `team_cards_against_${line}`, probabilityFromAverage(home.cardsAgainst, line), probabilityFromAverage(away.cardsAgainst, line)))
   ];
-  return renderNumbersSubtabs("cartoes", groups);
+  return predictionSection({
+    root: "cartoes",
+    title: "Número de cartas",
+    icon: "fa-solid fa-clone",
+    summary: predictionSummary(total, "Total de cartões por partida", match, home.cards, away.cards, "Cartões"),
+    tabs: [
+      ["cards-total", "Total de cartões", comparisonTable("Cartões de combinação", match, totalRows), true],
+      ["cards-team", "Cartões da equipe", comparisonTable("Cartões de Equipe", match, teamRows)]
+    ]
+  });
 }
 
 function renderShotsNumbersTab(match) {
-  const actual = (value) => match.status === "complete" ? value : null;
-  const totalShots = addNullable(actual(match.stats.shotsHome), actual(match.stats.shotsAway));
-  const totalOnTarget = addNullable(actual(match.stats.shotsOnTargetHome), actual(match.stats.shotsOnTargetAway));
-  const totalOffTarget = addNullable(actual(match.stats.shotsOffTargetHome), actual(match.stats.shotsOffTargetAway));
-  const totalOffsides = addNullable(actual(match.stats.offsidesHome), actual(match.stats.offsidesAway));
-  const totalFouls = addNullable(actual(match.stats.foulsHome), actual(match.stats.foulsAway));
-  const groups = [
-    ["finalizacoes-time", "Finalizações do time", [
-      statLine("Finalizações", actual(match.stats.shotsHome), actual(match.stats.shotsAway), totalShots),
-      statLine("Finalizações no alvo", actual(match.stats.shotsOnTargetHome), actual(match.stats.shotsOnTargetAway), totalOnTarget),
-      statLine("Finalizações fora do alvo", actual(match.stats.shotsOffTargetHome), actual(match.stats.shotsOffTargetAway), totalOffTarget),
-      statLine("Taxa de conversão de finalizações", shotConversion(match, "home"), shotConversion(match, "away"), null, "%"),
-      statLine("Finalizações por gol marcado", shotsPerGoal(match, "home"), shotsPerGoal(match, "away"), null)
-    ]],
-    ["finalizacoes-partida", "Finalizações da partida", [
-      numberLine("Total de finalizações", totalShots),
-      numberLine("Total finalizações no alvo", totalOnTarget),
-      numberLine("Total finalizações fora do alvo", totalOffTarget),
-      goalLine("Jogo com mais de 23,5 finalizações", null),
-      goalLine("Jogo com mais de 24,5 finalizações", null),
-      goalLine("Jogo com mais de 25,5 finalizações", null),
-      goalLine("Jogo com mais de 26,5 finalizações", null)
-    ]],
-    ["impedimentos", "Impedimentos", [
-      statLine("Impedimentos", actual(match.stats.offsidesHome), actual(match.stats.offsidesAway), totalOffsides),
-      goalLine("Mais de 2,5 impedimentos", null),
-      goalLine("Mais de 3,5 impedimentos", null)
-    ]],
-    ["outras", "Outras estatísticas", [
-      statLine("Faltas cometidas", actual(match.stats.foulsHome), actual(match.stats.foulsAway), totalFouls),
-      statLine("Faltas sofridas", null, null, null),
-      statLine("Posse", actual(match.stats.possessionHome), actual(match.stats.possessionAway), null, "%"),
-      goalLine("Empate no intervalo", null)
-    ]]
+  const home = teamNumbersForMatch(match, "home");
+  const away = teamNumbersForMatch(match, "away");
+  const commonRows = [
+    comparisonValueRow("Chutes / Partida", home.shots, away.shots),
+    comparisonValueRow("Taxa de conversão de chutes", home.shotConversion, away.shotConversion, "%"),
+    comparisonValueRow("Tiros no alvo / M", home.shotsOnTarget, away.shotsOnTarget),
+    comparisonValueRow("Tiros fora do alvo / M", home.shotsOffTarget, away.shotsOffTarget),
+    comparisonValueRow("Chutes por gol marcado", home.shotsPerGoal, away.shotsPerGoal),
+    ...[10.5, 11.5, 12.5, 13.5, 14.5, 15.5].map((line) => comparisonProbabilityRow(`Chutes da equipe acima de ${formatLine(line)}`, match, `team_shots_${line}`, probabilityFromAverage(home.shots, line), probabilityFromAverage(away.shots, line)))
   ];
-  return renderNumbersSubtabs("finalizacoes", groups);
+  const matchRows = [23.5, 24.5, 25.5, 26.5].map((line) =>
+    comparisonProbabilityRow(`Match Shots Acima de ${formatLine(line)}`, match, `match_shots_${line}`, probabilityFromAverage(sumIfKnown(home.shots, away.shots), line), null)
+  ).concat([
+    comparisonProbabilityRow("Disparos no alvo acima de 7,5", match, "match_sot_7.5", probabilityFromAverage(sumIfKnown(home.shotsOnTarget, away.shotsOnTarget), 7.5), null),
+    comparisonProbabilityRow("Match Shots On Target Over 8.5", match, "match_sot_8.5", probabilityFromAverage(sumIfKnown(home.shotsOnTarget, away.shotsOnTarget), 8.5), null),
+    comparisonProbabilityRow("Match Shots On Target Over 9.5", match, "match_sot_9.5", probabilityFromAverage(sumIfKnown(home.shotsOnTarget, away.shotsOnTarget), 9.5), null)
+  ]);
+  const secondaryRows = [
+    comparisonGroupRow("Estatísticas de impedimento"),
+    comparisonValueRow("Impedimentos / Partida", home.offsides, away.offsides),
+    comparisonProbabilityRow("Mais de 2,5 impedimentos", match, "offsides_2.5", probabilityFromAverage(home.offsides, 2.5), probabilityFromAverage(away.offsides, 2.5)),
+    comparisonProbabilityRow("Mais de 3,5 impedimentos", match, "offsides_3.5", probabilityFromAverage(home.offsides, 3.5), probabilityFromAverage(away.offsides, 3.5)),
+    comparisonGroupRow("Estatísticas diversas"),
+    comparisonValueRow("Faltas cometidas / partida", home.fouls, away.fouls),
+    comparisonValueRow("Falta sofrida / Partida", home.fouled, away.fouled),
+    comparisonValueRow("Posse média", home.possession, away.possession, "%")
+  ];
+  return predictionSection({
+    root: "finalizacoes",
+    title: "Chutes a gol, impedimentos, faltas e muito mais",
+    tabs: [
+      ["team-shots", "Fotos da equipe", `${comparisonTable("Fotos da equipe", match, commonRows)}${comparisonTable("", match, secondaryRows)}`, true],
+      ["match-shots", "Match Shots", `${comparisonTable("Match Shots", match, matchRows)}${comparisonTable("", match, secondaryRows)}`]
+    ]
+  });
 }
 
 function renderPlayersNumbersTab(match) {
   const homePlayers = matchPlayers(match, "home");
   const awayPlayers = matchPlayers(match, "away");
   return `
-    <div class="numbers-subtabs-wrap">
-      <div class="numbers-data-card">
-        <h4>Jogadores para marcar</h4>
-        <div class="numbers-players">${playersColumn(match.homeName, homePlayers, "goals")}${playersColumn(match.awayName, awayPlayers, "goals")}</div>
-      </div>
-      <div class="numbers-data-card">
-        <h4>Jogadores para receber cartão</h4>
-        <div class="numbers-players">${playersColumn(match.homeName, homePlayers, "cards")}${playersColumn(match.awayName, awayPlayers, "cards")}</div>
-      </div>
-      <div class="numbers-data-card">
-        <h4>Cartões por 90 minutos</h4>
-        <div class="numbers-players">${playersColumn(match.homeName, homePlayers, "cards90")}${playersColumn(match.awayName, awayPlayers, "cards90")}</div>
-      </div>
+    <div class="player-predictions">
+      ${playerPairSection("Artilheiros", match, homePlayers, awayPlayers, "goals")}
+      <h3 class="player-predictions__divider"><i class="fa-solid fa-clone"></i> Quem será contratado?</h3>
+      ${playerPairSection("Cartões entregues", match, homePlayers, awayPlayers, "cards")}
+      <h3 class="player-predictions__divider"><i class="fa-solid fa-clone"></i> Cartões por 90 minutos</h3>
+      ${playerPairSection("Cartões / 90", match, homePlayers, awayPlayers, "cards90")}
     </div>
+  `;
+}
+
+function predictionSection({ root, title, subtitle = "", icon = "", summary = "", tabs }) {
+  return `
+    <div class="prediction-layout" data-numbers-subtabs-root="${escapeHtml(root)}">
+      <div class="prediction-layout__title">
+        ${icon ? `<i class="${icon}"></i>` : ""}
+        <strong>${escapeHtml(title)}</strong>
+        ${subtitle ? `<span>${escapeHtml(subtitle)}</span>` : ""}
+      </div>
+      ${summary}
+      <div class="prediction-layout__tabs" role="tablist">
+        ${tabs.map(([id, label, , active]) => `<button type="button" class="numbers-subtab ${active ? "is-active" : ""}" data-numbers-subtab="${id}">${escapeHtml(label)}</button>`).join("")}
+      </div>
+      ${tabs.map(([id, , content, active]) => `<div class="numbers-subpanel ${active ? "is-active" : ""}" data-numbers-subpanel="${id}">${content}</div>`).join("")}
+      ${officialDataLegend()}
+    </div>
+  `;
+}
+
+function predictionSummary(total, label, match, homeValue, awayValue, unit) {
+  return `
+    <div class="prediction-summary">
+      <div class="prediction-summary__main">
+        <strong>${formatStatValue(total)}</strong>
+        <b>${escapeHtml(label)}</b>
+        <small>Média combinada entre ${escapeHtml(match.homeName)} e ${escapeHtml(match.awayName)}</small>
+      </div>
+      ${predictionTeamCard(match.homeName, homeValue, unit)}
+      ${predictionTeamCard(match.awayName, awayValue, unit)}
+    </div>
+  `;
+}
+
+function predictionTeamCard(name, value, unit) {
+  return `<div class="prediction-team-card"><strong>${formatStatValue(value)}</strong><span>/ Partida</span><small>${escapeHtml(unit)} · ${escapeHtml(name)}</small></div>`;
+}
+
+function comparisonTable(heading, match, rows) {
+  return `
+    <div class="comparison-table-wrap">
+      <table class="comparison-table">
+        <thead><tr><th>${escapeHtml(heading)}</th><th>${escapeHtml(match.homeName)}</th><th>${escapeHtml(match.awayName)}</th><th>Média</th></tr></thead>
+        <tbody>${rows.join("")}</tbody>
+      </table>
+    </div>
+  `;
+}
+
+function comparisonValueRow(label, home, away, suffix = "") {
+  const avg = average([home, away]);
+  return `<tr><th>${escapeHtml(label)}</th>${comparisonValueCell(home, suffix)}${comparisonValueCell(away, suffix)}${comparisonValueCell(avg, suffix)}</tr>`;
+}
+
+function comparisonProbabilityRow(label, match, key, homeFallback = null, awayFallback = null) {
+  const home = predictionField(match, key, "home", homeFallback);
+  const away = predictionField(match, key, "away", awayFallback);
+  const avg = predictionField(match, key, "average", averageProbability(home, away));
+  return `<tr><th>${escapeHtml(label)}</th>${goalPredictionCell(home)}${goalPredictionCell(away)}${goalPredictionCell(avg)}</tr>`;
+}
+
+function comparisonGroupRow(label) {
+  return `<tr class="comparison-table__group"><th colspan="4">${escapeHtml(label)}</th></tr>`;
+}
+
+function comparisonValueCell(value, suffix = "") {
+  const number = nullablePositiveNumber(value);
+  return `<td class="${number === null ? "empty" : "positive"}">${number === null ? "—" : `${round(number, suffix === "%" ? 0 : 2)}${suffix}`}</td>`;
+}
+
+function predictionField(match, key, scope, fallback = null) {
+  const normalized = key.replace(/\./g, "_");
+  const prefixes = scope === "home" ? ["home", "team_a"] : scope === "away" ? ["away", "team_b"] : ["average", "avg", "match"];
+  const values = prefixes.flatMap((prefix) => [
+    match[`${prefix}_${normalized}_potential`],
+    match[`${prefix}_${normalized}_percentage`],
+    match[`${prefix}_${normalized}`]
+  ]);
+  return firstGoalProbability(...values, fallback);
+}
+
+function probabilityFromAverage(value, line) {
+  return null;
+}
+
+function sumIfKnown(a, b) {
+  const first = nullablePositiveNumber(a);
+  const second = nullablePositiveNumber(b);
+  return first === null || second === null ? null : first + second;
+}
+
+function formatLine(value) {
+  return String(value).replace(".", ",");
+}
+
+function playerPairSection(title, match, homePlayers, awayPlayers, metric) {
+  return `<div class="player-predictions__grid">${playerRankingCard(`${title} - ${match.homeName}`, homePlayers, metric, "home")}${playerRankingCard(`${title} - ${match.awayName}`, awayPlayers, metric, "away")}</div>`;
+}
+
+function playerRankingCard(title, players, metric, side) {
+  const sorted = [...players].sort((a, b) => playerMetric(b, metric) - playerMetric(a, metric)).slice(0, 7);
+  const max = Math.max(...sorted.map((player) => playerMetric(player, metric)), 1);
+  return `
+    <article class="player-ranking-card player-ranking-card--${side}">
+      <h4>${escapeHtml(title)}</h4>
+      <div>${sorted.length ? sorted.map((player) => {
+        const value = playerMetric(player, metric);
+        const width = Math.max(8, (value / max) * 100);
+        return `<div class="player-ranking-row"><span style="width:${width}%"></span><p>🇧🇷 ${escapeHtml(player.name)} <b>${round(value, metric === "cards90" ? 2 : 0)}</b></p></div>`;
+      }).join("") : `<p class="numbers-empty-note">Dados de jogadores indisponíveis.</p>`}</div>
+      <small>* Estatísticas da temporada</small>
+    </article>
   `;
 }
 
@@ -1806,8 +1985,17 @@ function teamNumbersForMatch(match, side) {
     goalsPerMatch: firstNumber(team?.goalsPerMatch, team?.seasonScoredAVG_overall, team?.goals_per_match, goals !== null && played ? goals / played : null),
     concededPerMatch: firstNumber(team?.concededPerMatch, team?.seasonConcededAVG_overall, team?.goals_conceded_per_match, conceded !== null && played ? conceded / played : null),
     corners: firstNumber(team?.corners, team?.cornersAVG_overall, team?.corners_per_match, team?.average_corners),
+    cornersAgainst: firstNumber(team?.cornersAgainst, team?.cornersAgainstAVG_overall, team?.corners_against_per_match),
     cards: firstNumber(team?.cards, team?.cardsAVG_overall, team?.cards_per_match, team?.average_cards),
+    cardsAgainst: firstNumber(team?.cardsAgainst, team?.cardsAgainstAVG_overall, team?.cards_against_per_match),
     shots: firstNumber(team?.shots, team?.shotsAVG_overall, team?.shots_per_match, team?.average_shots),
+    shotsOnTarget: firstNumber(team?.shotsOnTarget, team?.shotsOnTargetAVG_overall, team?.shots_on_target_per_match),
+    shotsOffTarget: firstNumber(team?.shotsOffTarget, team?.shotsOffTargetAVG_overall, team?.shots_off_target_per_match),
+    shotConversion: firstNumber(team?.shotConversion, team?.shotConversionAVG_overall, team?.shot_conversion),
+    shotsPerGoal: firstNumber(team?.shotsPerGoal, team?.shots_per_goal),
+    offsides: firstNumber(team?.offsides, team?.offsidesAVG_overall, team?.offsides_per_match),
+    fouls: firstNumber(team?.fouls, team?.foulsAVG_overall, team?.fouls_per_match),
+    fouled: firstNumber(team?.fouled, team?.fouledAVG_overall, team?.fouled_per_match, team?.fouls_suffered_per_match),
     possession: firstNumber(team?.possession, team?.possessionAVG_overall, team?.average_possession)
   };
 }
