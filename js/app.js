@@ -2468,24 +2468,30 @@ function normalizeStatus(status, timestamp, raw = {}) {
   const minuteValue = String(raw.minute ?? raw.match_minute ?? raw.elapsed ?? raw.game_minute ?? "").trim();
   const normalizedMinute = normalizeText(minuteValue);
 
-  const isCancelled = ["cancelled", "canceled"].some((item) => value.includes(item));
-  const isPostponed = ["postponed"].some((item) => value.includes(item));
-  const isSuspended = ["suspended", "abandoned"].some((item) => value.includes(item));
-  const minuteSaysFinished = ["ft", "full time", "full-time"].some((item) => normalizedMinute === item || normalizedMinute.includes(item));
+  const exact = (...items) => items.includes(value);
+  const containsAny = (...items) => items.some((item) => value.includes(item));
+
+  const minuteSaysFinished = exactMinuteFinished(normalizedMinute);
   const minuteSaysLive = /^\d{1,3}(\+\d{1,2})?$/.test(normalizedMinute) || ["ht", "half time", "1h", "2h"].includes(normalizedMinute);
-  const isLive = minuteSaysLive || ["live", "in play", "inplay", "playing", "half time", "1h", "2h", "ht"].some((item) => value.includes(item));
-  const isFinished = minuteSaysFinished || ["complete", "finished", "full time", "full-time", "ft", "ended"].some((item) => value.includes(item));
-  const isScheduled = ["scheduled", "incomplete", "pre match", "pre-match", "not started", "pending"].some((item) => value.includes(item));
 
-  if (isCancelled) return "cancelled";
-  if (isPostponed) return "postponed";
-  if (isSuspended) return "suspended";
-  if (isLive && !minuteSaysFinished) return "live";
-  if (isFinished) return "complete";
-  if (isScheduled) return "scheduled";
+  if (containsAny("cancelled", "canceled")) return "cancelled";
+  if (containsAny("postponed")) return "postponed";
+  if (containsAny("suspended", "abandoned")) return "suspended";
 
-  // Sem confirmação oficial da FootyStats, não marcar como encerrado só pelo horário.
+  // Importante: FootyStats usa "incomplete" para jogos ainda não finalizados.
+  // "incomplete" contém a palavra "complete", então nunca pode ser testado com includes("complete").
+  if (exact("incomplete", "scheduled", "pre match", "pre-match", "not started", "pending", "tba")) return "scheduled";
+
+  if (minuteSaysLive || exact("live", "in play", "inplay", "playing", "half time", "1h", "2h", "ht")) return "live";
+
+  // Só marcar encerrado quando a API confirmar claramente finalizado.
+  if (minuteSaysFinished || exact("complete", "finished", "ft", "full time", "full-time", "ended", "finalizado")) return "complete";
+
   return "scheduled";
+}
+
+function exactMinuteFinished(value) {
+  return ["ft", "full time", "full-time", "fulltime", "ended"].includes(value);
 }
 
 function statusPill(match) {
