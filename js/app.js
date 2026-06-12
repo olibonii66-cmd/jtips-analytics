@@ -1595,7 +1595,7 @@ async function openMatchModal(matchId) {
 
   // Nunca deixar o usuário preso no loading: a API /match pode vir vazia ou demorar.
   // Primeiro renderiza os dados já disponíveis da lista; depois tenta enriquecer em segundo plano.
-  els.matchModalBody.innerHTML = matchModalTemplate(baseMatch);
+  els.matchModalBody.innerHTML = safeMatchModalTemplate(baseMatch);
 
   try {
     const detailedMatch = await withTimeout(fetchOfficialMatchDetails(baseMatch), 7000, "Detalhe da partida indisponível.");
@@ -1604,7 +1604,7 @@ async function openMatchModal(matchId) {
       withTimeout(ensureLastXForMatch(detailedMatch), 7000, "Últimos jogos indisponíveis.")
     ]);
     els.modalTitle.textContent = `${detailedMatch.homeName} x ${detailedMatch.awayName}`;
-    els.matchModalBody.innerHTML = matchModalTemplate(detailedMatch);
+    els.matchModalBody.innerHTML = safeMatchModalTemplate(detailedMatch);
   } catch (error) {
     console.warn("Dados extras indisponíveis, mantendo dados da lista:", error);
   }
@@ -1676,6 +1676,43 @@ async function ensureLastXForMatch(match) {
   match.__lastxHome = bySide.home || [];
   match.__lastxAway = bySide.away || [];
   match.__lastxLoaded = true;
+}
+
+function safeMatchModalTemplate(match) {
+  try {
+    return matchModalTemplate(match);
+  } catch (error) {
+    console.error("Erro ao renderizar Ver números:", error);
+    return basicMatchModalTemplate(match, error);
+  }
+}
+
+function basicMatchModalTemplate(match, error = null) {
+  return `
+    <div class="numbers-modal numbers-modal--real numbers-modal--tabs">
+      <div class="numbers-hero numbers-hero--real">
+        <div class="numbers-team">${teamCrest(match.homeName, match.leagueColor, match.homeLogo)}<strong>${escapeHtml(match.homeName)}</strong><span>Mandante</span></div>
+        <div class="numbers-center"><strong>${shouldShowMatchScore(match) ? `${match.homeGoals} – ${match.awayGoals}` : "VS"}</strong><span>${escapeHtml(formatMatchTime(match))}</span>${statusPill(match)}</div>
+        <div class="numbers-team">${teamCrest(match.awayName, secondaryColor(match.leagueColor), match.awayLogo)}<strong>${escapeHtml(match.awayName)}</strong><span>Visitante</span></div>
+      </div>
+      ${numbersTabsNav()}
+      <div class="numbers-panels">
+        ${numbersTabPanel("resumo", "Resumo", "fa-solid fa-chart-simple", `
+          <div class="numbers-grid numbers-grid--summary">
+            ${modalMarket("Campeonato", match.league || "—")}
+            ${modalMarket("Status", statusLabel(match))}
+            ${modalMarket("Resultado", shouldShowMatchScore(match) ? `${match.homeGoals} – ${match.awayGoals}` : "Disponível somente após finalização oficial")}
+          </div>
+          ${error ? `<p class="numbers-empty-note">Algumas seções não puderam ser renderizadas, mas os dados principais da partida foram mantidos.</p>` : ""}
+        `, true)}
+        ${numbersTabPanel("gols", "Gols", "fa-solid fa-futbol", renderGoalsNumbersTab(match))}
+        ${numbersTabPanel("escanteios", "Escanteios", "fa-solid fa-flag", renderCornersNumbersTab(match))}
+        ${numbersTabPanel("cartoes", "Cartões", "fa-solid fa-square", renderCardsNumbersTab(match))}
+        ${numbersTabPanel("finalizacoes", "Finalizações", "fa-solid fa-bullseye", renderShotsNumbersTab(match))}
+        ${numbersTabPanel("jogadores", "Jogadores", "fa-solid fa-user-group", renderPlayersNumbersTab(match))}
+      </div>
+    </div>
+  `;
 }
 
 /* Modal Ver números - versão com abas por estatística */
@@ -1949,6 +1986,24 @@ function renderShotsNumbersTab(match) {
     ]]
   ];
   return renderNumbersSubtabs("finalizacoes", groups);
+}
+
+function modalMarket(label, value) {
+  return `
+    <div class="numbers-metric-card">
+      <small>${escapeHtml(label)}</small>
+      <strong>${escapeHtml(value === null || value === undefined || value === "" ? "—" : String(value))}</strong>
+    </div>
+  `;
+}
+
+function matchPlayers(match, side) {
+  const teamId = side === "home" ? match.homeId : match.awayId;
+  const teamName = normalizeText(side === "home" ? match.homeName : match.awayName);
+  return state.players.filter((player) => {
+    if (teamId && Number(player.teamId) === Number(teamId)) return true;
+    return teamName && normalizeText(player.team || "") === teamName;
+  });
 }
 
 function renderPlayersNumbersTab(match) {
@@ -2412,10 +2467,6 @@ function normalizeStatus(status, timestamp, raw = {}) {
   const value = normalizeText(status || "");
   const minuteValue = String(raw.minute ?? raw.match_minute ?? raw.elapsed ?? raw.game_minute ?? "").trim();
   const normalizedMinute = normalizeText(minuteValue);
-  const kickoff = Number(timestamp) || 0;
-  const now = Date.now();
-  const fiveMinutes = 5 * 60 * 1000;
-  const liveWindow = 3.25 * 60 * 60 * 1000;
 
   const isCancelled = ["cancelled", "canceled"].some((item) => value.includes(item));
   const isPostponed = ["postponed"].some((item) => value.includes(item));
@@ -2429,25 +2480,11 @@ function normalizeStatus(status, timestamp, raw = {}) {
   if (isCancelled) return "cancelled";
   if (isPostponed) return "postponed";
   if (isSuspended) return "suspended";
-
-  // O live score da FootyStats usa minuto para atualizar partidas ao vivo.
-  // Quando existir minuto numérico, ele tem prioridade sobre status inconsistente.
   if (isLive && !minuteSaysFinished) return "live";
-
-  if (kickoff) {
-    if (kickoff > now + fiveMinutes) return "scheduled";
-
-    // Durante a janela natural da partida, tratar como ao vivo mesmo se a lista
-    // vier com status antigo como complete/finished.
-    if (now >= kickoff - fiveMinutes && now <= kickoff + liveWindow && !minuteSaysFinished) {
-      return "live";
-    }
-  }
-
   if (isFinished) return "complete";
   if (isScheduled) return "scheduled";
 
-  if (kickoff && now > kickoff + liveWindow) return "complete";
+  // Sem confirmação oficial da FootyStats, não marcar como encerrado só pelo horário.
   return "scheduled";
 }
 
